@@ -1,0 +1,2383 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#04060c">
+<title>Loopie v17.1</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><path d='M50 5 L15 20 V50 C15 70 50 90 50 90 C50 90 85 70 85 50 V20 L50 5 Z' fill='%231E40AF'/><ellipse cx='50' cy='55' rx='25' ry='12' fill='%23FDE047'/><path d='M35 55 C35 45 65 45 65 55' fill='%23FDE047'/><path d='M36 52 C36 50 64 50 64 52 L65 55 L35 55 Z' fill='%23EF4444'/></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ── TOKENS ── */
+:root{
+  --ink:#04060c;--i1:#07101e;--i2:#0d1628;--i3:#152132;--i4:#1d2d44;
+  --w1:rgba(255,255,255,.058);--w2:rgba(255,255,255,.11);
+  --t0:#ddeaff;--t1:#8aa4c6;--t2:#3a5068;--t3:#1c2e40;
+  --blue:#3b82f6;--blueL:#6fa8ff;--blueD:#1E40AF;
+  --teal:#0dd4c8;--green:#12d46a;--greenL:#3dffa0;
+  --amber:#f5a316;--amberL:#ffbc44;
+  --orange:#f57820;--orangeL:#ff9944;
+  --red:#f03030;--redL:#ff5e5e;
+  --purple:#8b5cf6;--purpleL:#a87fff;
+  --font:'Noto Sans Hebrew',sans-serif;--mono:'JetBrains Mono',monospace;
+  --r:16px;--rs:10px;--rx:22px;
+  --gc:var(--green);--gg:rgba(18,212,106,.16);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:var(--font);background:var(--ink);color:var(--t0);overflow-x:hidden;direction:rtl}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 62% 48% at 9% 7%,rgba(59,130,246,.046),transparent 68%),
+             radial-gradient(ellipse 48% 38% at 93% 91%,rgba(13,212,200,.032),transparent 68%)}
+.app{position:relative;z-index:1;max-width:430px;margin:0 auto;padding-bottom:90px}
+
+/* ── SCREENS ── */
+.screen{position:fixed;inset:0;z-index:700;background:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 22px;gap:18px;overflow-y:auto}
+.screen.hidden{display:none}
+.screen-title{font-size:22px;font-weight:900;text-align:center}
+.screen-sub{font-size:13px;color:var(--t1);text-align:center;line-height:1.65;max-width:310px}
+.disc-box{background:rgba(240,48,48,.08);border:1px solid rgba(240,48,48,.3);border-radius:var(--r);padding:13px 15px;font-size:11px;color:var(--redL);line-height:1.65;max-width:350px}
+.disc-box strong{color:var(--t0);display:block;margin-bottom:4px;font-size:12px}
+.role-btn{width:100%;max-width:300px;padding:17px;border:none;border-radius:var(--r);font-size:15px;font-weight:800;font-family:var(--font);cursor:pointer;transition:all .17s;display:flex;align-items:center;justify-content:center;gap:10px}
+.role-btn:active{transform:scale(.96)}
+.role-btn.child{background:linear-gradient(135deg,#f59e0b,#f97316);color:#fff;box-shadow:0 6px 20px rgba(245,158,11,.28)}
+.role-btn.parent{background:linear-gradient(135deg,var(--blue),var(--teal));color:#fff;box-shadow:0 6px 20px rgba(59,130,246,.28)}
+.setup-inp{width:100%;max-width:340px;background:var(--i2);border:1.5px solid var(--w1);border-radius:var(--rs);padding:12px 14px;color:var(--t0);font-size:14px;font-family:var(--mono);direction:ltr;transition:border-color .17s}
+.setup-inp:focus{outline:none;border-color:var(--blue)}
+.setup-inp::placeholder{color:var(--t3);direction:rtl}
+.setup-inp.rtl{direction:rtl;font-family:var(--font)}
+.inp-group{display:flex;flex-direction:column;gap:6px;width:100%;max-width:340px}
+.inp-group label{font-size:10px;color:var(--t2);text-transform:uppercase;letter-spacing:.8px;font-weight:700}
+.gender-row{display:flex;gap:8px;width:100%;max-width:340px}
+.g-btn{flex:1;padding:11px;border:1.5px solid var(--w1);border-radius:var(--rs);background:var(--i2);color:var(--t1);font-size:13px;font-weight:700;font-family:var(--font);cursor:pointer;transition:all .14s;text-align:center}
+.g-btn.on{background:rgba(59,130,246,.12);border-color:var(--blue);color:var(--blueL)}
+.big-btn{width:100%;max-width:340px;padding:14px;border:none;border-radius:var(--r);background:linear-gradient(135deg,var(--blue),var(--teal));color:#fff;font-size:15px;font-weight:800;font-family:var(--font);cursor:pointer;transition:all .16s;box-shadow:0 5px 18px rgba(59,130,246,.26)}
+.big-btn:active{transform:scale(.97);opacity:.9}
+.skip-lnk{font-size:12px;color:var(--t2);cursor:pointer;text-decoration:underline}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:13px 14px 0}
+.logo{display:flex;align-items:center;gap:8px;font-weight:900;font-size:19px;letter-spacing:-.3px}
+.logo-icon{width:30px;height:30px;flex-shrink:0}
+.logo-word{background:linear-gradient(90deg,var(--blueL),var(--teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo-ver{font-size:9px;color:var(--t2);font-weight:400;margin-right:2px;font-family:var(--mono)}
+.topbar-r{display:flex;gap:6px;align-items:center}
+.role-chip{font-size:10px;font-weight:700;padding:4px 9px;border-radius:12px;border:1px solid}
+.role-chip.child{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.3);color:#f59e0b}
+.role-chip.parent{background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.3);color:var(--blueL)}
+.sync-ts{font-size:9px;font-family:var(--mono);color:var(--t2)}
+.tbtn{display:flex;align-items:center;gap:5px;background:var(--i2);border:1px solid var(--w1);border-radius:var(--rs);padding:6px 11px;color:var(--t1);font-size:11px;font-family:var(--font);cursor:pointer;transition:all .15s}
+.tbtn:active{transform:scale(.91)}
+.spin{animation:spin .9s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── INSULIN BAR ── */
+.insulin-bar{display:flex;gap:6px;padding:6px 14px 0;flex-wrap:wrap;align-items:center}
+.ins-chip{display:flex;align-items:center;gap:5px;background:var(--i2);border:1px solid var(--w1);border-radius:18px;padding:5px 10px;font-size:10px;color:var(--t1)}
+.ins-chip strong{font-family:var(--mono);font-size:10px;font-weight:600}
+.ins-chip.fast{background:rgba(18,212,106,.08);border-color:rgba(18,212,106,.22);color:var(--greenL)}
+.ins-chip.slow{background:rgba(59,130,246,.08);border-color:rgba(59,130,246,.22);color:var(--blueL)}
+.pb-chip{display:flex;align-items:center;gap:5px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.3);border-radius:18px;padding:5px 10px;font-size:10px;color:var(--purpleL);animation:pbP 2s ease-in-out infinite}
+.pb-chip.hidden{display:none!important}
+@keyframes pbP{0%,100%{border-color:rgba(139,92,246,.3)}50%{border-color:rgba(139,92,246,.8)}}
+.adapt-chip{display:none;align-items:center;gap:5px;font-size:10px;color:var(--purpleL);background:rgba(139,92,246,.09);border:1px solid rgba(139,92,246,.25);border-radius:12px;padding:4px 9px}
+.adapt-chip.show{display:flex}
+
+/* ── HW STRIP ── */
+.hw-strip{display:flex;gap:6px;padding:6px 14px 0;flex-wrap:wrap}
+.hwc{display:flex;align-items:center;gap:5px;background:var(--i2);border:1px solid var(--w1);border-radius:18px;padding:5px 10px;font-size:10px;color:var(--t1);white-space:nowrap}
+.hwc strong{font-family:var(--mono);font-size:10px;color:var(--t0);font-weight:500}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;animation:dp 2.5s ease-in-out infinite}
+@keyframes dp{0%,100%{opacity:1}50%{opacity:.2}}
+.dot.ok{background:var(--green)}.dot.warn{background:var(--amber)}.dot.crit{background:var(--red)}
+.bas-chip{display:flex;align-items:center;gap:5px;border-radius:18px;padding:5px 10px;font-size:10px;font-weight:600;white-space:nowrap}
+.bas-chip.sched{background:rgba(18,212,106,.08);border:1px solid rgba(18,212,106,.22);color:var(--greenL)}
+.bas-chip.temp{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.28);color:var(--blueL)}
+.bas-chip.zero{background:rgba(245,163,22,.09);border:1px solid rgba(245,163,22,.28);color:var(--amberL)}
+
+/* ── DATA LOSS ── */
+.dataloss{display:none;margin:7px 14px 0;background:rgba(240,48,48,.1);border:1.5px solid rgba(240,48,48,.5);border-radius:var(--rs);padding:8px 13px;font-size:11px;color:var(--redL);align-items:center;gap:8px;animation:dlBl 2s ease-in-out infinite}
+@keyframes dlBl{0%,100%{border-color:rgba(240,48,48,.5)}50%{border-color:rgba(240,48,48,1)}}
+.dataloss.show{display:flex}
+
+/* ── MODE GRID ── */
+.mode-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px 14px 0}
+.mpill{display:flex;flex-direction:column;align-items:center;gap:2px;background:var(--i2);border:1.5px solid var(--w1);border-radius:12px;padding:8px 5px;cursor:pointer;font-family:var(--font);transition:all .16s;text-align:center}
+.mpill:active{transform:scale(.9)}
+.mpill .mi{font-size:17px;display:block}
+.mpill .mn{font-size:10px;font-weight:700;line-height:1.2;color:var(--t1)}
+.mpill .mt2{font-family:var(--mono);font-size:8px;opacity:.6;color:var(--t2)}
+.mpill.on{border-color:var(--mc,var(--blue));background:var(--mbg);box-shadow:0 0 12px var(--mgl)}
+.mpill.on .mn{color:var(--mc,var(--blue))}
+.mpill[data-mode="sleep"].on{animation:slGl 3s ease-in-out infinite}
+@keyframes slGl{0%,100%{box-shadow:0 0 10px rgba(91,114,245,.22)}50%{box-shadow:0 0 24px rgba(91,114,245,.48)}}
+
+/* ── STATUS BAR ── */
+.status-bar{margin:7px 14px 0;border-radius:var(--rs);padding:8px 12px;font-size:11px;display:flex;align-items:center;gap:8px}
+.status-bar.hidden{display:none}
+.status-bar.sport{background:rgba(18,212,106,.07);border:1px solid rgba(18,212,106,.22);color:var(--green)}
+.sb-r{font-family:var(--mono);font-size:10px;margin-right:auto;opacity:.8}
+
+/* ── BANNERS ── */
+.banner{margin:7px 14px 0;border-radius:var(--r);padding:12px 13px;display:flex;align-items:flex-start;gap:10px}
+.banner.hidden{display:none!important}
+@keyframes sIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.banner.crit{background:rgba(240,48,48,.1);border:2px solid rgba(240,48,48,.55);animation:sIn .32s,crBl 2s ease-in-out infinite;flex-direction:column;gap:9px}
+@keyframes crBl{0%,100%{border-color:rgba(240,48,48,.55)}50%{border-color:rgba(240,48,48,1)}}
+.banner.warn{background:rgba(245,163,22,.09);border:1.5px solid rgba(245,163,22,.45);animation:sIn .3s,waBl 2s ease-in-out infinite}
+@keyframes waBl{0%,100%{border-color:rgba(245,163,22,.45)}50%{border-color:rgba(245,163,22,.95)}}
+.banner.info{background:rgba(91,114,245,.09);border:1.5px solid rgba(91,114,245,.36);animation:sIn .3s}
+.banner.hypo{background:rgba(240,48,48,.09);border:1.5px solid rgba(240,48,48,.44);animation:sIn .3s,crBl 1.9s ease-in-out infinite}
+.banner.act{background:linear-gradient(135deg,rgba(139,92,246,.12),rgba(13,212,200,.06));border:1.5px solid rgba(139,92,246,.3);animation:sIn .3s}
+.banner.partial{background:rgba(245,163,22,.08);border:1.5px solid rgba(245,163,22,.4);animation:sIn .3s;flex-direction:column;gap:8px}
+.ban-em{font-size:24px;flex-shrink:0;margin-top:1px}
+.ban-body{flex:1;min-width:0}
+.ban-title{font-size:13px;font-weight:700}
+.ban-sub{font-size:10px;color:var(--t1);margin-top:2px;line-height:1.5}
+.ban-acts{display:flex;flex-direction:column;gap:5px;flex-shrink:0}
+.by,.bn,.bo,.br{border:none;border-radius:7px;padding:6px 11px;font-size:11px;font-weight:700;font-family:var(--font);cursor:pointer;transition:all .13s}
+.by{background:var(--purple);color:#fff}.bn{background:var(--i3);color:var(--t1)}
+.bo{background:rgba(245,120,32,.15);color:var(--orangeL);border:1px solid rgba(245,120,32,.3)}
+.br{background:rgba(240,48,48,.14);color:var(--redL);border:1px solid rgba(240,48,48,.3)}
+.by:active,.bn:active,.bo:active,.br:active{transform:scale(.88)}
+/* blood box */
+.blood-box{background:rgba(245,120,32,.06);border:1px solid rgba(245,120,32,.2);border-radius:var(--rs);padding:10px 12px;width:100%;margin-top:8px}
+.blood-box label{font-size:11px;color:var(--orangeL);display:block;margin-bottom:6px;font-weight:700}
+.blood-row{display:flex;gap:7px;align-items:center}
+.blood-inp{flex:1;max-width:130px;background:var(--i2);border:1.5px solid rgba(245,120,32,.35);border-radius:8px;padding:9px 10px;color:var(--t0);font-size:22px;font-family:var(--mono);font-weight:700;text-align:center;-moz-appearance:textfield}
+.blood-inp::-webkit-outer-spin-button,.blood-inp::-webkit-inner-spin-button{-webkit-appearance:none}
+.blood-inp:focus{outline:none;border-color:var(--orange)}
+.blood-result{margin-top:8px;font-size:12px;line-height:1.55;padding:9px 11px;border-radius:8px}
+.blood-result.ok{background:rgba(18,212,106,.08);border:1px solid rgba(18,212,106,.25);color:var(--greenL)}
+.blood-result.low{background:rgba(240,48,48,.08);border:1px solid rgba(240,48,48,.25);color:var(--redL)}
+.blood-result.hidden{display:none}
+/* partial rescue */
+.partial-rescue{background:rgba(245,163,22,.07);border:1px solid rgba(245,163,22,.22);border-radius:var(--rs);padding:9px 12px;font-size:11px;color:var(--amberL);line-height:1.65;width:100%}
+.partial-rescue strong{color:var(--t0)}
+/* second dose */
+.sd-box{margin:7px 14px 0;background:rgba(18,212,106,.07);border:1px solid rgba(18,212,106,.25);border-radius:var(--rs);padding:10px 13px}
+.sd-box.hidden{display:none}
+.sd-title{font-size:12px;font-weight:700;color:var(--greenL);margin-bottom:4px}
+.sd-sub{font-size:10px;color:var(--t1);line-height:1.5}
+.sd-acts{display:flex;gap:7px;margin-top:8px}
+
+/* ── SPORT GATE ── */
+.sport-gate{margin:7px 14px 0;background:rgba(59,130,246,.08);border:1.5px solid rgba(59,130,246,.35);border-radius:var(--r);padding:13px 15px;animation:sIn .32s}
+.sport-gate.hidden{display:none}
+.sg-title{font-size:13px;font-weight:700;color:var(--blueL);margin-bottom:6px}
+.sg-sub{font-size:11px;color:var(--t1);line-height:1.6;margin-bottom:10px}
+.sg-carb{display:flex;align-items:center;gap:10px;background:rgba(18,212,106,.07);border:1px solid rgba(18,212,106,.2);border-radius:var(--rs);padding:10px 13px;font-size:12px;color:var(--greenL);font-weight:700;margin-bottom:10px}
+.sg-carb .num{font-size:22px;font-family:var(--mono);color:var(--amberL)}
+.sg-acts{display:flex;gap:8px}
+
+/* ── POST-SPORT ── */
+.ps-box{margin:7px 14px 0;background:rgba(245,163,22,.08);border:1.5px solid rgba(245,163,22,.35);border-radius:var(--r);padding:13px 15px;animation:sIn .32s}
+.ps-box.hidden{display:none}
+.ps-title{font-size:13px;font-weight:700;color:var(--amberL);margin-bottom:6px}
+.ps-sub{font-size:11px;color:var(--t1);line-height:1.6;margin-bottom:10px}
+.ps-bolus{display:flex;align-items:center;gap:10px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.22);border-radius:var(--rs);padding:10px 13px;font-size:12px;color:var(--purpleL);font-weight:700}
+.ps-bolus .num{font-size:22px;font-family:var(--mono)}
+
+/* ── CALENDAR STRIP ── */
+.cal-strip{margin:7px 14px 0;background:var(--i2);border:1px solid var(--w2);border-radius:var(--r);padding:10px 13px;display:flex;align-items:center;gap:10px;animation:sIn .3s}
+.cal-strip.hidden{display:none}
+.cal-body{flex:1}
+.cal-title{font-size:12px;font-weight:700}
+.cal-sub{font-size:10px;color:var(--t1);margin-top:2px;font-family:var(--mono)}
+.cal-rec{font-size:11px;color:var(--amberL);font-weight:700;margin-top:4px;line-height:1.4}
+
+/* ── COMMAND BAR (v17.1) ── */
+.cmd-bar{display:flex;gap:8px;margin:8px 14px 0;align-items:center}
+.cmd-inp{flex:1;background:var(--i2);border:1.5px solid var(--w1);border-radius:var(--rs);padding:9px 12px;color:var(--t0);font-size:13px;font-family:var(--mono);direction:rtl;transition:border-color .17s}
+.cmd-inp:focus{outline:none;border-color:var(--purple);box-shadow:0 0 0 3px rgba(139,92,246,.11)}
+.cmd-inp::placeholder{color:var(--t3)}
+.cmd-result{margin:5px 14px 0;font-size:11px;padding:7px 12px;border-radius:var(--rs);line-height:1.5}
+.cmd-result.ok{background:rgba(18,212,106,.07);border:1px solid rgba(18,212,106,.2);color:var(--greenL)}
+.cmd-result.err{background:rgba(240,48,48,.07);border:1px solid rgba(240,48,48,.2);color:var(--redL)}
+.cmd-result.hidden{display:none}
+
+/* ── MEAL AUDIT BANNER ── */
+.audit-box{margin:7px 14px 0;background:rgba(91,114,245,.08);border:1px solid rgba(91,114,245,.3);border-radius:var(--r);padding:11px 13px;animation:sIn .3s}
+.audit-box.hidden{display:none}
+.audit-title{font-size:12px;font-weight:700;color:var(--purpleL);margin-bottom:5px}
+.audit-body{font-size:11px;color:var(--t1);line-height:1.6}
+.audit-body strong{color:var(--t0)}
+
+/* ── GLUCOSE HERO ── */
+.gl-hero{margin:8px 14px 0;background:var(--i1);border:1px solid var(--w1);border-radius:var(--rx);padding:15px 17px 12px;position:relative;overflow:hidden}
+.gl-hero::after{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 65% 58% at 20% 42%,var(--gg),transparent 62%);transition:background .65s}
+.gh-row{display:flex;align-items:flex-start;justify-content:space-between}
+.gh-l{position:relative;z-index:1}
+.gh-lbl{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:.9px;font-weight:700}
+.gh-main{display:flex;align-items:baseline;gap:7px;margin-top:1px}
+.gh-num{font-family:var(--mono);font-size:62px;font-weight:700;line-height:1;color:var(--gc);text-shadow:0 0 26px var(--gg);transition:color .5s,text-shadow .5s}
+.gh-arrow{font-size:25px;color:var(--gc);transition:color .5s}
+.gh-delta{font-size:10px;font-family:var(--mono);color:var(--t1);margin-top:3px}
+.gh-chips{display:flex;gap:5px;margin-top:4px;flex-wrap:wrap}
+.gh-chip{display:inline-flex;align-items:center;gap:3px;border-radius:9px;padding:2px 8px;font-size:9px;font-weight:700;border:1px solid}
+.gh-chip.anom{background:rgba(245,120,32,.12);border-color:rgba(245,120,32,.4);color:var(--orangeL);animation:waBl 1.7s ease-in-out infinite}
+.gh-chip.pod{background:rgba(240,48,48,.12);border-color:rgba(240,48,48,.4);color:var(--redL);animation:crBl 2s ease-in-out infinite}
+.gh-chip.tir{background:rgba(18,212,106,.1);border-color:rgba(18,212,106,.3);color:var(--greenL)}
+.gh-r{position:relative;z-index:1;text-align:left;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.gh-badge{display:inline-flex;align-items:center;gap:4px;border-radius:12px;padding:4px 10px;font-size:11px;font-weight:700;border:1px solid;transition:all .5s}
+.gh-time{font-size:9px;font-family:var(--mono);color:var(--t2)}
+.gh-mode{font-size:10px;color:var(--t1)}
+
+/* ── METRICS ── */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:6px 14px 0}
+.metric{background:var(--i1);border:1px solid var(--w1);border-radius:var(--rs);padding:8px 8px;text-align:center}
+.m-lbl{font-size:7px;color:var(--t2);text-transform:uppercase;letter-spacing:.6px;font-weight:700}
+.m-val{font-size:16px;font-family:var(--mono);font-weight:700;margin-top:2px;line-height:1}
+.m-unit{font-size:7px;color:var(--t1);margin-top:2px}
+.metric.iob{border-color:rgba(139,92,246,.2)}.metric.iob .m-val{color:var(--purple)}
+.metric.cob{border-color:rgba(245,163,22,.2)}.metric.cob .m-val{color:var(--amber)}
+.metric.smb{border-color:rgba(13,212,200,.2)}.metric.smb .m-val{color:var(--teal)}
+.metric.bas{border-color:rgba(59,130,246,.2)}.metric.bas .m-val{color:var(--blueL)}
+
+/* ── CHART ── */
+.chart-wrap{margin:6px 14px 0;background:var(--i1);border:1px solid var(--w1);border-radius:var(--r);padding:10px;height:160px}
+canvas#gc{width:100%!important;height:100%!important}
+
+/* ── ACTIVITY BTNS ── */
+.act-row{display:flex;gap:8px;margin:8px 14px 0}
+.act-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:12px 10px;border:1.5px solid var(--w1);border-radius:var(--r);background:var(--i2);cursor:pointer;font-family:var(--font);font-size:12px;font-weight:700;color:var(--t1);transition:all .16s}
+.act-btn:active{transform:scale(.93)}
+.act-btn.walk-on{background:rgba(13,212,200,.1);border-color:var(--teal);color:var(--teal)}
+.act-btn.sport-on{background:rgba(18,212,106,.1);border-color:var(--green);color:var(--greenL)}
+
+/* ── FOLLOWER PANEL ── */
+.fp{margin:7px 14px 0;background:var(--i1);border:1px solid var(--w1);border-radius:var(--r);overflow:hidden}
+.fp.hidden{display:none}
+.fp-hdr{padding:10px 13px;border-bottom:1px solid var(--w1);font-size:12px;font-weight:700;color:var(--t1);display:flex;align-items:center;gap:7px}
+.fp-body{padding:10px 13px;display:flex;flex-direction:column;gap:6px}
+.fi{display:flex;align-items:center;gap:10px;background:var(--i2);border:1px solid var(--w1);border-radius:var(--rs);padding:9px 12px}
+.fi-info{flex:1;min-width:0}
+.fi-name{font-size:12px;font-weight:700}
+.fi-det{font-size:10px;color:var(--t2);font-family:var(--mono)}
+.fi-del{background:none;border:none;color:var(--t2);font-size:16px;cursor:pointer;padding:3px;transition:color .12s;font-family:var(--font)}
+.fi-del:active{color:var(--red)}
+.urg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.urg-dot.whisper{background:var(--teal)}.urg-dot.action{background:var(--amber)}.urg-dot.emergency{background:var(--red);animation:dp 1s ease-in-out infinite}
+.fp-add{width:100%;padding:9px;border:1px dashed var(--w2);border-radius:var(--rs);background:transparent;color:var(--t2);font-size:12px;font-family:var(--font);cursor:pointer;margin-top:4px;transition:all .14s}
+.fp-add:hover{border-color:var(--blue);color:var(--blueL)}
+
+/* ── CARDS ── */
+.slbl{font-size:9px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:1.1px;padding:11px 14px 5px}
+.page{display:none}.page.active{display:block}
+.card{margin:6px 14px;background:var(--i1);border:1px solid var(--w1);border-radius:var(--r);overflow:hidden}
+.card-hdr{padding:11px 14px;border-bottom:1px solid var(--w1);display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+.card-title{font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
+.card-chev{color:var(--t2);font-size:14px;transition:transform .26s}
+.card.collapsed .card-body{display:none}
+.card.collapsed .card-chev{transform:rotate(-90deg)}
+.card-body{padding:13px}
+
+/* ── FOOD SEARCH ── */
+.fs-wrap{position:relative;margin-bottom:10px}
+.fs-inp{width:100%;background:var(--i2);border:1.5px solid var(--w1);border-radius:var(--rs);padding:11px 42px 11px 13px;color:var(--t0);font-size:14px;font-family:var(--font);direction:rtl;transition:border-color .17s}
+.fs-inp:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(59,130,246,.11)}
+.fs-inp::placeholder{color:var(--t3)}
+.fs-ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none}
+.fs-results{background:var(--i2);border:1px solid var(--w2);border-radius:var(--rs);overflow:hidden;margin-bottom:10px}
+.fs-results.hidden{display:none}
+.fri{display:flex;align-items:center;justify-content:space-between;padding:9px 13px;border-bottom:1px solid var(--w1);cursor:pointer;transition:background .13s}
+.fri:last-child{border:none}
+.fri:active{background:var(--i3)}
+.fri-name{font-size:12px;font-weight:600}
+.fri-det{font-size:10px;color:var(--t2);margin-top:1px}
+.fri-c{font-size:11px;font-family:var(--mono);color:var(--amberL);font-weight:700}
+
+/* ── PRECISION REC BOX ── */
+.rec-box{margin:6px 14px 0;background:var(--i2);border:1px solid var(--w2);border-radius:var(--r);overflow:hidden;animation:rcIn .3s}
+@keyframes rcIn{from{opacity:0;transform:translateY(11px)}to{opacity:1;transform:translateY(0)}}
+.rec-hdr{padding:9px 13px;font-size:11px;font-weight:700;border-bottom:1px solid var(--w1);display:flex;align-items:center;gap:6px;color:var(--teal);background:linear-gradient(90deg,rgba(13,212,200,.08),transparent)}
+.prec-nums{display:grid;grid-template-columns:repeat(3,1fr);background:var(--w1);gap:1px}
+.pn{background:var(--i1);padding:12px 8px;text-align:center}
+.pn-l{font-size:8px;color:var(--t2);text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin-bottom:4px}
+.pn-v{font-size:21px;font-family:var(--mono);font-weight:700;line-height:1}
+.pn-u{font-size:8px;color:var(--t1);margin-top:2px}
+.pn.carbs .pn-v{color:var(--amber)}.pn.bolus .pn-v{color:var(--purple)}.pn.dur .pn-v{color:var(--teal)}
+.pb-rec{padding:7px 13px;font-size:10px;color:var(--purpleL);background:rgba(139,92,246,.06);border-top:1px solid rgba(139,92,246,.14);display:flex;align-items:center;gap:5px}
+.pb-rec.hidden{display:none}
+.smb-row{padding:7px 13px;font-size:10px;color:var(--teal);background:rgba(13,212,200,.04);border-top:1px solid rgba(13,212,200,.1);display:flex;align-items:center;gap:5px}
+.reas{padding:9px 13px;border-top:1px solid var(--w1);font-size:11px;line-height:1.65;color:var(--t1)}
+.reas strong{color:var(--t0)}
+.phase-tag{display:inline-flex;align-items:center;gap:4px;background:rgba(245,163,22,.09);color:var(--amber);border:1px solid rgba(245,163,22,.26);border-radius:12px;padding:3px 9px;font-size:10px;font-weight:700;margin:8px 13px 0}
+.phase2-btn{margin:5px 13px 11px;width:calc(100% - 26px);background:rgba(245,163,22,.07);border:1.5px solid rgba(245,163,22,.28);border-radius:var(--rs);padding:10px;color:var(--amber);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .15s}
+.phase2-btn:active{transform:scale(.97)}
+
+/* ── EMOJI TRAY ── */
+.emoji-tray{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px}
+.etb{background:var(--i2);border:1px solid var(--w1);border-radius:8px;padding:6px 8px;font-size:16px;cursor:pointer;transition:all .12s;display:flex;flex-direction:column;align-items:center;min-width:40px}
+.etb:active{transform:scale(.83)}
+.etb span{font-size:8px;color:var(--t2);font-family:var(--mono);margin-top:1px}
+.em-inp{width:100%;background:var(--i2);border:1.5px solid var(--w1);border-radius:var(--rs);padding:11px 12px;color:var(--t0);font-size:18px;font-family:var(--font);line-height:1.4;resize:none;direction:ltr;min-height:48px;transition:border-color .17s}
+.em-inp:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(59,130,246,.11)}
+.em-inp::placeholder{font-size:13px;direction:rtl;color:var(--t3)}
+.parse-strip{border-radius:var(--rs);padding:8px 11px;margin:7px 0 9px;font-size:11px;display:flex;align-items:flex-start;gap:6px;line-height:1.55;min-height:36px;transition:all .22s}
+.parse-strip.live{background:rgba(13,212,200,.07);border:1px solid rgba(13,212,200,.2);color:var(--teal)}
+.parse-strip.empty{background:transparent;border:1px solid var(--w1);color:var(--t2)}
+.parse-strip.err{background:rgba(240,48,48,.07);border:1px solid rgba(240,48,48,.2);color:var(--redL)}
+.split-box{background:rgba(91,114,245,.08);border:1px solid rgba(91,114,245,.3);border-radius:var(--rs);padding:10px 12px;margin-bottom:9px;font-size:11px;color:var(--purpleL);line-height:1.6}
+.split-box.hidden{display:none}
+.split-box strong{color:var(--t0)}
+
+/* ── FORM ── */
+.flbl{font-size:9px;color:var(--t2);text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin-bottom:5px;display:block}
+.stepper{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.stbtn{width:35px;height:35px;border-radius:8px;background:var(--i2);border:1px solid var(--w1);color:var(--t0);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:var(--font);transition:all .11s}
+.stbtn:active{transform:scale(.82);background:var(--i3)}
+.num-inp{flex:1;background:var(--i2);border:1.5px solid var(--w1);border-radius:var(--rs);padding:8px;color:var(--t0);font-size:20px;font-family:var(--mono);font-weight:700;text-align:center;-moz-appearance:textfield;transition:border-color .17s}
+.num-inp::-webkit-outer-spin-button,.num-inp::-webkit-inner-spin-button{-webkit-appearance:none}
+.num-inp:focus{outline:none;border-color:var(--blue)}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:9px}
+.txt-inp{width:100%;background:var(--i2);border:1px solid var(--w1);border-radius:var(--rs);padding:8px 10px;color:var(--t0);font-size:13px;font-family:var(--font)}
+.txt-inp:focus{outline:none;border-color:var(--blue)}
+.food-type-row{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:9px}
+.ftbtn{background:var(--i2);border:1px solid var(--w1);border-radius:var(--rs);padding:8px 4px;cursor:pointer;text-align:center;font-family:var(--font);transition:all .14s}
+.ftbtn:active{transform:scale(.87)}.ftbtn.on{background:rgba(59,130,246,.1);border-color:var(--blue)}
+.fti{font-size:17px;display:block}.ftn{font-size:9px;color:var(--t1);margin-top:2px;font-weight:600}.ftd{font-size:8px;color:var(--t2);font-family:var(--mono)}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.toggle-lbl{font-size:12px;color:var(--t1)}
+input[type=checkbox]{accent-color:var(--blue);width:15px;height:15px;cursor:pointer}
+.day-bar{display:flex;gap:5px;margin-bottom:9px}
+.day-btn{flex:1;background:var(--i2);border:1px solid var(--w1);border-radius:7px;padding:7px 2px;cursor:pointer;text-align:center;font-size:11px;font-weight:700;color:var(--t1);transition:all .12s;font-family:var(--font)}
+.day-btn.on{background:rgba(59,130,246,.12);border-color:var(--blue);color:var(--blueL)}
+.partial-inp-row{display:flex;align-items:center;gap:8px;background:var(--i2);border:1px solid var(--w1);border-radius:var(--rs);padding:9px 12px;margin-top:9px}
+
+/* ── BUTTONS ── */
+.btn{width:100%;padding:12px;border:none;border-radius:var(--rs);color:#fff;font-size:13px;font-weight:700;font-family:var(--font);cursor:pointer;transition:all .16s}
+.btn.primary{background:linear-gradient(135deg,var(--blue),var(--teal));box-shadow:0 4px 15px rgba(59,130,246,.22)}
+.btn.ghost{background:var(--i2);border:1px solid var(--w1);color:var(--t1)}
+.btn:active{transform:scale(.97);opacity:.88}
+.mt{margin-top:7px}
+.btn-row{display:flex;gap:7px;margin-top:7px}
+.btn-sm{padding:7px 12px;font-size:11px;border-radius:7px;border:none;font-family:var(--font);font-weight:700;cursor:pointer;transition:all .12s}
+.btn-sm:active{transform:scale(.9)}
+.btn-sm.add{background:var(--blue);color:#fff}.btn-sm.amber{background:var(--amber);color:#fff}
+
+/* ── RESCUE ── */
+.rescue-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:9px}
+.resc-btn{border-radius:var(--r);padding:13px 8px;cursor:pointer;text-align:center;font-family:var(--font);transition:all .14s;background:var(--i2);border:1.5px solid var(--w1);position:relative;overflow:hidden}
+.resc-btn:active{transform:scale(.92)}
+.resc-btn::before{content:'';position:absolute;inset:0;opacity:.055}
+.resc-em{font-size:24px;display:block;margin-bottom:5px}
+.resc-name{font-size:12px;font-weight:800;display:block;margin-bottom:2px}
+.resc-desc{font-size:9px;color:var(--t1);display:block;line-height:1.4}
+.resc-g{font-family:var(--mono);font-size:11px;font-weight:700;display:block;margin-top:4px}
+.resc-btn.l1{border-color:rgba(18,212,106,.35)}.resc-btn.l1::before{background:var(--green)}.resc-btn.l1 .resc-name{color:var(--green)}
+.resc-btn.l2{border-color:rgba(245,163,22,.35)}.resc-btn.l2::before{background:var(--amber)}.resc-btn.l2 .resc-name{color:var(--amber)}
+.resc-btn.l3{border-color:rgba(245,120,32,.38)}.resc-btn.l3::before{background:var(--orange)}.resc-btn.l3 .resc-name{color:var(--orangeL)}
+.resc-btn.l4{border-color:rgba(240,48,48,.42)}.resc-btn.l4::before{background:var(--red)}.resc-btn.l4 .resc-name{color:var(--redL)}
+.resc-sent{margin-top:7px;background:rgba(13,212,200,.07);border:1px solid rgba(13,212,200,.2);border-radius:var(--rs);padding:8px 12px;font-size:11px;color:var(--teal);display:flex;align-items:center;gap:6px;animation:rcIn .26s}
+.resc-sent.hidden{display:none}
+.early-alert{display:flex;align-items:center;gap:7px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.26);border-radius:var(--rs);padding:8px 12px;margin-bottom:9px;font-size:11px;color:var(--purple)}
+.early-alert.hidden{display:none}
+
+/* ── SCHEDULE ── */
+.ev-list{display:flex;flex-direction:column;gap:6px}
+.ev-item{background:var(--i2);border:1px solid var(--w1);border-radius:var(--rs);padding:10px 12px;display:flex;align-items:center;gap:9px;animation:rcIn .26s}
+.ev-em{font-size:21px}
+.ev-info{flex:1;min-width:0}
+.ev-name{font-size:13px;font-weight:700}
+.ev-meta{font-size:10px;color:var(--t1);margin-top:1px;font-family:var(--mono)}
+.ev-tags{display:flex;gap:4px;margin-top:3px;flex-wrap:wrap}
+.ev-tag{font-size:9px;border-radius:4px;padding:2px 6px;font-weight:700}
+.ev-tag.sport{background:rgba(18,212,106,.12);color:var(--green)}.ev-tag.walk{background:rgba(13,212,200,.12);color:var(--teal)}
+.ev-tag.live{background:rgba(59,130,246,.15);color:var(--blueL);animation:livePl 1.5s ease-in-out infinite}
+@keyframes livePl{0%,100%{opacity:1}50%{opacity:.4}}
+.ev-del{background:none;border:none;color:var(--t2);font-size:17px;cursor:pointer;padding:4px;transition:color .12s;font-family:var(--font)}
+.ev-del:active{color:var(--red)}
+.ev-empty{text-align:center;color:var(--t2);font-size:12px;padding:12px 0}
+
+/* ── SETTINGS ── */
+.srow{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.srow-lbl{font-size:13px;color:var(--t1)}
+.sinp{background:var(--i2);border:1px solid var(--w1);border-radius:8px;padding:7px 10px;color:var(--t0);font-size:12px;font-family:var(--mono);width:150px;text-align:left;direction:ltr}
+.sinp:focus{outline:none;border-color:var(--blue)}
+.divider{height:1px;background:var(--w1);margin:8px 0}
+.pwa-btn{display:flex;align-items:center;gap:8px;background:rgba(91,114,245,.09);border:1px solid rgba(91,114,245,.28);border-radius:var(--rs);padding:10px 13px;cursor:pointer;font-family:var(--font);font-size:12px;font-weight:600;color:var(--purpleL);width:100%;transition:all .15s;margin-bottom:8px}
+
+/* ── BOT NAV ── */
+.bot-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:300;background:rgba(4,6,12,.97);backdrop-filter:blur(26px);border-top:1px solid var(--w1);display:flex;padding:9px 0 calc(9px + env(safe-area-inset-bottom))}
+.ntab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:2px;transition:all .13s}
+.ntab-i{font-size:19px}
+.ntab-l{font-size:9px;color:var(--t2);font-weight:700;letter-spacing:.3px}
+.ntab.on .ntab-l{color:var(--blue)}
+.ntab.on .ntab-i{filter:drop-shadow(0 0 5px var(--blue))}
+
+/* ── TOAST ── */
+.toast{position:fixed;top:14px;left:50%;transform:translateX(-50%) translateY(-60px);background:var(--i2);border:1px solid var(--w2);border-radius:16px;padding:8px 18px;font-size:12px;font-weight:600;color:var(--t0);box-shadow:0 8px 24px rgba(0,0,0,.55);z-index:999;transition:transform .24s cubic-bezier(.34,1.56,.64,1);white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ DISCLAIMER ═══════════ -->
+<div class="screen" id="scDisc">
+  <svg width="72" height="72" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <path d="M50 5 L15 20 V50 C15 70 50 90 50 90 C50 90 85 70 85 50 V20 L50 5 Z" fill="#1E40AF"/>
+    <ellipse cx="50" cy="55" rx="25" ry="12" fill="#FDE047"/>
+    <path d="M35 55 C35 45 65 45 65 55" fill="#FDE047"/>
+    <path d="M36 52 C36 50 64 50 64 52 L65 55 L35 55 Z" fill="#EF4444"/>
+  </svg>
+  <div class="screen-title">Loopie v17.1</div>
+  <div class="screen-sub">מרכז בקרה חכם לניהול T1D</div>
+  <div class="disc-box">
+    <strong>&#x26A0;&#xFE0F; הצהרה רפואית &#x2014; חובה לקרוא</strong>
+    Loopie הוא כלי תמיכה ומידע בלבד ואינו תחליף לייעוץ רפואי מקצועי.
+    כל החלטה בנוגע למינוני אינסולין ופחמימות חייבת להיות מאושרת על ידי
+    צוות רפואי מוסמך. המשתמש נושא באחריות מלאה.
+  </div>
+  <button class="big-btn" onclick="dismissDisc()">הבנתי ומאשר/ת &#x2014; המשך &#x279C;</button>
+</div>
+
+<!-- ═══════════ ROLE SCREEN ═══════════ -->
+<div class="screen hidden" id="scRole">
+  <svg width="72" height="72" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <path d="M50 5 L15 20 V50 C15 70 50 90 50 90 C50 90 85 70 85 50 V20 L50 5 Z" fill="#1E40AF"/>
+    <ellipse cx="50" cy="55" rx="25" ry="12" fill="#FDE047"/>
+    <path d="M35 55 C35 45 65 45 65 55" fill="#FDE047"/>
+    <path d="M36 52 C36 50 64 50 64 52 L65 55 L35 55 Z" fill="#EF4444"/>
+  </svg>
+  <div class="screen-title">מי אתה?</div>
+  <div class="screen-sub">הבחירה קובעת אילו פעולות זמינות עבורך</div>
+  <button class="role-btn child" onclick="chooseRole('child')">
+    <span style="font-size:26px">&#x1F466;</span> אני הילד
+  </button>
+  <button class="role-btn parent" onclick="chooseRole('parent')">
+    <span style="font-size:26px">&#x1F468;&#x200D;&#x1F469;&#x200D;&#x1F466;</span> אני הורה / עוקב
+  </button>
+</div>
+
+<!-- ═══════════ SETUP SCREEN ═══════════ -->
+<div class="screen hidden" id="scSetup">
+  <div class="screen-title">&#x2699;&#xFE0F; הגדרה ראשונית</div>
+  <div class="inp-group">
+    <label>שם הילד</label>
+    <input class="setup-inp rtl" id="setupName" placeholder="למשל: עידו">
+  </div>
+  <div style="width:100%;max-width:340px">
+    <label class="flbl" style="margin-bottom:6px">מגדר</label>
+    <div class="gender-row">
+      <button class="g-btn on" id="gM" onclick="setGender('m')">זכר</button>
+      <button class="g-btn" id="gF" onclick="setGender('f')">נקבה</button>
+    </div>
+  </div>
+  <div class="inp-group">
+    <label>שרת Flask</label>
+    <input class="setup-inp" id="setupFlask" placeholder="http://192.168.x.x:5000">
+  </div>
+  <div class="inp-group">
+    <label>Nightscout URL</label>
+    <input class="setup-inp" id="setupNS" placeholder="https://your.ns.url">
+  </div>
+  <div class="inp-group">
+    <label>api_secret</label>
+    <input class="setup-inp" type="password" id="setupSec" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;">
+  </div>
+  <button class="big-btn" onclick="finishSetup()">שמור והתחל &#x1F680;</button>
+  <span class="skip-lnk" onclick="skipSetup()">דלג &#x2014; הגדר מאוחר יותר</span>
+</div>
+
+<!-- ═══════════ MAIN APP ═══════════ -->
+<div class="app" id="mainApp" style="display:none">
+<div class="toast" id="toast"></div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">
+    <svg class="logo-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <path d="M50 5 L15 20 V50 C15 70 50 90 50 90 C50 90 85 70 85 50 V20 L50 5 Z" fill="#1E40AF"/>
+      <ellipse cx="50" cy="55" rx="25" ry="12" fill="#FDE047"/>
+      <path d="M35 55 C35 45 65 45 65 55" fill="#FDE047"/>
+      <path d="M36 52 C36 50 64 50 64 52 L65 55 L35 55 Z" fill="#EF4444"/>
+    </svg>
+    <span class="logo-word">Loopie</span>
+    <span class="logo-ver">v17.1</span>
+  </div>
+  <div class="topbar-r">
+    <div class="role-chip" id="roleChip"></div>
+    <span class="sync-ts" id="syncTs">--:--</span>
+    <button class="tbtn" onclick="fetchStatus()">
+      <span id="syncIco">&#x1F504;</span><span id="syncLbl">סנכרן</span>
+    </button>
+  </div>
+</div>
+
+<!-- INSULIN BAR -->
+<div class="insulin-bar">
+  <div class="ins-chip slow" id="insChip">&#x1F489; <strong id="insName">--</strong></div>
+  <div class="pb-chip hidden" id="pbChip">&#x23F1; Pre-bolus: <strong id="pbMin">--</strong> דק׳</div>
+  <div class="adapt-chip" id="adaptChip">&#x1F52C; <span id="adaptTxt">שינוי פרופיל</span></div>
+</div>
+
+<!-- HW STRIP -->
+<div class="hw-strip">
+  <div class="hwc"><div class="dot ok" id="podDot"></div>פוד: <strong id="podRem">--</strong></div>
+  <div class="hwc"><div class="dot ok" id="senDot"></div>חיישן: <strong id="senRem">--</strong></div>
+  <div class="hwc">&#x1F50B; <strong id="battTxt">--%</strong></div>
+  <div class="bas-chip sched" id="basalChip">&#x21A5; <strong id="basalVal">--</strong> U/h</div>
+</div>
+
+<!-- DATA LOSS -->
+<div class="dataloss" id="datalossBar">&#x1F4E1; <strong>אובדן נתונים!</strong> אין קריאה מ-NS מעל 30 דקות</div>
+
+<!-- COMMAND BAR (v17.1 Adaptive AI) -->
+<div class="cmd-bar">
+  <input class="cmd-inp" id="cmdInp" placeholder="&#x1F916; 'שנה חוק 150 ל-140' / 'עדכן פסטה ל-18'" onkeydown="if(event.key==='Enter')runCmd()">
+  <button class="btn-sm add" onclick="runCmd()">&#x25B6;</button>
+</div>
+<div class="cmd-result hidden" id="cmdResult"></div>
+
+<!-- SPORT BAR -->
+<div class="status-bar sport hidden" id="sportBar">&#x26BD; <strong>מצב ספורט פעיל</strong><span class="sb-r" id="sportTimer"></span></div>
+
+<!-- SPORT GATE -->
+<div class="sport-gate hidden" id="sportGate">
+  <div class="sg-title">&#x1F3C1; שער ספורט &#x2014; חוק ה-<span id="sportLimit">150</span></div>
+  <div class="sg-sub" id="sgSub">בדיקת ערכי סוכר ו-IOB...</div>
+  <div class="sg-carb hidden" id="sgCarb">&#x1F36C; אכל לפני: <span class="num" id="sgCarbVal">--</span>&#x05D2;&#x05F3;</div>
+  <div class="sg-acts">
+    <button class="by" onclick="confirmSport()">אשר יציאה &#x2705;</button>
+    <button class="bn" onclick="E('sportGate').classList.add('hidden')">ביטול</button>
+  </div>
+</div>
+
+<!-- POST-SPORT -->
+<div class="ps-box hidden" id="psBox">
+  <div class="ps-title">&#x1F4CA; תיקון פוסט-ספורט (60% שמרני)</div>
+  <div class="ps-sub" id="psSub">SGV גבוה לאחר פעילות</div>
+  <div class="ps-bolus">&#x1F489; מינון מומלץ: <span class="num" id="psVal">--</span> יח׳</div>
+  <div style="margin-top:8px;font-size:10px;color:var(--t2)">&#x26A0;&#xFE0F; המתן 30 דק׳ לאחר הספורט</div>
+  <button class="bn" style="margin-top:8px;width:100%;padding:9px" onclick="E('psBox').classList.add('hidden')">הבנתי</button>
+</div>
+
+<!-- SECOND DOSE -->
+<div class="sd-box hidden" id="sdBox">
+  <div class="sd-title">&#x1F514; עלייה עקבית זוהתה &#x2014; מנה שנייה?</div>
+  <div class="sd-sub" id="sdSub">3 קריאות עולות רצופות</div>
+  <div class="sd-acts">
+    <button class="btn-sm add" onclick="doSecondDose()">&#x1F489; הזרק מנה שנייה</button>
+    <button class="btn-sm" style="background:var(--i3);color:var(--t1)" onclick="E('sdBox').classList.add('hidden')">לא עכשיו</button>
+  </div>
+</div>
+
+<!-- PARTIAL MEAL -->
+<div class="banner partial hidden" id="partialBanner">
+  <div style="display:flex;align-items:center;gap:8px;width:100%">
+    <span style="font-size:22px">&#x26A0;&#xFE0F;</span>
+    <div>
+      <div class="ban-title" style="color:var(--amberL)">אכלת רק חלק מהארוחה!</div>
+      <div class="ban-sub" id="partialSub"></div>
+    </div>
+  </div>
+  <div class="partial-rescue" id="partialRec"></div>
+  <button class="bn" style="width:100%;padding:9px" onclick="E('partialBanner').classList.add('hidden')">סגור</button>
+</div>
+
+<!-- MEAL AUDIT (v17.1) -->
+<div class="audit-box hidden" id="auditBox">
+  <div class="audit-title">&#x1F4CB; תחקיר ארוחה &#x2014; 4 שעות לאחר מכן</div>
+  <div class="audit-body" id="auditBody"></div>
+  <div style="display:flex;gap:7px;margin-top:8px">
+    <button class="btn-sm add" id="auditApplyBtn" onclick="applyAuditSuggestion()">עדכן חוק &#x2714;</button>
+    <button class="btn-sm" style="background:var(--i3);color:var(--t1)" onclick="E('auditBox').classList.add('hidden')">דחה</button>
+  </div>
+</div>
+
+<!-- ANOMALY BANNER -->
+<div class="banner warn hidden" id="anomalyBanner">
+  <div class="ban-em">&#x26A0;&#xFE0F;</div>
+  <div class="ban-body">
+    <div class="ban-title">חשד לזיוף חיישן!</div>
+    <div class="ban-sub" id="anomSub">שינוי חריג בנתונים</div>
+    <div class="blood-box hidden" id="bloodBox">
+      <label>ערך בדיקת דם (mg/dL)</label>
+      <div class="blood-row">
+        <input class="blood-inp" type="number" id="bloodVal" placeholder="120" min="40" max="500">
+        <button class="btn-sm amber" onclick="validateBlood()">אמת &#x2713;</button>
+      </div>
+      <div class="blood-result hidden" id="bloodResult"></div>
+    </div>
+  </div>
+  <div class="ban-acts">
+    <button class="bo" onclick="E('bloodBox').classList.toggle('hidden');E('bloodVal').focus()">&#x1FA78; הזן דם</button>
+    <button class="bn" onclick="dismissAnomaly()">התעלם</button>
+  </div>
+</div>
+
+<!-- POD FAULT -->
+<div class="banner crit hidden" id="podFaultBanner">
+  <div style="display:flex;align-items:center;gap:10px;width:100%">
+    <span style="font-size:28px">&#x1F6A8;</span>
+    <div>
+      <div style="font-size:14px;font-weight:900;color:var(--redL)">פוד חשוד לכשל!</div>
+      <div class="ban-sub" id="podFaultSub">סוכר גבוה 4+ שעות ללא ירידה</div>
+    </div>
+  </div>
+  <div style="background:rgba(240,48,48,.07);border:1px solid rgba(240,48,48,.2);border-radius:var(--rs);padding:9px 12px;font-size:11px;width:100%;line-height:1.6;color:var(--t0)">
+    <strong style="color:var(--redL)">המלצה:</strong>
+    הזרק <span id="podFaultCorr">--</span> יח׳ במזרק ידני + החלף פוד
+  </div>
+  <button class="br" style="width:100%;padding:10px" onclick="dismissPodFault()">ביטול / החלפה</button>
+</div>
+
+<!-- SLEEP BOOST -->
+<div class="banner info hidden" id="sleepBoostBanner">
+  <div class="ban-em">&#x1F319;</div>
+  <div class="ban-body">
+    <div class="ban-title">חיזוק שינה מומלץ</div>
+    <div class="ban-sub" id="sleepBoostSub">מגמת ירידה עקבית</div>
+  </div>
+  <div class="ban-acts">
+    <button class="by" onclick="doSleepBoost()">אכל &#x1F36A;</button>
+    <button class="bn" onclick="dismissSleepBoost()">הבנתי</button>
+  </div>
+</div>
+
+<!-- HYPO -->
+<div class="banner hypo hidden" id="hypoBanner">
+  <div class="ban-em">&#x26A0;&#xFE0F;</div>
+  <div class="ban-body"><div class="ban-title" id="hypoTxt">סוכר נמוך!</div></div>
+</div>
+
+<!-- ACTIVITY -->
+<div class="banner act hidden" id="actBanner">
+  <div class="ban-em" id="actEm">&#x1F94A;</div>
+  <div class="ban-body">
+    <div class="ban-title" id="actTitle">יוצא לאימון?</div>
+    <div class="ban-sub" id="actSub">עוד 30 דק׳</div>
+  </div>
+  <div class="ban-acts">
+    <button class="by" onclick="actAnswer(true)">כן &#x26A1;</button>
+    <button class="bn" onclick="actAnswer(false)">לא</button>
+  </div>
+</div>
+
+<!-- CALIBRATION -->
+<div class="banner info hidden" id="calibBanner" style="padding:10px 13px">
+  <div class="ban-body">
+    <div class="ban-title" style="font-size:12px">&#x1F4E1; נדרש כיול חיישן? (סטייה >20%)</div>
+  </div>
+  <div style="display:flex;gap:7px">
+    <button class="by" onclick="postAction('calibrate',{needed:true});E('calibBanner').classList.add('hidden')">כן</button>
+    <button class="bn" onclick="postAction('calibrate',{needed:false});E('calibBanner').classList.add('hidden')">לא</button>
+  </div>
+</div>
+
+<!-- CALENDAR STRIP -->
+<div class="cal-strip hidden" id="calStrip">
+  <span id="calIcon" style="font-size:22px">&#x1F4C5;</span>
+  <div class="cal-body">
+    <div class="cal-title" id="calTitle">אין אירועים קרובים</div>
+    <div class="cal-sub" id="calSub"></div>
+    <div class="cal-rec" id="calRec"></div>
+  </div>
+</div>
+
+<!-- MODE GRID -->
+<div class="mode-grid">
+  <button class="mpill on" data-mode="home" onclick="setMode('home')">
+    <span class="mi">&#x1F3E1;</span><span class="mn">בית</span><span class="mt2">100&#x2013;120</span>
+  </button>
+  <button class="mpill" data-mode="school" onclick="setMode('school')">
+    <span class="mi">&#x1F3EB;</span><span class="mn">בי&quot;ס</span><span class="mt2">110&#x2013;130</span>
+  </button>
+  <button class="mpill" data-mode="sport" onclick="setMode('sport')">
+    <span class="mi">&#x26BD;</span><span class="mn">ספורט</span><span class="mt2" id="sportTgt">150+</span>
+  </button>
+  <button class="mpill" data-mode="pool" onclick="setMode('pool')">
+    <span class="mi">&#x1F30A;</span><span class="mn">בריכה</span><span class="mt2">160&#x2013;180</span>
+  </button>
+  <button class="mpill" data-mode="sleep" onclick="setMode('sleep')">
+    <span class="mi">&#x1F319;</span><span class="mn">שינה</span><span class="mt2">120+</span>
+  </button>
+  <button class="mpill" data-mode="sick" onclick="setMode('sick')">
+    <span class="mi">&#x1F912;</span><span class="mn">מחלה</span><span class="mt2">+15%</span>
+  </button>
+</div>
+
+<!-- ═══════════════ PAGE: DASHBOARD ═══════════════ -->
+<div class="page active" id="page-dash">
+  <div class="gl-hero">
+    <div class="gh-row">
+      <div class="gh-l">
+        <div class="gh-lbl">גלוקוז נוכחי</div>
+        <div class="gh-main">
+          <div class="gh-num" id="glNum">---</div>
+          <div class="gh-arrow" id="glArrow">&#x2192;</div>
+        </div>
+        <div class="gh-delta" id="glDelta">&#x394; -- mg/dL</div>
+        <div class="gh-chips">
+          <div class="gh-chip anom hidden" id="anomChip">&#x1F536; אנומליה</div>
+          <div class="gh-chip pod hidden" id="podChip">&#x1F6A8; פוד חשוד</div>
+          <div class="gh-chip tir hidden" id="tirChip">&#x1F4CA; TIR</div>
+        </div>
+      </div>
+      <div class="gh-r">
+        <div class="gh-badge" id="glBadge">&#x23F3; ממתין</div>
+        <div class="gh-time" id="glTime">--:--</div>
+        <div class="gh-mode" id="glMode">&#x1F3E1; בית</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="metrics">
+    <div class="metric iob"><div class="m-lbl">IOB</div><div class="m-val" id="iobV">--</div><div class="m-unit">יח׳</div></div>
+    <div class="metric cob"><div class="m-lbl">COB</div><div class="m-val" id="cobV">--</div><div class="m-unit">גרם</div></div>
+    <div class="metric smb"><div class="m-lbl">SMB 3h</div><div class="m-val" id="smbV">--</div><div class="m-unit">יח׳</div></div>
+    <div class="metric bas"><div class="m-lbl">בזאל</div><div class="m-val" id="basalMetric">--</div><div class="m-unit">U/h</div></div>
+  </div>
+
+  <div class="chart-wrap"><canvas id="gc"></canvas></div>
+
+  <div class="act-row">
+    <button class="act-btn" id="walkBtn" onclick="triggerActivity('walk')">&#x1F6B6; הליכה</button>
+    <button class="act-btn" id="sportBtn" onclick="triggerActivity('sport')">&#x26BD; ספורט</button>
+  </div>
+
+  <div class="fp hidden" id="followerPanel">
+    <div class="fp-hdr">&#x1F465; צוות מטפלים (<span id="followerCount">0</span>/5)</div>
+    <div class="fp-body" id="followerBody">
+      <button class="fp-add" onclick="addFollowerPrompt()">+ הוסף עוקב</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ PAGE: MEAL ═══════════════ -->
+<div class="page" id="page-meal">
+  <div class="slbl">מחשבון בולוס מדויק &#x2014; 3 ערכים</div>
+
+  <!-- FOOD SEARCH -->
+  <div class="card" id="foodCard">
+    <div class="card-hdr" onclick="toggleCard('foodCard')">
+      <span class="card-title">&#x1F50D; חיפוש מאכל (עברית / English / &#x1F355;&#x1F354;)</span>
+      <span class="card-chev" id="foodCard-chev">&#x25BC;</span>
+    </div>
+    <div class="card-body" id="foodCard-body">
+      <div class="fs-wrap">
+        <input class="fs-inp" type="text" id="foodSearchInp"
+               placeholder="חפש: פסטה, burger, &#x1F355;, המבורגר..."
+               oninput="onFoodSearch()">
+        <span class="fs-ico">&#x1F37D;&#xFE0F;</span>
+      </div>
+      <div class="fs-results hidden" id="foodResults"></div>
+      <div class="btn-row">
+        <button class="btn primary" style="flex:1" onclick="useFoodSearch()">&#x2705; חשב בולוס</button>
+        <button class="btn ghost" style="flex:0 0 auto;padding:12px" onclick="clearFoodSearch()">&#x1F5D1;</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EMOJI ENGINE -->
+  <div class="card collapsed" id="emojiCard">
+    <div class="card-hdr" onclick="toggleCard('emojiCard')">
+      <span class="card-title">&#x1F9E0; הזנה באימוג׳י</span>
+      <span class="card-chev" id="emojiCard-chev">&#x25B6;</span>
+    </div>
+    <div class="card-body" id="emojiCard-body">
+      <div class="emoji-tray">
+        <button class="etb" onclick="eAdd('&#x1FAD3;')">&#x1FAD3;<span>50ג׳</span></button>
+        <button class="etb" onclick="eAdd('&#x1F36A;')">&#x1F36A;<span>7.5ג׳</span></button>
+        <button class="etb" onclick="eAdd('&#x1F35A;')">&#x1F35A;<span>30ג׳</span></button>
+        <button class="etb" onclick="eAdd('&#x1F35F;')">&#x1F35F;<span>15ג׳</span></button>
+        <button class="etb" onclick="eAdd('&#x1F35D;')">&#x1F35D;<span>15ג׳</span></button>
+        <button class="etb" onclick="eAdd('&#x1F355;')">&#x1F355;<span>35ג׳</span></button>
+        <button class="etb" onclick="eAdd('&#x1F354;')">&#x1F354;<span>50ג׳</span></button>
+        <button class="etb" onclick="eAdd('&#x1F34E;')">&#x1F34E;<span>15ג׳</span></button>
+        <button class="etb" onclick="eAdd('&#x1F34C;')">&#x1F34C;<span>15ג׳</span></button>
+        <button class="etb" onclick="eAdd('&#x1F366;')">&#x1F366;<span>20ג׳</span></button>
+        <button class="etb" onclick="eAdd('&#x1F36B;')">&#x1F36B;<span>20ג׳</span></button>
+        <button class="etb" onclick="eAdd('&#x1F95B;')">&#x1F95B;<span>12ג׳</span></button>
+        <button class="etb" onclick="eAdd('&#x1F35E;')">&#x1F35E;<span>15ג׳</span></button>
+        <button class="etb" onclick="eAdd('&#x1F9C3;')">&#x1F9C3;<span>15ג׳</span></button>
+      </div>
+      <textarea class="em-inp" id="emojiInp" rows="2"
+                placeholder="2&#x1F36A; + &#x1FAD3; או פסטה כוס..."
+                oninput="onEmojiInput()"></textarea>
+      <div class="parse-strip empty" id="parseStrip">
+        <span>&#x1F4A1;</span><span id="parseTxt">הקלד מה אכלת &#x2014; זיהוי אוטומטי</span>
+      </div>
+      <div class="split-box hidden" id="splitBox"></div>
+      <div class="btn-row">
+        <button class="btn primary" style="flex:1" onclick="useEmoji()">&#x2705; חשב מהזיהוי</button>
+        <button class="btn ghost" style="flex:0 0 auto;padding:12px" onclick="clearEmoji()">&#x1F5D1;</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MANUAL CALC -->
+  <div class="card collapsed" id="manualCard">
+    <div class="card-hdr" onclick="toggleCard('manualCard')">
+      <span class="card-title">&#x1F37D;&#xFE0F; חישוב ידני</span>
+      <span class="card-chev" id="manualCard-chev">&#x25B6;</span>
+    </div>
+    <div class="card-body" id="manualCard-body">
+      <label class="flbl">פחמימות (גרם)</label>
+      <div class="stepper">
+        <button class="stbtn" onclick="step('carbInp',-5)">&#x2212;</button>
+        <input class="num-inp" type="number" id="carbInp" value="40" min="0" max="400">
+        <button class="stbtn" onclick="step('carbInp',5)">+</button>
+      </div>
+      <label class="flbl">סוג מזון &#x2014; קובע משך ספיגה</label>
+      <div class="food-type-row">
+        <button class="ftbtn" data-food="fast" onclick="setFood('fast')">
+          <span class="fti">&#x1F36C;</span><div class="ftn">פירות</div><div class="ftd">2&#x2013;3h</div>
+        </button>
+        <button class="ftbtn on" data-food="normal" onclick="setFood('normal')">
+          <span class="fti">&#x1F35A;</span><div class="ftn">אורז/לחם</div><div class="ftd">3h</div>
+        </button>
+        <button class="ftbtn" data-food="medium" onclick="setFood('medium')">
+          <span class="fti">&#x1F366;</span><div class="ftn">גלידה</div><div class="ftd">4&#x2013;5h</div>
+        </button>
+        <button class="ftbtn" data-food="fat" onclick="setFood('fat')">
+          <span class="fti">&#x1F355;</span><div class="ftn">פיצה/בורגר</div><div class="ftd">5&#x2013;8h &#x2702;&#xFE0F;</div>
+        </button>
+      </div>
+      <div class="two-col">
+        <div>
+          <label class="flbl">ICR (1:X)</label>
+          <input class="num-inp" type="number" id="icrInp" placeholder="--" style="font-size:16px;padding:8px">
+        </div>
+        <div>
+          <label class="flbl">ISF</label>
+          <input class="num-inp" type="number" id="isfInp" placeholder="--" style="font-size:16px;padding:8px">
+        </div>
+      </div>
+      <button class="btn primary" onclick="calcMeal()">&#x1F9EE; חשב בולוס מדויק</button>
+
+      <!-- PARTIAL MEAL INPUT -->
+      <div class="partial-inp-row">
+        <span style="font-size:12px;color:var(--t1);flex:1">&#x1F37D;&#xFE0F; אכלתי רק:</span>
+        <input class="num-inp" type="number" id="partialPct" placeholder="%"
+               style="max-width:68px;font-size:16px;padding:7px;flex:0 0 auto" min="1" max="99">
+        <span style="font-size:11px;color:var(--t2)">%</span>
+        <button class="btn-sm amber" onclick="calcPartialMeal()">חשב</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="mealRec"></div>
+
+  <!-- RESCUE -->
+  <div class="slbl">חילוץ מהיר &#x2014; 4 דרגות</div>
+  <div class="card">
+    <div class="card-body" style="display:block">
+      <div class="early-alert hidden" id="earlyAlert">
+        &#x26A1; מצב <strong id="earlyMode"></strong> &#x2014; חלץ ב-100&#x2013;110!
+      </div>
+      <div class="rescue-grid">
+        <button class="resc-btn l1" onclick="doRescue(1)">
+          <span class="resc-em">&#x1F7E2;</span><span class="resc-name">קל</span>
+          <span class="resc-desc">חצי פתיבר</span><span class="resc-g">3.75ג׳</span>
+        </button>
+        <button class="resc-btn l2" onclick="doRescue(2)">
+          <span class="resc-em">&#x1F7E1;</span><span class="resc-name">בינוני</span>
+          <span class="resc-desc">פתיבר שלם</span><span class="resc-g">7.5ג׳</span>
+        </button>
+        <button class="resc-btn l3" onclick="doRescue(3)">
+          <span class="resc-em">&#x1F7E0;</span><span class="resc-name">חזק</span>
+          <span class="resc-desc">2 שלוקים + פתיבר</span><span class="resc-g">15ג׳</span>
+        </button>
+        <button class="resc-btn l4" onclick="doRescue(4)">
+          <span class="resc-em">&#x1F534;</span><span class="resc-name">חירום</span>
+          <span class="resc-desc">4 שלוקים + פתיבר</span><span class="resc-g">22.5ג׳</span>
+        </button>
+      </div>
+      <div class="resc-sent hidden" id="rescSent">
+        &#x2705; <span id="rescSentTxt"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ PAGE: SCHEDULE ═══════════════ -->
+<div class="page" id="page-schedule">
+  <div class="slbl">לוח חוגים</div>
+  <div class="card" id="addEvCard">
+    <div class="card-hdr" onclick="toggleCard('addEvCard')">
+      <span class="card-title">&#x2795; הוסף חוג</span>
+      <span class="card-chev" id="addEvCard-chev">&#x25BC;</span>
+    </div>
+    <div class="card-body" id="addEvCard-body">
+      <div class="two-col">
+        <div>
+          <label class="flbl">שם החוג</label>
+          <input class="txt-inp" id="evName" placeholder="MMA, צופים...">
+        </div>
+        <div>
+          <label class="flbl">אימוג׳י</label>
+          <div style="display:flex;align-items:center;gap:7px">
+            <span id="evEm" style="font-size:26px;cursor:pointer" onclick="cycleEm()">&#x1F94A;</span>
+            <span style="font-size:10px;color:var(--t2)">לחץ</span>
+          </div>
+        </div>
+      </div>
+      <div class="two-col">
+        <div><label class="flbl">שעת התחלה</label><input class="txt-inp" type="time" id="evStart" value="15:30"></div>
+        <div><label class="flbl">שעת סיום</label><input class="txt-inp" type="time" id="evEnd" value="17:00"></div>
+      </div>
+      <label class="flbl">ימי השבוע</label>
+      <div class="day-bar">
+        <button class="day-btn" data-d="0" onclick="toggleDay(0)">א׳</button>
+        <button class="day-btn" data-d="1" onclick="toggleDay(1)">ב׳</button>
+        <button class="day-btn" data-d="2" onclick="toggleDay(2)">ג׳</button>
+        <button class="day-btn" data-d="3" onclick="toggleDay(3)">ד׳</button>
+        <button class="day-btn" data-d="4" onclick="toggleDay(4)">ה׳</button>
+        <button class="day-btn" data-d="5" onclick="toggleDay(5)">ו׳</button>
+        <button class="day-btn" data-d="6" onclick="toggleDay(6)">ש׳</button>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-lbl">פעילות ספורטיבית (&#x2192; מצב ספורט)</span>
+        <input type="checkbox" id="evSport" checked>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-lbl">כולל הליכה ברגל</span>
+        <input type="checkbox" id="evWalk" checked>
+      </div>
+      <button class="btn-sm add" style="width:100%;padding:10px" onclick="addEvent()">&#x2795; שמור חוג</button>
+    </div>
+  </div>
+  <div class="slbl">חוגים קבועים</div>
+  <div class="card">
+    <div class="card-body" style="display:block">
+      <div class="ev-list" id="evList"><div class="ev-empty">אין חוגים מוגדרים</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ PAGE: SETTINGS ═══════════════ -->
+<div class="page" id="page-settings">
+  <div class="slbl">הגדרות</div>
+  <div class="card">
+    <div class="card-body" style="display:block">
+      <div class="srow"><span class="srow-lbl">שרת Flask</span><input class="sinp" type="url" id="flaskUrl" placeholder="http://server:5000"></div>
+      <div class="srow"><span class="srow-lbl">שרת NS</span><input class="sinp" type="url" id="nsUrl" placeholder="https://..."></div>
+      <div class="srow"><span class="srow-lbl">api_secret</span><input class="sinp" type="password" id="nsSecret" placeholder="&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;"></div>
+      <div class="divider"></div>
+      <div class="srow"><span class="srow-lbl">ICR</span><input class="sinp" type="number" id="defIcr" placeholder="10"></div>
+      <div class="srow"><span class="srow-lbl">ISF</span><input class="sinp" type="number" id="defIsf" placeholder="40"></div>
+      <div class="srow"><span class="srow-lbl">סוכר יעד</span><input class="sinp" type="number" id="defTgt" placeholder="110"></div>
+      <div class="srow"><span class="srow-lbl">יעד שינה</span><input class="sinp" type="number" id="sleepTgt" placeholder="130"></div>
+      <div class="srow"><span class="srow-lbl">חוק ספורט (mg/dL)</span><input class="sinp" type="number" id="sportLimit" placeholder="150"></div>
+      <div class="srow"><span class="srow-lbl">יעד טווח Lo</span><input class="sinp" type="number" id="targetLo" placeholder="80"></div>
+      <div class="srow"><span class="srow-lbl">יעד טווח Hi</span><input class="sinp" type="number" id="targetHi" placeholder="150"></div>
+      <div class="divider"></div>
+      <div class="srow"><span class="srow-lbl">סף אנומליה |&#x394;|</span><input class="sinp" type="number" id="anomThresh" placeholder="35"></div>
+      <div class="srow"><span class="srow-lbl">CallMeBot Phone</span><input class="sinp" id="cmPhone" placeholder="+972..."></div>
+      <div class="srow"><span class="srow-lbl">CallMeBot Key</span><input class="sinp" id="cmKey" placeholder="xxxx"></div>
+      <div class="srow"><span class="srow-lbl">WhatsApp חירום</span><input type="checkbox" id="waEnabled" checked></div>
+      <div class="divider"></div>
+      <button class="pwa-btn" onclick="reqPush()">&#x1F514; הפעל התראות Push (PWA)</button>
+      <button class="btn primary" onclick="saveSettings()">&#x1F4BE; שמור הגדרות</button>
+      <button class="btn ghost mt" onclick="resetRole()">&#x1F504; החלף תפקיד</button>
+      <div style="text-align:center;font-size:10px;color:var(--t2);margin-top:12px;line-height:1.5">
+        Loopie v17.1 &#x2014; Adaptive T1D Control<br>
+        <span style="color:var(--redL)">&#x26A0;&#xFE0F; אינו מחליף ייעוץ רפואי מקצועי</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- /app -->
+
+<!-- BOT NAV -->
+<div class="bot-nav" id="botNav" style="display:none">
+  <div class="ntab on" id="nav-dash" onclick="showPage('dash')"><span class="ntab-i">&#x1F4C8;</span><span class="ntab-l">דשבורד</span></div>
+  <div class="ntab" id="nav-meal" onclick="showPage('meal')"><span class="ntab-i">&#x1F37D;&#xFE0F;</span><span class="ntab-l">ארוחה</span></div>
+  <div class="ntab" id="nav-schedule" onclick="showPage('schedule')"><span class="ntab-i">&#x1F4C5;</span><span class="ntab-l">לו&quot;ז</span></div>
+  <div class="ntab" id="nav-settings" onclick="showPage('settings')"><span class="ntab-i">&#x2699;&#xFE0F;</span><span class="ntab-l">הגדרות</span></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+/* ════════════════════════════════════════════════════
+   SERVICE WORKER  (blob, background NS check q5min)
+════════════════════════════════════════════════════ */
+var SW_SRC = [
+  "var _c={};",
+  "self.addEventListener('install',function(){self.skipWaiting();});",
+  "self.addEventListener('activate',function(e){e.waitUntil(self.clients.claim());});",
+  "self.addEventListener('message',function(e){if(e.data&&e.data.type==='CFG')_c=e.data.cfg;});",
+  "function nt(t,b,tg,u){self.registration.showNotification(t,{body:b,tag:tg,requireInteraction:u,",
+  "vibrate:u?[400,100,400,100,400]:[200,100,200],",
+  "icon:'data:image/svg+xml,<svg viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M50 5 L15 20 V50 C15 70 50 90 50 90 C50 90 85 70 85 50 V20 L50 5 Z\" fill=\"%231E40AF\"/><ellipse cx=\"50\" cy=\"55\" rx=\"25\" ry=\"12\" fill=\"%23FDE047\"/></svg>'}).catch(function(){});}",
+  "async function chk(){",
+  "if(!_c.ns)return;",
+  "try{",
+  "var r=await fetch(_c.ns+'/api/v1/entries.json?count=3&api_secret='+encodeURIComponent(_c.sec||''));",
+  "if(!r.ok)return;",
+  "var e=await r.json();if(!e.length)return;",
+  "var s=e[0].sgv,p=e[1]?e[1].sgv:s,d=s-p,a=(Date.now()-new Date(e[0].date||Date.now()))/60000;",
+  "var cl=await self.clients.matchAll();",
+  "cl.forEach(function(c){c.postMessage({type:'SGV',sgv:s,delta:d,age:a});});",
+  "var th=parseInt(_c.th||35);",
+  "if(s<70)nt('Loopie: היפו חירום!','SGV '+s+' mg/dL','hypo',true);",
+  "else if(s<80)nt('Loopie: סוכר נמוך','SGV '+s,'low',false);",
+  "else if(Math.abs(d)>=th)nt('Loopie: אנומליה!','Delta='+d+' SGV='+s,'anom',true);",
+  "else if(s>350)nt('Loopie: סוכר גבוה מאוד',s+' mg/dL','hyper',false);",
+  "if(a>30)nt('Loopie: אובדן נתונים','אין קריאה מ-NS מעל 30 דק','dl',true);",
+  "}catch(x){}",
+  "}",
+  "self.addEventListener('notificationclick',function(e){e.notification.close();e.waitUntil(clients.openWindow('/'));});",
+  "function lp(){setTimeout(function(){chk().finally(lp);},5*60*1000);}",
+  "chk();lp();"
+].join('\n');
+
+async function registerSW() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    var blob = new Blob([SW_SRC], {type:'application/javascript'});
+    window._sw = await navigator.serviceWorker.register(URL.createObjectURL(blob), {scope:'/'});
+    navigator.serviceWorker.addEventListener('message', function(e){
+      // data already handled by poll
+    });
+  } catch(ex) { console.warn('[SW]', ex); }
+}
+function updateSWConfig() {
+  if (!window._sw || !window._sw.active) return;
+  window._sw.active.postMessage({
+    type: 'CFG',
+    cfg: {ns: S.cfg.nsUrl, sec: S.cfg.nsSecret, th: S.cfg.anomThresh || 35}
+  });
+}
+async function reqPush() {
+  if (!('Notification' in window)) { toast('דפדפן לא תומך'); return; }
+  var p = await Notification.requestPermission();
+  toast(p === 'granted' ? 'התראות Push הופעלו!' : 'הרשאה נדחתה');
+  if (p === 'granted') updateSWConfig();
+}
+function pushNotify(title, body, urgent, tag) {
+  tag = tag || 'loopie';
+  if (window._sw) {
+    window._sw.showNotification(title, {
+      body: body, tag: tag, requireInteraction: !!urgent,
+      vibrate: urgent ? [400,100,400,100,400] : [200,100,200],
+      icon: 'data:image/svg+xml,<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M50 5 L15 20 V50 C15 70 50 90 50 90 C50 90 85 70 85 50 V20 L50 5 Z" fill="%231E40AF"/></svg>'
+    }).catch(function(){});
+  } else if (Notification.permission === 'granted') {
+    new Notification(title, {body: body, tag: tag});
+  }
+}
+
+/* WhatsApp CallMeBot */
+function sendWA(msg) {
+  var c = S.cfg;
+  if (!c.waEnabled || !c.cmPhone || !c.cmKey) return;
+  fetch('https://api.callmebot.com/whatsapp.php?phone=' + encodeURIComponent(c.cmPhone) +
+        '&text=' + encodeURIComponent('Loopie: ' + msg) +
+        '&apikey=' + c.cmKey).catch(function(){});
+}
+
+/* ════════════════════════════════════════════════════
+   FOOD DATABASE  (v17.1 house rules embedded)
+════════════════════════════════════════════════════ */
+var FOOD_DB = [
+  /* House rules — v17.1 */
+  {he:'פסטה (כוס)',    en:'pasta cup',      c:15, u:'כוס',    d:5, fat:false, key:'pasta'},
+  {he:'המבורגר לחמנייה',en:'hamburger bun', c:50, u:'יח׳',    d:5, fat:true,  key:'burger'},
+  {he:"צ'יפס (10 יחידות)",en:'chips 10pcs', c:15, u:'10 יח׳', d:5, fat:true,  key:'chips10'},
+  {he:'פיתה',          en:'pita',           c:50, u:'יח׳',    d:3, fat:false, key:'pita'},
+  {he:'לחמנייה',       en:'bread roll',     c:65, u:'יח׳',    d:3, fat:false, key:'roll'},
+  {he:'פתיבר (במבה)',  en:'bamba',          c:7.5,u:'יח׳',   d:3, fat:false, key:'bamba'},
+  {he:'אורז (כף)',     en:'rice tbsp',      c:5,  u:'כף',     d:3, fat:false, key:'rice_tbsp'},
+  {he:'אורז (כוס)',    en:'rice cup',       c:45, u:'כוס',    d:3, fat:false, key:'rice'},
+  {he:'פיצה מסעדה',   en:'pizza restaurant',c:35, u:'פרוסה',  d:6, fat:true,  key:'pizza_rest'},
+  {he:'פיצה ביתית',   en:'pizza homemade', c:20, u:'פרוסה',  d:5, fat:true,  key:'pizza_home'},
+  /* Common items */
+  {he:'לחם (פרוסה)',   en:'bread slice',    c:15, u:'פרוסה',  d:3, fat:false, key:'bread'},
+  {he:'גלידה',         en:'ice cream',      c:22, u:'כדור',   d:4, fat:true,  key:'icecream'},
+  {he:'שוקולד',        en:'chocolate',      c:20, u:'קוביה',  d:4, fat:true,  key:'choco'},
+  {he:'תפוח',          en:'apple',          c:15, u:'יח׳',    d:2, fat:false, key:'apple'},
+  {he:'בננה',          en:'banana',         c:20, u:'יח׳',    d:2, fat:false, key:'banana'},
+  {he:'ענבים',         en:'grapes',         c:15, u:'כוס',    d:2, fat:false, key:'grapes'},
+  {he:'מיץ',           en:'juice',          c:10, u:'100 מ"ל',d:1.5,fat:false,key:'juice'},
+  {he:'חלב',           en:'milk',           c:5,  u:'כוס',    d:3, fat:false, key:'milk'},
+  {he:'גרנולה',        en:'granola',        c:40, u:'100גר',  d:3, fat:false, key:'granola'},
+  {he:'קרקרים',        en:'crackers',       c:15, u:'5 יח׳',  d:3, fat:false, key:'crackers'},
+  {he:'שניצל',         en:'schnitzel',      c:15, u:'יח׳',    d:4, fat:true,  key:'schnitzel'},
+  {he:'סושי',          en:'sushi',          c:25, u:'4 יח׳',  d:3, fat:false, key:'sushi'},
+  {he:'עוגה',          en:'cake',           c:35, u:'פרוסה',  d:4, fat:true,  key:'cake'},
+  {he:'ממתקים',        en:'candy',          c:10, u:'10 גר',  d:2, fat:false, key:'candy'},
+  {he:'לאפה',          en:'laffa',          c:55, u:'יח׳',    d:3, fat:false, key:'laffa'},
+];
+
+/* Runtime overrides (command bar + audit engine) */
+var FOOD_OVERRIDES = {}; // key -> {c, d}
+var RULE_OVERRIDES = {}; // e.g. sport_limit: 140
+
+function getFoodC(f) {
+  return FOOD_OVERRIDES[f.key] ? FOOD_OVERRIDES[f.key].c : f.c;
+}
+function getFoodD(f) {
+  return FOOD_OVERRIDES[f.key] ? FOOD_OVERRIDES[f.key].d : f.d;
+}
+
+function searchFood(q) {
+  if (!q || q.length < 2) return [];
+  var ql = q.toLowerCase();
+  /* Emoji shortcut */
+  var emojiMap = {
+    '\uD83C\uDF55': 'pizza','\uD83C\uDF54': 'hamburger',
+    '\uD83C\uDF5D': 'pasta','\uD83C\uDF5F': 'chips',
+    '\uD83E\uDED3': 'pita', '\uD83C\uDF5E': 'bread',
+  };
+  for (var em in emojiMap) {
+    if (q.includes(em)) { ql = emojiMap[em]; break; }
+  }
+  return FOOD_DB.filter(function(f) {
+    return f.he.includes(q) || f.en.toLowerCase().includes(ql) || f.he.includes(ql);
+  }).slice(0, 7);
+}
+
+var selectedFood = null;
+
+function onFoodSearch() {
+  var q = E('foodSearchInp').value.trim();
+  var res = searchFood(q);
+  var el = E('foodResults');
+  if (!res.length) { el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  /* ── data-idx safe approach — no Hebrew in onclick ── */
+  el.innerHTML = res.map(function(f, i) {
+    var idx = FOOD_DB.indexOf(f);
+    var c = getFoodC(f);
+    var d = getFoodD(f);
+    return '<div class="fri" data-idx="' + idx + '" onclick="selectFoodByIdx(this)">' +
+           '<div><div class="fri-name">' + f.he + ' / ' + f.en + '</div>' +
+           '<div class="fri-det">' + f.u + ' \u00b7 ' + d + 'h' + (f.fat ? ' \u00b7 \uD83E\uDDC8' : '') + '</div></div>' +
+           '<div class="fri-c">' + c + 'g/' + f.u + '</div></div>';
+  }).join('');
+}
+
+function selectFoodByIdx(el) {
+  var idx = parseInt(el.dataset.idx || '0');
+  var f = FOOD_DB[idx] || FOOD_DB[0];
+  selectedFood = f;
+  E('foodSearchInp').value = f.he + ' \u2014 ' + getFoodC(f) + 'g/' + f.u;
+  E('foodResults').classList.add('hidden');
+  toast('\u2705 ' + f.he + ' \u05E0\u05D1\u05D7\u05E8');
+}
+
+function useFoodSearch() {
+  if (!selectedFood) {
+    var q = E('foodSearchInp').value.trim();
+    var res = searchFood(q);
+    if (!res.length) { toast('\u26A0\uFE0F \u05DC\u05D0 \u05E0\u05DE\u05E6\u05D0 \u05DE\u05D0\u05DB\u05DC'); return; }
+    selectedFood = res[0];
+  }
+  E('carbInp').value = getFoodC(selectedFood);
+  var d = getFoodD(selectedFood);
+  if (selectedFood.fat) setFood('fat');
+  else if (d <= 2) setFood('fast');
+  else if (d <= 3) setFood('normal');
+  else setFood('medium');
+  toggleCard('foodCard');
+  E('manualCard').classList.remove('collapsed');
+  E('manualCard-chev').textContent = '\u25BC';
+  calcMeal();
+}
+
+function clearFoodSearch() {
+  selectedFood = null;
+  E('foodSearchInp').value = '';
+  E('foodResults').classList.add('hidden');
+}
+
+/* ════════════════════════════════════════════════════
+   EMOJI DATABASE  (v17.1 updated carbs)
+════════════════════════════════════════════════════ */
+var EDB = [
+  {e:'\uD83E\uDED3',c:50,d:3,n:'\u05E4\u05D9\u05EA\u05D4',fat:false,isPita:true},
+  {e:'\uD83C\uDF6A',c:7.5,d:3,n:'\u05E4\u05EA\u05D9\u05D1\u05E8',fat:false},
+  {e:'\uD83C\uDF5A',c:45,d:3,n:'\u05D0\u05D5\u05E8\u05D6',fat:false},
+  {e:'\uD83C\uDF5F',c:15,d:5,n:"\u05E6'\u05D9\u05E4\u05E1 10\u05D9\u05D7'",fat:true},
+  {e:'\uD83C\uDF5D',c:15,d:5,n:'\u05E4\u05E1\u05D8\u05D4 \u05DB\u05D5\u05E1',fat:false},
+  {e:'\uD83C\uDF55',c:35,d:6,n:'\u05E4\u05D9\u05E6\u05D4',fat:true},
+  {e:'\uD83C\uDF54',c:50,d:5,n:'\u05D4\u05DE\u05D1\u05D5\u05E8\u05D2\u05E8 \u05DC\u05D7\u05DE\u05E0\u05D9\u05D9\u05D4',fat:true},
+  {e:'\uD83C\uDF4E',c:15,d:2,n:'\u05EA\u05E4\u05D5\u05D7',fat:false},
+  {e:'\uD83C\uDF4C',c:20,d:2,n:'\u05D1\u05E0\u05E0\u05D4',fat:false},
+  {e:'\uD83C\uDF66',c:20,d:4,n:'\u05D2\u05DC\u05D9\u05D3\u05D4',fat:true},
+  {e:'\uD83C\uDF6B',c:20,d:4,n:'\u05E9\u05D5\u05E7\u05D5\u05DC\u05D3',fat:true},
+  {e:'\uD83E\uDD5B',c:12,d:3,n:'\u05D7\u05DC\u05D1',fat:false},
+  {e:'\uD83C\uDF5E',c:15,d:3,n:'\u05DC\u05D7\u05DD',fat:false},
+  {e:'\uD83E\uDDC3',c:15,d:2,n:'\u05DE\u05D9\u05E5',fat:false},
+];
+var EMAP = {};
+EDB.forEach(function(x){ EMAP[x.e] = x; });
+
+function parseEmojiStr(raw) {
+  if (!raw.trim()) return null;
+  /* "food N" Hebrew pattern e.g. "פסטה 15" */
+  var hm = raw.match(/^([\u0590-\u05FF\u0020]+?)\s+(\d+)$/);
+  if (hm) {
+    var term = hm[1].trim();
+    var explC = parseInt(hm[2]);
+    var fd = FOOD_DB.find(function(f){ return f.he.includes(term); });
+    if (fd) return {items:[{e:'',n:fd.he,d:getFoodD(fd),qty:1,carbPer:explC,carbs:explC,fat:fd.fat,isPita:!!fd.isPita}],totalCarbs:explC,maxDur:getFoodD(fd),hasFat:fd.fat,hasPita:!!fd.isPita,_explicit:true};
+  }
+  /* Emoji parser */
+  var epat = EDB.map(function(x){return x.e;}).join('|');
+  var re = new RegExp('(\\d+(?:\\.\\d+)?)?\\s*(' + epat + ')\\s*(\\d+(?:\\.\\d+)?)?','gu');
+  var items = [];
+  var m;
+  while ((m = re.exec(raw)) !== null) {
+    var db = EMAP[m[2]]; if (!db) continue;
+    var qty = parseFloat(m[1]||'1')||1;
+    var carbPer = db.c;
+    if (m[3] && !m[1]) { var ov = parseFloat(m[3]); if (ov>0&&ov<600) carbPer=ov; }
+    qty = Math.max(0.5, Math.min(qty, 30));
+    var carbs = Math.round(carbPer * qty * 10) / 10;
+    var ex = items.find(function(x){ return x.e===db.e && x.carbPer===carbPer; });
+    if (ex) { ex.qty += qty; ex.carbs += carbs; }
+    else items.push({e:db.e,n:db.n,d:db.d,qty:qty,carbPer:carbPer,carbs:carbs,fat:db.fat,isPita:!!db.isPita});
+  }
+  if (!items.length) return null;
+  var hasFat = items.some(function(x){return x.fat;});
+  var maxD = items.reduce(function(m,x){return Math.max(m,x.d);},0);
+  return {items:items,totalCarbs:Math.round(items.reduce(function(s,x){return s+x.carbs;},0)),maxDur:maxD,hasFat:hasFat,hasPita:items.some(function(x){return x.isPita;})};
+}
+
+/* ════════════════════════════════════════════════════
+   INSULIN TYPE DETECTION
+════════════════════════════════════════════════════ */
+var INS_TYPES = {
+  lyumjev:  {name:'Lyumjev',  fast:true,  pbMax:0,  onset:5},
+  fiasp:    {name:'Fiasp',    fast:true,  pbMax:0,  onset:5},
+  novorapid:{name:'NovoRapid',fast:false, pbMax:15, onset:15},
+  novolog:  {name:'NovoLog',  fast:false, pbMax:15, onset:15},
+  humalog:  {name:'Humalog',  fast:false, pbMax:15, onset:15},
+  'default':{name:'אינסולין', fast:false, pbMax:10, onset:15},
+};
+function getIns() { return INS_TYPES[S.insulinType] || INS_TYPES['default']; }
+function calcPB(sgv, dir) {
+  var ins = getIns();
+  if (ins.fast) return 0;
+  var pb = ins.pbMax;
+  if (sgv > 140) pb = Math.max(0, pb - 5);
+  if (dir === 'FortyFiveDown' || dir === 'SingleDown' || dir === 'DoubleDown') return 0;
+  return pb;
+}
+function updateInsBar() {
+  var ins = getIns();
+  var chip = E('insChip');
+  chip.className = 'ins-chip ' + (ins.fast ? 'fast' : 'slow');
+  E('insName').textContent = ins.name;
+  var sgv = S.latest ? S.latest.sgv : 0;
+  var dir = S.latest ? (S.latest.dir||'Flat') : 'Flat';
+  var pb = calcPB(sgv, dir);
+  var pbChip = E('pbChip');
+  if (pb > 0 && sgv > 60) {
+    pbChip.classList.remove('hidden');
+    E('pbMin').textContent = pb;
+  } else {
+    pbChip.classList.add('hidden');
+  }
+}
+
+/* ════════════════════════════════════════════════════
+   ADAPTIVE COMMAND BAR  (v17.1)
+════════════════════════════════════════════════════ */
+function runCmd() {
+  var raw = E('cmdInp').value.trim();
+  if (!raw) return;
+  var res = parseCmd(raw);
+  var el = E('cmdResult');
+  el.className = 'cmd-result ' + (res.ok ? 'ok' : 'err');
+  el.textContent = res.msg;
+  el.classList.remove('hidden');
+  if (res.ok) { E('cmdInp').value = ''; setTimeout(function(){ el.classList.add('hidden'); }, 4000); }
+}
+
+function parseCmd(raw) {
+  var t = raw.trim();
+  /* "שנה חוק 150 ל-X" or "שנה חוק ספורט ל-X" */
+  var m1 = t.match(/(?:\u05E9\u05E0\u05D4\s+\u05D7\u05D5\u05E7\s+(?:150|\u05E1\u05E4\u05D5\u05E8\u05D8)\s+\u05DC-?)(\d+)/);
+  if (m1) {
+    var v1 = parseInt(m1[1]);
+    if (v1 < 80 || v1 > 250) return {ok:false, msg:'\u05E2\u05E8\u05DA \u05DC\u05D0 \u05EA\u05E7\u05D9\u05DF (80-250)'};
+    RULE_OVERRIDES.sport_limit = v1;
+    S.cfg.sportLimit = v1;
+    saveCfg();
+    E('sportTgt').textContent = v1 + '+';
+    E('sportLimit').value = v1;
+    return {ok:true, msg:'\u2705 \u05D7\u05D5\u05E7 \u05E1\u05E4\u05D5\u05E8\u05D8 \u05E2\u05D5\u05D3\u05DB\u05DF \u05DC-' + v1 + ' mg/dL'};
+  }
+  /* "עדכן [מאכל] ל-X" */
+  var m2 = t.match(/(?:\u05E2\u05D3\u05DB\u05DF|שנה)\s+(.+?)\s+\u05DC-?(\d+)/);
+  if (m2) {
+    var foodName = m2[1].trim();
+    var newC = parseInt(m2[2]);
+    if (newC < 1 || newC > 200) return {ok:false, msg:'\u05DB\u05DE\u05D5\u05EA \u05DC\u05D0 \u05EA\u05E7\u05D9\u05E0\u05D4'};
+    var fd = FOOD_DB.find(function(f){ return f.he.includes(foodName) || f.en.toLowerCase().includes(foodName.toLowerCase()); });
+    if (!fd) return {ok:false, msg:'\u05DE\u05D0\u05DB\u05DC \u05DC\u05D0 \u05E0\u05DE\u05E6\u05D0: ' + foodName};
+    FOOD_OVERRIDES[fd.key] = {c: newC, d: fd.d};
+    saveCfg();
+    return {ok:true, msg:'\u2705 ' + fd.he + ' \u05E2\u05D5\u05D3\u05DB\u05DF \u05DC-' + newC + 'g'};
+  }
+  /* "שנה ICR ל-X" */
+  var m3 = t.match(/(?:ICR|icr|icr)\s*\u05DC-?(\d+)/i);
+  if (m3) {
+    var v3 = parseInt(m3[1]);
+    S.cfg.icr = v3; saveCfg(); E('defIcr').value = v3; E('icrInp').value = v3;
+    return {ok:true, msg:'\u2705 ICR \u05E2\u05D5\u05D3\u05DB\u05DF \u05DC-1:' + v3};
+  }
+  /* "שנה ISF ל-X" */
+  var m4 = t.match(/(?:ISF|isf)\s*\u05DC-?(\d+)/i);
+  if (m4) {
+    var v4 = parseInt(m4[1]);
+    S.cfg.isf = v4; saveCfg(); E('defIsf').value = v4; E('isfInp').value = v4;
+    return {ok:true, msg:'\u2705 ISF \u05E2\u05D5\u05D3\u05DB\u05DF \u05DC-' + v4};
+  }
+  return {ok:false, msg:'\u05E4\u05E7\u05D5\u05D3\u05D4 \u05DC\u05D0 \u05D6\u05D5\u05D4\u05EA\u05D4. \u05D3\u05D5\u05D2\u05DE\u05D4: \u05E9\u05E0\u05D4 \u05D7\u05D5\u05E7 150 \u05DC-140'};
+}
+
+/* ════════════════════════════════════════════════════
+   MEAL AUDIT ENGINE  (v17.1 — runs 4h after meal)
+════════════════════════════════════════════════════ */
+var S_audit = null; // {mealCarbs, mealBolus, mealTime, foodKey, sgvAtMeal}
+
+function scheduleMealAudit(carbs, bolus, foodKey, sgvAtMeal) {
+  if (S_audit && S_audit._timer) clearTimeout(S_audit._timer);
+  var timer = setTimeout(function(){ runMealAudit(); }, 4 * 3600 * 1000);
+  S_audit = {mealCarbs: carbs, mealBolus: bolus, foodKey: foodKey, sgvAtMeal: sgvAtMeal, mealTime: Date.now(), _timer: timer};
+}
+
+function runMealAudit() {
+  if (!S_audit || !S.latest) return;
+  var sgvNow = S.latest.sgv;
+  var sgvAt  = S_audit.sgvAtMeal;
+  var diff   = sgvNow - sgvAt;
+  var body   = E('auditBody');
+  var applyBtn = E('auditApplyBtn');
+  applyBtn.style.display = 'none';
+  S_audit._auditSuggestion = null;
+  if (diff > 50) {
+    /* SGV higher than at meal start → bolus was too low */
+    var newC = Math.max(4, Math.round((S.cfg.icr||10) * 0.9));
+    body.innerHTML = '<strong>SGV \u05E2\u05DC\u05D4 ב-' + diff + ' mg/dL \u05DC\u05D0\u05D7\u05E8 \u05D4\u05D0\u05E8\u05D5\u05D7\u05D4.</strong><br>' +
+      '\u05D9\u05D9\u05EA\u05DB\u05DF \u05E9\u05D4-ICR \u05D0\u05D2\u05E8\u05E1\u05D9\u05D1\u05D9 \u05DE\u05D3\u05D9. \u05DE\u05D5\u05DE\u05DC\u05E5: ICR \u05D9\u05D9\u05E8\u05D3 \u05DC-1:' + newC;
+    S_audit._auditSuggestion = {type:'icr', value: newC};
+    applyBtn.style.display = '';
+  } else if (diff < -40) {
+    /* SGV much lower → bolus was too aggressive */
+    var newC2 = Math.round((S.cfg.icr||10) * 1.1);
+    body.innerHTML = '<strong>SGV \u05D9\u05E8\u05D3 ב-' + Math.abs(diff) + ' mg/dL \u05DC\u05D0\u05D7\u05E8 \u05D4\u05D0\u05E8\u05D5\u05D7\u05D4.</strong><br>' +
+      '\u05D9\u05D9\u05EA\u05DB\u05DF \u05E9\u05D4-ICR \u05E9\u05DE\u05E8\u05E0\u05D9 \u05DE\u05D3\u05D9. \u05DE\u05D5\u05DE\u05DC\u05E5: ICR \u05D9\u05E2\u05DC\u05D4 \u05DC-1:' + newC2;
+    S_audit._auditSuggestion = {type:'icr', value: newC2};
+    applyBtn.style.display = '';
+  } else {
+    body.innerHTML = '<strong>\u05D4\u05D0\u05E8\u05D5\u05D7\u05D4 \u05E1\u05D5\u05E4\u05D2\u05D4 \u05D8\u05D5\u05D1!</strong> SGV \u05D9\u05E6\u05D9\u05D1 (\u05E9\u05D9\u05E0\u05D5\u05D9 ' + diff + ' mg/dL). \u05D4\u05D3\u05D9\u05D9\u05E7 \u05E9\u05DC \u05D4\u05D1\u05D5\u05DC\u05D5\u05E1 \u05D1\u05E1\u05D3\u05E8.';
+  }
+  E('auditBox').classList.remove('hidden');
+}
+
+function applyAuditSuggestion() {
+  if (!S_audit || !S_audit._auditSuggestion) return;
+  var sug = S_audit._auditSuggestion;
+  if (sug.type === 'icr') {
+    S.cfg.icr = sug.value; saveCfg();
+    E('defIcr').value = sug.value; E('icrInp').value = sug.value;
+    toast('\u2705 ICR \u05E2\u05D5\u05D3\u05DB\u05DF \u05DC-1:' + sug.value);
+  }
+  E('auditBox').classList.add('hidden');
+}
+
+/* ════════════════════════════════════════════════════
+   MODES + FOODS CONFIG
+════════════════════════════════════════════════════ */
+var MODES = {
+  home:  {name:'\u05D1\u05D9\u05EA',  icon:'\uD83C\uDFE1',tgt:[100,120],agr:1.0, early:false,isSleep:false,c:'#3b82f6',bg:'rgba(59,130,246,.09)',gl:'rgba(59,130,246,.17)'},
+  school:{name:'\u05D1\u05D9"ס',      icon:'\uD83C\uDFEB',tgt:[110,130],agr:0.8, early:false,isSleep:false,c:'#8b5cf6',bg:'rgba(139,92,246,.09)',gl:'rgba(139,92,246,.17)'},
+  sport: {name:'\u05E1\u05E4\u05D5\u05E8\u05D8',icon:'\u26BD',tgt:[150,999],agr:0.0,early:true,isSleep:false,c:'#12d46a',bg:'rgba(18,212,106,.09)',gl:'rgba(18,212,106,.17)'},
+  pool:  {name:'\u05D1\u05E8\u05D9\u05DB\u05D4',icon:'\uD83C\uDF0A',tgt:[160,180],agr:0.0,early:true,isSleep:false,c:'#0dd4c8',bg:'rgba(13,212,200,.09)',gl:'rgba(13,212,200,.17)'},
+  sleep: {name:'\u05E9\u05D9\u05E0\u05D4',icon:'\uD83C\uDF19',tgt:[120,999],agr:0.0,early:true,isSleep:true,c:'#5b72f5',bg:'rgba(91,114,245,.09)',gl:'rgba(91,114,245,.17)'},
+  sick:  {name:'\u05DE\u05D7\u05DC\u05D4',icon:'\uD83E\uDD12',tgt:[100,120],agr:1.15,early:false,isSleep:false,c:'#f5a316',bg:'rgba(245,163,22,.09)',gl:'rgba(245,163,22,.17)',sm:1.15},
+};
+var FOODS = {
+  fast:  {label:'\u05E4\u05D9\u05E8\u05D5\u05EA/\u05E1\u05D5\u05DB\u05E8',   dur:2, split:false, fat:false},
+  normal:{label:'\u05D0\u05D5\u05E8\u05D6/\u05DC\u05D7\u05DD',               dur:3, split:false, fat:false},
+  medium:{label:'\u05D2\u05DC\u05D9\u05D3\u05D4/\u05E9\u05D5\u05E7\u05D5',   dur:4, split:false, fat:false},
+  fat:   {label:'\u05E4\u05D9\u05E6\u05D4/\u05D1\u05D5\u05E8\u05D2\u05E8',   dur:6, split:true,  fat:true},
+};
+var ARROWS = {
+  SingleUp:'\u2191\u2191', DoubleUp:'\u21D1\u21D1', FortyFiveUp:'\u2197',
+  Flat:'\u2192', FortyFiveDown:'\u2198', SingleDown:'\u2193', DoubleDown:'\u21D3',
+  'NOT COMPUTABLE':'?', 'RATE OUT OF RANGE':'?'
+};
+var DAY_NAMES = ['\u05D0\u05F3','\u05D1\u05F3','\u05D2\u05F3','\u05D3\u05F3','\u05D4\u05F3','\u05D5\u05F3','\u05E9\u05F3'];
+var EV_ICONS = ['\uD83E\uDD4A','\uD83C\uDFCA','\u26BD','\uD83C\uDFC3','\uD83D\uDEB4','\uD83C\uDFCB\uFE0F','\uD83C\uDFAD','\uD83D\uDCDA','\uD83C\uDFA8','\uD83E\uDDD7','\uD83C\uDFB8','\uD83C\uDFD5\uFE0F'];
+var RESCUE = [null,
+  {n:'\u05E7\u05DC',c:3.75,d:'\u05D7\u05E6\u05D9 \u05E4\u05EA\u05D9\u05D1\u05E8'},
+  {n:'\u05D1\u05D9\u05E0\u05D5\u05E0\u05D9',c:7.5,d:'\u05E4\u05EA\u05D9\u05D1\u05E8 \u05E9\u05DC\u05DD'},
+  {n:'\u05D7\u05D6\u05E7',c:15,d:'2 \u05E9\u05DC\u05D5\u05E7\u05D9\u05DD + \u05E4\u05EA\u05D9\u05D1\u05E8'},
+  {n:'\u05D7\u05D9\u05E8\u05D5\u05DD',c:22.5,d:'4 \u05E9\u05DC\u05D5\u05E7\u05D9\u05DD + \u05E4\u05EA\u05D9\u05D1\u05E8'},
+];
+
+/* ════════════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════════════ */
+var S = {
+  role:null, gender:'m', name:'',
+  mode:'home', food:'normal',
+  gluc:[], latest:null, lastDataTime:null,
+  iob:0, cob:0, smb:0,
+  podH:null, senH:null, batt:null,
+  basalRate:null, basalType:'scheduled',
+  prediction:[], suggestedBolus:null,
+  insulinType:'default',
+  tirPercent:null, profileVersion:null, profileChangeDate:null,
+  podChangeTime:null,
+  anomalyActive:false, anomalyCooldown:false,
+  podFaultAlerted:false, podFaultDismissed:false,
+  sleepBoostDismissed:false,
+  activityMode:null, preSportSgv:0,
+  currentMealCarbs:0, currentMealBolus:0, currentMealDur:3,
+  secondDoseReady:false,
+  followers:[], events:[], selDays:{},
+  evEmIdx:0, actBannerShown:false, pendingEv:null, sportEndMin:null,
+  parsedEmoji:null,
+  cfg:{},
+};
+var gcChart = null, syncInterval = null, datalossTimer = null;
+
+/* ════════════════════════════════════════════════════
+   BOOT
+════════════════════════════════════════════════════ */
+(function boot(){
+  // Check if disclaimer already accepted
+  if (!localStorage.getItem('lp171_disc')) {
+    E('scDisc').classList.remove('hidden');
+    return;
+  }
+  var r = localStorage.getItem('lp171_role');
+  if (!r) { E('scRole').classList.remove('hidden'); return; }
+  E('scDisc').classList.add('hidden');
+  E('scRole').classList.add('hidden');
+  initApp(r);
+})();
+
+function dismissDisc() {
+  localStorage.setItem('lp171_disc','1');
+  E('scDisc').classList.add('hidden');
+  var r = localStorage.getItem('lp171_role');
+  if (r) initApp(r); else E('scRole').classList.remove('hidden');
+}
+function chooseRole(r) {
+  localStorage.setItem('lp171_role', r);
+  E('scRole').classList.add('hidden');
+  if (r === 'child' && !localStorage.getItem('lp171_setup')) {
+    E('scSetup').classList.remove('hidden');
+  } else { initApp(r); }
+}
+function setGender(g) {
+  S.gender = g;
+  E('gM').classList.toggle('on', g==='m');
+  E('gF').classList.toggle('on', g==='f');
+}
+function finishSetup() {
+  S.name = E('setupName').value.trim() || '\u05D4\u05D9\u05DC\u05D3';
+  S.gender = E('gM').classList.contains('on') ? 'm' : 'f';
+  localStorage.setItem('lp171_name', S.name);
+  localStorage.setItem('lp171_gender', S.gender);
+  localStorage.setItem('lp171_setup','1');
+  S.cfg.flaskUrl = E('setupFlask').value.trim().replace(/\/$/,'');
+  S.cfg.nsUrl    = E('setupNS').value.trim().replace(/\/$/,'');
+  S.cfg.nsSecret = E('setupSec').value.trim();
+  saveCfg();
+  E('scSetup').classList.add('hidden');
+  initApp('child');
+}
+function skipSetup() {
+  localStorage.setItem('lp171_setup','1');
+  E('scSetup').classList.add('hidden');
+  initApp('child');
+}
+function resetRole() { localStorage.removeItem('lp171_role'); location.reload(); }
+
+async function initApp(role) {
+  await registerSW();
+  S.role   = role;
+  S.name   = localStorage.getItem('lp171_name') || '';
+  S.gender = localStorage.getItem('lp171_gender') || 'm';
+  S.followers = JSON.parse(localStorage.getItem('lp171_fl') || '[]');
+  loadCfg(); loadEvents();
+  E('mainApp').style.display = 'block';
+  E('botNav').style.display = 'flex';
+  var chip = E('roleChip');
+  chip.className = 'role-chip ' + role;
+  chip.textContent = role === 'child' ? ('\uD83D\uDC66 ' + (S.name||'\u05D9\u05DC\u05D3')) : '\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC66 \u05D4\u05D5\u05E8\u05D4';
+  if (role === 'parent') E('followerPanel').classList.remove('hidden');
+  renderFollowers();
+  updateModeUI();
+  loadMock(); updateGlUI(); drawChart();
+  checkSchedule(); setInterval(checkSchedule, 30000);
+  setInterval(checkDataloss, 60000);
+  setInterval(checkSecondDose, 60000);
+  fetchStatus(); syncInterval = setInterval(fetchStatus, 30000);
+  updateSWConfig();
+  // Apply stored overrides
+  FOOD_OVERRIDES = JSON.parse(localStorage.getItem('lp171_fo') || '{}');
+  RULE_OVERRIDES = JSON.parse(localStorage.getItem('lp171_ro') || '{}');
+  if (RULE_OVERRIDES.sport_limit) {
+    E('sportTgt').textContent = RULE_OVERRIDES.sport_limit + '+';
+  }
+  // Register PWA manifest
+  var mf = {name:'Loopie v17.1',short_name:'Loopie',start_url:'/',display:'standalone',background_color:'#04060c',theme_color:'#04060c'};
+  var mb = new Blob([JSON.stringify(mf)],{type:'application/json'});
+  var ml = document.getElementById('manifestLink');
+  if (ml) ml.remove();
+  ml = document.createElement('link'); ml.rel='manifest'; ml.id='manifestLink';
+  ml.href = URL.createObjectURL(mb); document.head.appendChild(ml);
+}
+
+/* ════════════════════════════════════════════════════
+   SETTINGS
+════════════════════════════════════════════════════ */
+function loadCfg() {
+  try { S.cfg = JSON.parse(localStorage.getItem('lp171')||'{}'); } catch(e) { S.cfg={}; }
+  var c = S.cfg;
+  if (c.flaskUrl) E('flaskUrl').value = c.flaskUrl;
+  if (c.nsUrl)    E('nsUrl').value    = c.nsUrl;
+  if (c.nsSecret) E('nsSecret').value = c.nsSecret;
+  if (c.icr)  { E('defIcr').value = c.icr; E('icrInp').value = c.icr; }
+  if (c.isf)  { E('defIsf').value = c.isf; E('isfInp').value = c.isf; }
+  if (c.tgt)      E('defTgt').value    = c.tgt;
+  if (c.sleepTgt) E('sleepTgt').value  = c.sleepTgt;
+  if (c.sportLimit){ E('sportLimit').value = c.sportLimit; E('sportTgt').textContent = c.sportLimit+'+'; }
+  if (c.targetLo) E('targetLo').value  = c.targetLo;
+  if (c.targetHi) E('targetHi').value  = c.targetHi;
+  if (c.anomThresh) E('anomThresh').value = c.anomThresh;
+  if (c.cmPhone)  E('cmPhone').value   = c.cmPhone;
+  if (c.cmKey)    E('cmKey').value     = c.cmKey;
+  if (c.waEnabled === false) E('waEnabled').checked = false;
+  if (c.mode)     S.mode = c.mode;
+  if (c.podChangeTime) S.podChangeTime = new Date(c.podChangeTime);
+  if (c.profileVersion) S.profileVersion = c.profileVersion;
+  if (c.profileChangeDate) S.profileChangeDate = new Date(c.profileChangeDate);
+}
+function saveCfg() { localStorage.setItem('lp171', JSON.stringify(S.cfg)); }
+function saveSettings() {
+  S.cfg = {
+    flaskUrl: E('flaskUrl').value.trim().replace(/\/$/,''),
+    nsUrl:    E('nsUrl').value.trim().replace(/\/$/,''),
+    nsSecret: E('nsSecret').value.trim(),
+    icr:      parseFloat(E('defIcr').value)||10,
+    isf:      parseFloat(E('defIsf').value)||40,
+    tgt:      parseFloat(E('defTgt').value)||110,
+    sleepTgt: parseFloat(E('sleepTgt').value)||130,
+    sportLimit: parseFloat(E('sportLimit').value)||150,
+    targetLo: parseFloat(E('targetLo').value)||80,
+    targetHi: parseFloat(E('targetHi').value)||150,
+    anomThresh: parseFloat(E('anomThresh').value)||35,
+    cmPhone:  E('cmPhone').value.trim(),
+    cmKey:    E('cmKey').value.trim(),
+    waEnabled: E('waEnabled').checked,
+    mode: S.mode,
+    podChangeTime: S.podChangeTime ? S.podChangeTime.toISOString() : null,
+    profileVersion: S.profileVersion,
+    profileChangeDate: S.profileChangeDate ? S.profileChangeDate.toISOString() : null,
+  };
+  saveCfg();
+  E('icrInp').value = S.cfg.icr;
+  E('isfInp').value = S.cfg.isf;
+  E('sportTgt').textContent = S.cfg.sportLimit + '+';
+  localStorage.setItem('lp171_fo', JSON.stringify(FOOD_OVERRIDES));
+  localStorage.setItem('lp171_ro', JSON.stringify(RULE_OVERRIDES));
+  clearInterval(syncInterval);
+  fetchStatus();
+  syncInterval = setInterval(fetchStatus, 30000);
+  updateSWConfig();
+  toast('\u2705 \u05D4\u05D2\u05D3\u05E8\u05D5\u05EA \u05E0\u05E9\u05DE\u05E8\u05D5');
+}
+
+/* ════════════════════════════════════════════════════
+   NS FETCH
+════════════════════════════════════════════════════ */
+async function fetchStatus() {
+  var c = S.cfg;
+  E('syncIco').className = 'spin';
+  if (c.flaskUrl) {
+    try {
+      var r = await fetch(c.flaskUrl + '/get_status', {cache:'no-store'});
+      if (r.ok) { var d = await r.json(); applyStatus(d); markSynced(); return; }
+    } catch(ex) {}
+  }
+  if (c.nsUrl) {
+    var sec = encodeURIComponent(c.nsSecret||'');
+    var s3h = new Date(Date.now()-3*3600000).toISOString();
+    try {
+      var res = await Promise.all([
+        fetch(c.nsUrl+'/api/v1/entries.json?count=40&api_secret='+sec).then(function(r){return r.json();}),
+        fetch(c.nsUrl+'/api/v1/treatments.json?find[created_at][$gte]='+s3h+'&api_secret='+sec).then(function(r){return r.json();}),
+        fetch(c.nsUrl+'/api/v1/devicestatus.json?count=1&api_secret='+sec).then(function(r){return r.json();}).catch(function(){return [];}),
+      ]);
+      applyStatus({entries:res[0], treatments:res[1], device:res[2]});
+      markSynced();
+    } catch(ex) { toast('\u26A0\uFE0F \u05E9\u05D2\u05D9\u05D0\u05EA NS'); loadMock(); updateGlUI(); drawChart(); }
+  } else { loadMock(); updateGlUI(); drawChart(); }
+  E('syncIco').className = '';
+  E('syncLbl').textContent = '\u05E1\u05E0\u05DB\u05E8\u05DF';
+}
+function markSynced() {
+  E('syncTs').textContent = new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+  E('syncIco').className = '';
+  E('syncLbl').textContent = '\u05E1\u05E0\u05DB\u05E8\u05DF';
+}
+
+function applyStatus(d) {
+  if (d.entries && d.entries.length) {
+    S.gluc = d.entries.map(function(e){
+      return {sgv:e.sgv, date:new Date(e.date||e.dateString||Date.now()), dir:e.direction||'Flat'};
+    }).reverse();
+    S.latest = S.gluc[S.gluc.length-1] || null;
+    S.lastDataTime = S.latest ? S.latest.date : null;
+  }
+  if (d.iob != null) S.iob = parseFloat(d.iob)||0;
+  if (d.cob != null) S.cob = parseFloat(d.cob)||0;
+  if (d.smb != null) S.smb = parseFloat(d.smb)||0;
+  if (d.pod_hours != null) S.podH = parseFloat(d.pod_hours);
+  if (d.sensor_hours != null) S.senH = parseFloat(d.sensor_hours);
+  if (d.battery != null) S.batt = parseInt(d.battery);
+  if (d.basal_rate != null) { S.basalRate = parseFloat(d.basal_rate); S.basalType = d.basal_type||'scheduled'; }
+  if (d.prediction && d.prediction.length) S.prediction = d.prediction;
+  if (d.suggested_bolus != null) S.suggestedBolus = parseFloat(d.suggested_bolus);
+  if (d.insulin_type) S.insulinType = d.insulin_type.toLowerCase();
+  if (d.tir) S.tirPercent = d.tir;
+  if (d.treatments) processTreatments(d.treatments);
+  if (d.device && d.device.length) {
+    var dev = d.device[0];
+    if (dev.pump && dev.pump.clock && !S.podH) S.podH = Math.round((Date.now()-new Date(dev.pump.clock))/360000)/10;
+    if (dev.uploader && dev.uploader.battery && !S.batt) S.batt = dev.uploader.battery;
+    if (S.gluc.length && !S.senH) S.senH = Math.round((Date.now()-S.gluc[0].date)/3600000);
+    if (!S.basalRate && dev.loop && dev.loop.enacted && dev.loop.enacted.rate != null) {
+      S.basalRate = parseFloat(dev.loop.enacted.rate); S.basalType = 'temp';
+    }
+    if (!S.cob && dev.loop && dev.loop.cob) S.cob = parseFloat(dev.loop.cob.cob)||0;
+    if (!S.prediction.length && dev.loop && dev.loop.predicted) S.prediction = dev.loop.predicted.values||[];
+    if (dev.loop && dev.loop.suggestedBolus != null) S.suggestedBolus = parseFloat(dev.loop.suggestedBolus);
+    /* insulin type from profile */
+    var ins = ((dev.profile && dev.profile.activeProfile) || '').toLowerCase();
+    if (ins.includes('lyumjev')) S.insulinType = 'lyumjev';
+    else if (ins.includes('fiasp')) S.insulinType = 'fiasp';
+    else if (ins.includes('novorapid') || ins.includes('novolog')) S.insulinType = 'novorapid';
+    else if (ins.includes('humalog')) S.insulinType = 'humalog';
+    /* profile change detection */
+    var profKey = JSON.stringify({
+      icr: dev.profile && dev.profile.carbratio && dev.profile.carbratio[0] && dev.profile.carbratio[0].value,
+      isf: dev.profile && dev.profile.sens && dev.profile.sens[0] && dev.profile.sens[0].value,
+    });
+    if (S.profileVersion && S.profileVersion !== profKey) {
+      S.profileChangeDate = new Date();
+      E('adaptChip').classList.add('show');
+    }
+    if (profKey !== '{}') { S.profileVersion = profKey; S.cfg.profileVersion = profKey; }
+    if (S.profileChangeDate) {
+      var daysSince = (Date.now() - new Date(S.profileChangeDate)) / 86400000;
+      if (daysSince <= 4) {
+        E('adaptChip').classList.add('show');
+        E('adaptTxt').textContent = '\u05E9\u05D9\u05E0\u05D5\u05D9 \u05E4\u05E8\u05D5\u05E4\u05D9\u05DC \u2014 \u05D9\u05D5\u05DD ' + Math.floor(daysSince+1) + '/4' + (S.tirPercent!=null ? ' \u00B7 TIR: ' + S.tirPercent + '%' : '');
+      } else {
+        E('adaptChip').classList.remove('show');
+      }
+    }
+  }
+  resetDatalossTimer();
+  updateHW(); updateGlUI(); drawChart(); updateInsBar();
+  checkAnomaly(); checkPodFault(); checkSleepMode(); checkPostSport();
+  if (S.tirPercent != null) {
+    var tc = E('tirChip'); tc.classList.remove('hidden');
+    tc.textContent = '\uD83D\uDCCA TIR ' + S.tirPercent + '%';
+    tc.style.color = S.tirPercent >= 70 ? 'var(--greenL)' : 'var(--amberL)';
+  }
+  updateCalendar();
+}
+
+function processTreatments(treats) {
+  var smb=0, iob=0, cob=0;
+  var sorted = treats.slice().sort(function(a,b){ return new Date(a.created_at)-new Date(b.created_at); });
+  var latestPodChange = null;
+  sorted.forEach(function(t){
+    var ev = (t.eventType||'').toLowerCase();
+    if (ev.includes('site change')||ev.includes('insulin change')||ev.includes('pump change'))
+      latestPodChange = new Date(t.created_at);
+  });
+  if (latestPodChange && (!S.podChangeTime || latestPodChange > S.podChangeTime)) {
+    S.podChangeTime = latestPodChange; S.podFaultAlerted=false; S.podFaultDismissed=false;
+    S.cfg.podChangeTime = latestPodChange.toISOString(); saveCfg();
+  }
+  sorted.forEach(function(t){
+    var by = (t.enteredBy||'').toLowerCase();
+    var isLoop = by.includes('loop')||by.includes('androidaps')||by.includes('openaps')||by.includes('freeaps');
+    var ins = parseFloat(t.insulin||0);
+    var notes = (t.notes||'').toLowerCase();
+    var isPrime = notes.includes('prime') || (S.podChangeTime && ins>0 && ins<=0.3 && Math.abs(new Date(t.created_at)-S.podChangeTime)/60000<=15);
+    if (isPrime) return;
+    if (ins && isLoop) smb += ins;
+    if (t.iob) iob = Math.max(iob, parseFloat(t.iob));
+    if (t.cob) cob = Math.max(cob, parseFloat(t.cob));
+  });
+  S.smb = Math.round(smb*100)/100;
+  if (!S.iob) S.iob = Math.round(iob*100)/100;
+  if (!S.cob) S.cob = Math.round(cob);
+}
+
+/* ════ DATA LOSS ════ */
+function resetDatalossTimer() {
+  clearTimeout(datalossTimer);
+  E('datalossBar').classList.remove('show');
+  datalossTimer = setTimeout(function(){
+    E('datalossBar').classList.add('show');
+    pushNotify('Loopie: \u05D0\u05D5\u05D1\u05D3\u05DF \u05E0\u05EA\u05D5\u05E0\u05D9\u05DD', '\u05D0\u05D9\u05DF \u05E7\u05E8\u05D9\u05D0\u05D4 \u05DE-NS \u05DE\u05E2\u05DC 30 \u05D3\u05E7\u05F3', true, 'dataloss');
+    sendWA('\u05D0\u05D5\u05D1\u05D3\u05DF \u05E0\u05EA\u05D5\u05E0\u05D9\u05DD! \u05D0\u05D9\u05DF \u05E7\u05E8\u05D9\u05D0\u05D4 \u05DE-NS \u05DE\u05E2\u05DC 30 \u05D3\u05E7\u05F3');
+  }, 30*60000);
+}
+function checkDataloss() {
+  if (S.lastDataTime && (Date.now()-S.lastDataTime)/60000 > 30) E('datalossBar').classList.add('show');
+}
+
+/* ════ HW ════ */
+function updateHW() {
+  if (S.podH != null) {
+    var r = 72-S.podH;
+    E('podRem').textContent = r>0 ? r.toFixed(0)+'h \u05E0\u05D5\u05EA\u05E8\u05D5' : '\u05E4\u05D2!';
+    E('podDot').className = 'dot '+(r>12?'ok':r>4?'warn':'crit');
+  }
+  if (S.senH != null) {
+    var r2 = 240-S.senH;
+    E('senRem').textContent = r2>0 ? r2.toFixed(0)+'h \u05E0\u05D5\u05EA\u05E8\u05D5' : '\u05E4\u05D2!';
+    E('senDot').className = 'dot '+(r2>24?'ok':r2>8?'warn':'crit');
+  }
+  if (S.batt != null) E('battTxt').textContent = S.batt+'%';
+  if (S.basalRate != null) {
+    E('basalVal').textContent = S.basalRate.toFixed(2);
+    E('basalMetric').textContent = S.basalRate.toFixed(2);
+    var bc = E('basalChip');
+    bc.className = 'bas-chip '+(S.basalType==='temp'?S.basalRate===0?'zero':'temp':'sched');
+    bc.innerHTML = (S.basalType==='temp'?'\u21C4 Temp':'\u21A5') + ' <strong>' + S.basalRate.toFixed(2) + '</strong> U/h';
+  }
+}
+
+/* ════ ANOMALY ════ */
+function checkAnomaly() {
+  if (S.gluc.length < 2) return;
+  var thresh = Math.abs(S.cfg.anomThresh||35);
+  var curr = S.gluc[S.gluc.length-1], prev = S.gluc[S.gluc.length-2];
+  var delta = curr.sgv - prev.sgv;
+  var timeDiff = Math.abs(curr.date - prev.date) / 60000;
+  if (timeDiff > 10) return;
+  if (Math.abs(delta) >= thresh && !S.anomalyCooldown) {
+    S.anomalyActive = true; S.anomalyCooldown = true;
+    var dir = delta < 0 ? '\u05E6\u05E0\u05D9\u05D7\u05D4 (\u0394'+delta+')' : '\u05D6\u05D9\u05E0\u05D5\u05E7 (\u0394+'+delta+')';
+    E('anomSub').textContent = dir + ' \u00B7 SGV: ' + curr.sgv;
+    E('anomalyBanner').classList.remove('hidden');
+    E('bloodBox').classList.add('hidden'); E('bloodResult').classList.add('hidden'); E('bloodVal').value='';
+    E('anomChip').classList.remove('hidden');
+    pushNotify('Loopie: \u05D0\u05E0\u05D5\u05DE\u05DC\u05D9\u05D4!', dir + ' SGV: ' + curr.sgv, true, 'anom');
+    sendWA('\u05D0\u05E0\u05D5\u05DE\u05DC\u05D9\u05D4! ' + dir + ' SGV: ' + curr.sgv);
+    notifyFollowers('action', '\u26A0\uFE0F \u05D0\u05E0\u05D5\u05DE\u05DC\u05D9\u05D4: \u0394' + delta + ' SGV: ' + curr.sgv);
+    setTimeout(function(){ S.anomalyCooldown = false; }, 15*60000);
+  }
+}
+function validateBlood() {
+  var val = parseFloat(E('bloodVal').value)||0;
+  if (val<40||val>500) { toast('\u26A0\uFE0F \u05E2\u05E8\u05DA \u05DC\u05D0 \u05EA\u05E7\u05D9\u05DF'); return; }
+  var res = E('bloodResult'); res.classList.remove('hidden');
+  var sgv = S.latest ? S.latest.sgv : 0;
+  var dev = sgv > 0 ? Math.abs((val-sgv)/sgv*100) : 0;
+  postAction('blood_validation', {blood_glucose:val, sgv:sgv, deviation:Math.round(dev)});
+  if (val >= 110) {
+    res.className = 'blood-result ok';
+    res.innerHTML = '\u2705 \u05D3\u05DD \u05EA\u05E7\u05D9\u05DF (' + val + ') \u2014 \u05D7\u05D9\u05D9\u05E9\u05DF \u05E9\u05D2\u05D5\u05D9 \u05D6\u05DE\u05E0\u05D9\u05EA';
+    if (dev > 20) E('calibBanner').classList.remove('hidden');
+    S.anomalyActive = false; E('anomChip').classList.add('hidden');
+    setTimeout(function(){ E('anomalyBanner').classList.add('hidden'); }, 4000);
+  } else {
+    res.className = 'blood-result low';
+    res.innerHTML = '\uD83D\uDD34 \u05E1\u05D5\u05DB\u05E8 \u05E0\u05DE\u05D5\u05DA \u05D0\u05DE\u05D9\u05EA\u05D9: ' + val + ' \u2014 \u05D8\u05E4\u05DC \u05DE\u05D9\u05D3!';
+    showPage('meal'); setTimeout(function(){ E('earlyAlert').classList.remove('hidden'); }, 300);
+  }
+}
+function dismissAnomaly() {
+  E('anomalyBanner').classList.add('hidden'); S.anomalyActive=false; E('anomChip').classList.add('hidden');
+  postAction('anomaly_dismissed',{});
+}
+
+/* ════ POD FAULT ════ */
+function checkPodFault() {
+  if (!S.podChangeTime || S.podFaultAlerted || S.podFaultDismissed) return;
+  var ageH = (Date.now()-S.podChangeTime)/3600000;
+  var sgv = S.latest ? S.latest.sgv : 0; if (!sgv) return;
+  var isDrop = S.gluc.length>=4 && S.gluc.slice(-4).every(function(v,i,a){ return i===0||v.sgv<=a[i-1].sgv; });
+  if (ageH >= 4 && sgv >= 250 && !isDrop) {
+    S.podFaultAlerted = true;
+    var isf=S.cfg.isf||40, tgt=S.cfg.tgt||110;
+    var corr = Math.max(0, Math.round((sgv-tgt)/isf*100)/100);
+    E('podFaultCorr').textContent = corr;
+    E('podFaultSub').textContent = 'SGV: ' + sgv + ' \u00B7 ' + ageH.toFixed(1) + 'h \u05DE\u05D4\u05D7\u05DC\u05E4\u05D4 \u05DC\u05DC\u05D0 \u05D9\u05E8\u05D9\u05D3\u05D4';
+    E('podFaultBanner').classList.remove('hidden'); E('podChip').classList.remove('hidden');
+    pushNotify('Loopie: \u05E4\u05D5\u05D3 \u05D7\u05E9\u05D5\u05D3 \u05DC\u05DB\u05E9\u05DC!', 'SGV: '+sgv+' \u00B7 '+Math.round(ageH)+'h \u05DE\u05D4\u05D7\u05DC\u05E4\u05D4', true, 'pod');
+    sendWA('\u05DB\u05E9\u05DC \u05E4\u05D5\u05D3! SGV: '+sgv+' \u00B7 '+Math.round(ageH)+'h \u2014 \u05EA\u05D9\u05E7\u05D5\u05DF \u05D9\u05D3\u05E0\u05D9: '+corr+' \u05D9\u05D7\u05F3');
+    notifyFollowers('emergency', '\uD83D\uDEA8 \u05E4\u05D5\u05D3 \u05D7\u05E9\u05D5\u05D3: SGV ' + sgv + ', ' + Math.round(ageH) + 'h');
+  }
+  if (S.podFaultAlerted && sgv < 200) {
+    E('podFaultBanner').classList.add('hidden'); E('podChip').classList.add('hidden'); S.podFaultAlerted=false;
+  }
+}
+function dismissPodFault() {
+  E('podFaultBanner').classList.add('hidden'); E('podChip').classList.add('hidden');
+  S.podFaultDismissed=true; S.podFaultAlerted=false;
+  S.podChangeTime=new Date(); S.cfg.podChangeTime=S.podChangeTime.toISOString(); saveCfg();
+  toast('\uD83D\uDC89 \u05DE\u05E6\u05D1 \u05E4\u05D5\u05D3 \u05D7\u05D3\u05E9 \u05D0\u05D5\u05E4\u05E1');
+}
+
+/* ════ SLEEP MODE ════ */
+function checkSleepMode() {
+  if (S.mode !== 'sleep') return;
+  var g = S.latest; if (!g) return;
+  var sleepTgt = S.cfg.sleepTgt||130;
+  var consistentDrop = false;
+  if (S.gluc.length >= 3) {
+    var l = S.gluc.slice(-3);
+    consistentDrop = l[2].sgv < l[1].sgv && l[1].sgv < l[0].sgv;
+  }
+  var needsBoost = S.anomalyActive || (g.sgv < sleepTgt && (consistentDrop || g.sgv < 100));
+  E('sleepBoostBanner').classList.toggle('hidden', !needsBoost || S.sleepBoostDismissed);
+  if (needsBoost && !S.sleepBoostDismissed) {
+    var r = S.anomalyActive ? '\u05D0\u05E0\u05D5\u05DE\u05DC\u05D9\u05D4 \u05D6\u05D5\u05D4\u05EA\u05D4' : g.sgv<100 ? '\u05E1\u05D5\u05DB\u05E8 '+g.sgv : g.sgv+' \u05D1\u05D9\u05E8\u05D9\u05D3\u05D4 \u05E2\u05E7\u05D1\u05D9\u05EA';
+    E('sleepBoostSub').textContent = r + ' \u00B7 \u05DE\u05D5\u05DE\u05DC\u05E5 \u05E4\u05EA\u05D9\u05D1\u05E8 (7.5\u05D2\u05F3)';
+    if (!S.anomalyActive) pushNotify('Loopie: \u05D7\u05D9\u05D6\u05D5\u05E7 \u05E9\u05D9\u05E0\u05D4', r, false, 'sleep');
+  }
+}
+async function doSleepBoost() {
+  E('sleepBoostBanner').classList.add('hidden'); S.sleepBoostDismissed=true;
+  await postAction('sleep_boost',{carbs:7.5});
+  toast('\uD83C\uDF6A \u05D7\u05D9\u05D6\u05D5\u05E7 \u05E9\u05D9\u05E0\u05D4 \u05E0\u05E8\u05E9\u05DD');
+  setTimeout(function(){ S.sleepBoostDismissed=false; }, 30*60000);
+}
+function dismissSleepBoost() {
+  E('sleepBoostBanner').classList.add('hidden'); S.sleepBoostDismissed=true;
+  setTimeout(function(){ S.sleepBoostDismissed=false; }, 20*60000);
+}
+
+/* ════ SPORT GATE ════ */
+function triggerActivity(type) {
+  var g = S.latest ? S.latest.sgv : 0;
+  var iob = S.iob;
+  var dir = S.latest ? (S.latest.dir||'Flat') : 'Flat';
+  var limit = RULE_OVERRIDES.sport_limit || S.cfg.sportLimit || 150;
+  var gate = E('sportGate');
+  gate.classList.remove('hidden');
+  E('sgCarb').classList.add('hidden');
+  if (type === 'sport') {
+    /* Rolling Start: allow at 130+ with upward trend */
+    if (g < 130 || (g < limit && !['FortyFiveUp','SingleUp','DoubleUp'].includes(dir))) {
+      var deficit = Math.max(limit - g, 0);
+      var carbsNeeded = Math.max(10, Math.round(deficit/5));
+      E('sgSub').innerHTML = '\u26A0\uFE0F SGV ' + g + ' < ' + limit + ' \u2014 <strong>\u05D7\u05D5\u05E7 \u05D4-<span id="sportLimit2">' + limit + '</span>!</strong><br>\u05D0\u05DB\u05D5\u05DC ' + carbsNeeded + '\u05D2\u05F3 \u05DC\u05E4\u05E0\u05D9 \u05D4\u05E1\u05E4\u05D5\u05E8\u05D8';
+      E('sgCarbVal').textContent = carbsNeeded; E('sgCarb').classList.remove('hidden');
+    } else if (g >= 130 && g < limit && ['FortyFiveUp','SingleUp','DoubleUp'].includes(dir)) {
+      /* Rolling Start approved */
+      E('sgSub').innerHTML = '\u2705 Rolling Start \u05DE\u05D0\u05D5\u05E9\u05E8! SGV ' + g + ' \u05D1\u05DE\u05D2\u05DE\u05D4 \u05E2\u05D5\u05DC\u05D4 (\u2197)';
+    } else if (iob > 1.5) {
+      var extra = Math.round(iob * 10);
+      E('sgSub').innerHTML = '\u26A0\uFE0F IOB \u05D2\u05D1\u05D5\u05D4 (' + iob.toFixed(2) + ' \u05D9\u05D7\u05F3) \u2014 \u05D0\u05DB\u05D5\u05DC ' + extra + '\u05D2\u05F3 \u05E0\u05D5\u05E1\u05E4\u05D9\u05DD';
+      E('sgCarbVal').textContent = extra; E('sgCarb').classList.remove('hidden');
+    } else {
+      E('sgSub').innerHTML = '\u2705 SGV ' + g + ' \u00B7 IOB ' + iob.toFixed(2) + ' \u2014 \u05DE\u05D5\u05DB\u05DF \u05DC\u05E1\u05E4\u05D5\u05E8\u05D8!';
+    }
+  } else {
+    if (g < 100) {
+      E('sgSub').innerHTML = '\u26A0\uFE0F SGV ' + g + ' \u2014 \u05D0\u05DB\u05D5\u05DC 10\u05D2\u05F3 \u05DC\u05E4\u05E0\u05D9 \u05D4\u05D4\u05DC\u05D9\u05DB\u05D4';
+      E('sgCarbVal').textContent = 10; E('sgCarb').classList.remove('hidden');
+    } else if (g >= 130 && ['FortyFiveUp','SingleUp','DoubleUp'].includes(dir)) {
+      E('sgSub').innerHTML = '\u2705 \u05DE\u05D5\u05DB\u05DF \u05DC\u05D4\u05DC\u05D9\u05DB\u05D4! (SGV ' + g + ' \u2197)';
+    } else {
+      E('sgSub').innerHTML = 'SGV ' + g + ' \u00B7 \u05D1\u05D3\u05D5\u05E7 \u05DE\u05D2\u05DE\u05D4 \u05DC\u05E4\u05E0\u05D9 \u05D9\u05E6\u05D9\u05D0\u05D4';
+    }
+  }
+  S._pendingActivityType = type;
+}
+function confirmSport() {
+  E('sportGate').classList.add('hidden');
+  var t = S._pendingActivityType || 'sport';
+  if (t === 'sport') {
+    S.activityMode='sport'; S.preSportSgv=S.latest?S.latest.sgv:0;
+    E('sportBtn').classList.add('sport-on'); setMode('sport');
+    toast('\u26BD \u05E1\u05E4\u05D5\u05E8\u05D8 \u05D4\u05D5\u05E4\u05E2\u05DC!');
+    postAction('sport_confirmed',{sgv:S.preSportSgv,iob:S.iob});
+  } else {
+    S.activityMode='walk'; E('walkBtn').classList.add('walk-on');
+    toast('\uD83D\uDEB6 \u05D4\u05DC\u05D9\u05DB\u05D4 \u05D0\u05D5\u05E9\u05E8\u05EA!');
+    postAction('walk_confirmed',{sgv:S.latest?S.latest.sgv:0});
+  }
+}
+
+/* ════ POST-SPORT ════ */
+function checkPostSport() {
+  if (S.activityMode !== 'sport' || S.mode !== 'sport') return;
+  var g = S.latest ? S.latest.sgv : 0;
+  if (g > 280) {
+    var suggested = S.suggestedBolus || (g - (S.cfg.tgt||110)) / (S.cfg.isf||40);
+    var conservative = Math.round(suggested * 0.6 * 100) / 100;
+    E('psVal').textContent = conservative;
+    E('psSub').textContent = 'SGV: ' + g + ' \u05DC\u05D0\u05D7\u05E8 \u05E1\u05E4\u05D5\u05E8\u05D8 \u00B7 \u05DE\u05D9\u05E0\u05D5\u05DF \u05DE\u05DC\u05D0: ' + suggested.toFixed(2) + ' \u05D9\u05D7\u05F3 \u2192 60%';
+    E('psBox').classList.remove('hidden');
+  }
+}
+
+/* ════ SECOND DOSE ════ */
+function checkSecondDose() {
+  if (!S.currentMealCarbs || S.secondDoseReady) return;
+  if (S.gluc.length < 3) return;
+  var last3 = S.gluc.slice(-3);
+  if (last3[2].sgv > last3[1].sgv && last3[1].sgv > last3[0].sgv) {
+    S.secondDoseReady = true;
+    var icr = S.cfg.icr || 10;
+    var p30c = Math.round(S.currentMealCarbs * 0.3);
+    var p30b = Math.round(p30c / icr * 100) / 100;
+    E('sdSub').textContent = 'SGV ' + last3[2].sgv + ' \u2192 ' + last3[1].sgv + ' \u2192 ' + last3[0].sgv + ' (\u05E2\u05D5\u05DC\u05D4) \u00B7 \u05E9\u05DC\u05D1 \u05D1\u05F3: ' + p30b + ' \u05D9\u05D7\u05F3 (' + p30c + '\u05D2\u05F3)';
+    E('sdBox').classList.remove('hidden');
+    pushNotify('Loopie: \u05DE\u05E0\u05D4 \u05E9\u05E0\u05D9\u05D9\u05D4?', 'SGV \u05E2\u05D5\u05DC\u05D4 \u00B7 ' + p30b + ' \u05D9\u05D7\u05F3', false, 'sd');
+  }
+}
+async function doSecondDose() {
+  var icr = S.cfg.icr || 10;
+  var p30 = Math.round(S.currentMealCarbs * 0.3);
+  var bolus = Math.round(p30/icr*100)/100;
+  E('sdBox').classList.add('hidden');
+  await postAction('meal_phase2',{carbs:p30,bolus:bolus,reason:'trend_rise'});
+  toast('\uD83D\uDC89 \u05DE\u05E0\u05D4 \u05E9\u05E0\u05D9\u05D9\u05D4: ' + bolus + ' \u05D9\u05D7\u05F3 (' + p30 + '\u05D2\u05F3)');
+}
+
+/* ════ PARTIAL MEAL ════ */
+function calcPartialMeal() {
+  var pctRaw = parseFloat(E('partialPct').value);
+  if (!pctRaw || pctRaw<=0 || pctRaw>=100) { toast('\u26A0\uFE0F \u05D4\u05D6\u05DF % \u05D1\u05D9\u05DF 1\u201399'); return; }
+  var pct = pctRaw / 100;
+  var totalCarbs = parseFloat(E('carbInp').value) || S.currentMealCarbs || 0;
+  var totalBolus = S.currentMealBolus;
+  if (!totalCarbs || !totalBolus) { toast('\u26A0\uFE0F \u05D7\u05E9\u05D1 \u05D0\u05E8\u05D5\u05D7\u05D4 \u05E7\u05D5\u05D3\u05DD'); return; }
+  var eatenCarbs = Math.round(totalCarbs * pct);
+  var unusedBolus = Math.round((totalBolus * (1-pct)) * 100) / 100;
+  var isf = S.cfg.isf || 40;
+  var dropMgdL = Math.round(unusedBolus * isf);
+  var rescueCarbs = Math.round(unusedBolus * 10);
+  E('partialSub').textContent = '\u05D0\u05DB\u05DC\u05EA ' + pctRaw + '% (' + eatenCarbs + '\u05D2\u05F3) \u05DE\u05EA\u05D5\u05DA ' + totalCarbs + '\u05D2\u05F3';
+  E('partialRec').innerHTML = '<strong>\uD83D\uDCA1 \u05D4\u05DE\u05DC\u05E6\u05D4:</strong> \u05D0\u05D9\u05E0\u05E1\u05D5\u05DC\u05D9\u05DF \u05E2\u05D5\u05D3\u05E3: <strong>' + unusedBolus + ' \u05D9\u05D7\u05F3</strong> \u00B7 \u05D9\u05E8\u05D9\u05D3\u05D4 \u05E6\u05E4\u05D5\u05D9\u05D4: ~' + dropMgdL + ' mg/dL<br>\u05D0\u05DB\u05D5\u05DC <strong>' + rescueCarbs + '\u05D2\u05F3</strong> \u05D2\u05DC\u05D5\u05E7\u05D5\u05D6 \u05DC\u05D0\u05D9\u05D6\u05D5\u05DF \u2014 \u05DE\u05E2\u05E7\u05D1 \u05DB\u05DC 15 \u05D3\u05E7\u05F3';
+  E('partialBanner').classList.remove('hidden');
+  postAction('partial_meal',{pct:pctRaw,eaten_carbs:eatenCarbs,unused_bolus:unusedBolus,rescue_carbs:rescueCarbs});
+}
+
+/* ════════════════════════════════════════════════════
+   GLUCOSE UI
+════════════════════════════════════════════════════ */
+function glCol(sgv) {
+  var lo = MODES[S.mode].tgt[0], hi = MODES[S.mode].tgt[1];
+  if (sgv < 70)            return {c:'#f03030',g:'rgba(240,48,48,.17)',sb:'rgba(240,48,48,.1)',sc:'#f03030',sbd:'rgba(240,48,48,.33)',lbl:'\u26A0\uFE0F \u05D4\u05D9\u05E4\u05D5!'};
+  if (sgv < lo)            return {c:'#f5a316',g:'rgba(245,163,22,.17)',sb:'rgba(245,163,22,.1)',sc:'#f5a316',sbd:'rgba(245,163,22,.28)',lbl:'\u2199 \u05DE\u05EA\u05D7\u05EA \u05D9\u05E2\u05D3'};
+  if (sgv<=hi||hi===999)   return {c:'#12d46a',g:'rgba(18,212,106,.17)',sb:'rgba(18,212,106,.1)',sc:'#12d46a',sbd:'rgba(18,212,106,.28)',lbl:'\u2705 \u05D1\u05D8\u05D5\u05D5\u05D7'};
+  if (sgv < 200)           return {c:'#f5a316',g:'rgba(245,163,22,.17)',sb:'rgba(245,163,22,.1)',sc:'#f5a316',sbd:'rgba(245,163,22,.28)',lbl:'\u2197 \u05DE\u05E2\u05DC \u05D9\u05E2\u05D3'};
+  return                          {c:'#f03030',g:'rgba(240,48,48,.17)',sb:'rgba(240,48,48,.1)',sc:'#f03030',sbd:'rgba(240,48,48,.33)',lbl:'\u2B06 \u05D2\u05D1\u05D5\u05D4'};
+}
+
+function updateGlUI() {
+  var g = S.latest; if (!g) return;
+  var col = glCol(g.sgv);
+  document.documentElement.style.setProperty('--gc', col.c);
+  document.documentElement.style.setProperty('--gg', col.g);
+  E('glNum').textContent = g.sgv; E('glNum').style.color = col.c; E('glNum').style.textShadow = '0 0 24px '+col.g;
+  E('glArrow').textContent = ARROWS[g.dir]||'\u2192'; E('glArrow').style.color = col.c;
+  if (S.gluc.length >= 2) {
+    var d = S.gluc[S.gluc.length-1].sgv - S.gluc[S.gluc.length-2].sgv;
+    E('glDelta').textContent = '\u0394 ' + (d>0?'+':'') + d + ' mg/dL / 5min';
+  }
+  E('glTime').textContent = g.date.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+  var md = MODES[S.mode];
+  E('glMode').textContent = md.icon + ' ' + md.name;
+  var b = E('glBadge'); b.textContent=col.lbl; b.style.background=col.sb; b.style.color=col.sc; b.style.borderColor=col.sbd;
+  E('iobV').textContent = S.iob.toFixed(2);
+  E('cobV').textContent = S.cob;
+  E('smbV').textContent = S.smb.toFixed(2);
+  var md2 = MODES[S.mode];
+  var isDrop = g.dir==='SingleDown'||g.dir==='DoubleDown'||g.dir==='FortyFiveDown';
+  var hypo = g.sgv < 80 || (md2.early && g.sgv < 110 && isDrop);
+  E('hypoBanner').classList.toggle('hidden', !hypo);
+  if (hypo) {
+    var n = S.name || '\u05D4\u05D9\u05DC\u05D3';
+    E('hypoTxt').textContent = g.sgv<80 ? '\u05E1\u05D5\u05DB\u05E8 '+g.sgv+' \u2014 '+n+', \u05D7\u05DC\u05E5 \u05DE\u05D9\u05D3!' : g.sgv+' \u2193 \u2014 \u05D7\u05DC\u05E5 \u05DE\u05D5\u05E7\u05D3\u05DD!';
+    if (g.sgv < 70) {
+      pushNotify('Loopie: \u05D4\u05D9\u05E4\u05D5 \u05D7\u05D9\u05E8\u05D5\u05DD!','SGV: '+g.sgv+' \u2014 \u05D7\u05DC\u05E5 \u05DE\u05D9\u05D3!',true,'hypo');
+      sendWA('\u05D4\u05D9\u05E4\u05D5 \u05D7\u05D9\u05E8\u05D5\u05DD! SGV: '+g.sgv+' \u00B7 '+n);
+      notifyFollowers('emergency','\uD83D\uDEA8 \u05D4\u05D9\u05E4\u05D5: SGV '+g.sgv);
+    }
+  }
+}
+
+/* ════ CHART ════ */
+function drawChart() {
+  var h = S.gluc.slice(-36); if (!h.length) return;
+  var labels = h.map(function(x){ return x.date.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}); });
+  var vals = h.map(function(x){ return x.sgv; });
+  var md = MODES[S.mode];
+  var lo = S.cfg.targetLo||80, hi = S.cfg.targetHi||150;
+  var pL = labels.slice(), pV = new Array(vals.length).fill(null);
+  var loV = new Array(vals.length).fill(lo), hiV = new Array(vals.length).fill(hi);
+  if (S.prediction.length > 0) {
+    S.prediction.slice(0,6).forEach(function(v,i){
+      pL.push(new Date(h[h.length-1].date.getTime()+(i+1)*5*60000).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}));
+      pV.push(v); loV.push(lo); hiV.push(hi);
+    });
+  } else if (vals.length >= 5) {
+    var slope = (vals[vals.length-1]-vals[vals.length-5])/4;
+    for (var i=1;i<=6;i++) {
+      pL.push(new Date(h[h.length-1].date.getTime()+i*5*60000).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}));
+      pV.push(Math.max(40,Math.round(vals[vals.length-1]+slope*i))); loV.push(lo); hiV.push(hi);
+    }
+  }
+  var ctx = E('gc').getContext('2d');
+  if (gcChart) gcChart.destroy();
+  gcChart = new Chart(ctx, {
+    type:'line',
+    data:{labels:pL,datasets:[
+      {label:'hi',data:hiV,borderColor:'transparent',backgroundColor:'rgba(18,212,106,.07)',pointRadius:0,tension:0,fill:'+1'},
+      {label:'lo',data:loV,borderColor:'rgba(18,212,106,.15)',backgroundColor:'transparent',pointRadius:0,tension:0,borderDash:[3,3],borderWidth:1},
+      {label:'gl',data:vals,borderColor:md.c,backgroundColor:md.gl.replace('.17','.055'),borderWidth:2.5,pointRadius:2.5,tension:0.42,fill:false,z:10},
+      {label:'pred',data:pV,borderColor:'rgba(255,255,255,.22)',borderDash:[4,4],borderWidth:1.5,pointRadius:0,tension:0.3,fill:false},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:420},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return (c.dataset.label==='gl'||c.dataset.label==='pred')?c.raw+' mg/dL':null;},filter:function(i){return i.dataset.label==='gl'||i.dataset.label==='pred';}},backgroundColor:'rgba(7,10,26,.97)',borderColor:'rgba(255,255,255,.07)',borderWidth:1,titleColor:'#3a5068',bodyColor:'#ddeaff'}},
+      scales:{x:{ticks:{color:'#1c2e40',font:{size:9},maxTicksLimit:6},grid:{color:'rgba(255,255,255,.028)'}},y:{min:60,max:320,ticks:{color:'#3a5068',font:{size:9}},grid:{color:'rgba(255,255,255,.028)'}}}}
+  });
+}
+
+/* ════ MOCK ════ */
+function loadMock() {
+  var now = Date.now();
+  var r = [88,91,95,100,106,113,119,123,120,115,109,104,100,97,95,98,103,110,116,121,118,113,107,101,97,94,97,103,109,115,119,117,113,108,103,99];
+  S.gluc = r.map(function(v,i){ return {sgv:v,date:new Date(now-(35-i)*5*60000),dir:i<r.length-1?(r[i+1]>v?'FortyFiveUp':r[i+1]<v?'FortyFiveDown':'Flat'):'Flat'}; });
+  S.latest = S.gluc[S.gluc.length-1];
+  S.lastDataTime = S.latest.date;
+  S.smb=0.85; S.iob=1.2; S.cob=15; S.podH=38; S.senH=96; S.batt=82;
+  S.basalRate=0.85; S.basalType='temp';
+  updateHW();
+}
+
+/* ════ MODE ════ */
+function setMode(m) {
+  S.mode=m; S.sleepBoostDismissed=false;
+  updateModeUI(); updateGlUI(); drawChart();
+  S.cfg.mode=m; saveCfg();
+  toast(MODES[m].icon+' '+MODES[m].name);
+  updateRescuePage();
+  postAction('mode_change',{new_mode:m});
+  if (m!=='sport' && S.activityMode==='sport') { S.activityMode=null; E('sportBtn').classList.remove('sport-on'); setTimeout(checkPostSport,500); }
+  if (m==='sleep') setTimeout(checkSleepMode,300);
+}
+function updateModeUI() {
+  document.querySelectorAll('.mpill').forEach(function(b){
+    var md = MODES[b.dataset.mode];
+    b.classList.toggle('on', b.dataset.mode===S.mode);
+    b.style.setProperty('--mc',md.c); b.style.setProperty('--mbg',md.bg); b.style.setProperty('--mgl',md.gl);
+  });
+}
+
+/* ════ FOOD / EMOJI ════ */
+function setFood(f) { S.food=f; document.querySelectorAll('.ftbtn').forEach(function(b){ b.classList.toggle('on',b.dataset.food===f); }); }
+function eAdd(e) { var i=E('emojiInp'); i.value+=e; i.focus(); onEmojiInput(); }
+function clearEmoji() { E('emojiInp').value=''; onEmojiInput(); }
+function onEmojiInput() {
+  var raw = E('emojiInp').value;
+  var strip = E('parseStrip');
+  if (!raw.trim()) { strip.className='parse-strip empty'; E('parseTxt').textContent='\u05D4\u05E7\u05DC\u05D3 \u05DE\u05D4 \u05D0\u05DB\u05DC\u05EA \u2014 \u05D6\u05D9\u05D4\u05D5\u05D9 \u05D0\u05D5\u05D8\u05D5\u05DE\u05D8\u05D9'; S.parsedEmoji=null; E('splitBox').classList.add('hidden'); return; }
+  var res = parseEmojiStr(raw);
+  if (!res || (!res.items && !res._explicit)) { strip.className='parse-strip err'; E('parseTxt').textContent='\u05DC\u05D0 \u05D6\u05D5\u05D4\u05D5 \u05DE\u05D0\u05DB\u05DC\u05D9\u05DD'; S.parsedEmoji=null; E('splitBox').classList.add('hidden'); return; }
+  S.parsedEmoji = res;
+  strip.className = 'parse-strip live';
+  if (res._explicit) {
+    E('parseTxt').innerHTML = '<strong>' + res.items[0].n + '</strong> \u2014 <strong style="color:var(--amberL)">' + res.totalCarbs + '\u05D2\u05F3</strong> (\u05DE\u05E4\u05D5\u05E8\u05E9) \u00B7 \u05E1\u05E4\u05D9\u05D2\u05D4: ' + res.maxDur + 'h';
+  } else {
+    E('parseTxt').innerHTML = res.items.map(function(x){ return '<strong>'+(x.qty>1?x.qty+'\u00D7':'')+x.e+' '+x.n+'</strong>('+x.carbs+'\u05D2\u05F3)'; }).join('+') + ' \u2014 <strong style="color:var(--amberL)">' + res.totalCarbs + '\u05D2\u05F3</strong>\u00B7' + res.maxDur + 'h';
+  }
+  var sb = E('splitBox');
+  if (res.hasPita) {
+    var icr = parseFloat(E('icrInp').value)||S.cfg.icr||10;
+    var p70 = Math.round(res.totalCarbs*.7), p30 = res.totalCarbs-p70;
+    sb.classList.remove('hidden');
+    sb.innerHTML = '<strong>\uD83E\uDED3 \u05E4\u05D9\u05E6\u05D5\u05DC 70/30:</strong><br>\u05E9\u05DC\u05D1 \u05D0\u05F3 \u05E2\u05DB\u05E9\u05D9\u05D5: <strong>' + Math.round(p70/icr*100)/100 + ' \u05D9\u05D7\u05F3</strong> (' + p70 + '\u05D2\u05F3)<br>\u05E9\u05DC\u05D1 \u05D1\u05F3 \u05DB\u05E9\u05E1\u05D5\u05DB\u05E8 \u2265120 \u05D5\u05E2\u05D5\u05DC\u05D4: <strong>' + Math.round(p30/icr*100)/100 + ' \u05D9\u05D7\u05F3</strong> (' + p30 + '\u05D2\u05F3)';
+  } else { sb.classList.add('hidden'); }
+}
+function useEmoji() {
+  if (!S.parsedEmoji) { toast('\u26A0\uFE0F \u05DC\u05D0 \u05D6\u05D5\u05D4\u05D5 \u05DE\u05D0\u05DB\u05DC\u05D9\u05DD'); return; }
+  E('carbInp').value = S.parsedEmoji.totalCarbs;
+  var dur = S.parsedEmoji.maxDur;
+  if (S.parsedEmoji.hasFat) setFood('fat');
+  else if (dur<=2) setFood('fast');
+  else if (dur<=3) setFood('normal');
+  else setFood('medium');
+  toggleCard('emojiCard');
+  E('manualCard').classList.remove('collapsed'); E('manualCard-chev').textContent='\u25BC';
+  toast('\u2705 ' + S.parsedEmoji.totalCarbs + '\u05D2\u05F3');
+  calcMeal();
+}
+
+/* ════════════════════════════════════════════════════
+   MEAL CALC  (precision 3-value output)
+════════════════════════════════════════════════════ */
+function calcMeal() {
+  var carbs = parseFloat(E('carbInp').value)||0;
+  var icr = parseFloat(E('icrInp').value)||S.cfg.icr||10;
+  var isf = parseFloat(E('isfInp').value)||S.cfg.isf||40;
+  var tgt = S.cfg.tgt||110;
+  var bg = S.latest ? S.latest.sgv : tgt;
+  var dir = S.latest ? (S.latest.dir||'Flat') : 'Flat';
+  var md = MODES[S.mode]; var ft = FOODS[S.food];
+  if (carbs <= 0) { toast('\u26A0\uFE0F \u05D4\u05D6\u05DF \u05E4\u05D7\u05DE\u05D9\u05DE\u05D5\u05EA'); return; }
+  var corr = Math.max(0, (bg-tgt)/isf);
+  var meal = carbs/icr;
+  if (md.sm) meal *= md.sm;
+  if (md.agr===0) meal=0; else if (md.agr<1) meal*=md.agr;
+  var total = meal+corr;
+  var isSplit = ft.split;
+  var p1c=carbs, p1b=total, p2c=0, p2b=0;
+  if (isSplit) { p1c=Math.floor(carbs*.7); p2c=carbs-p1c; p1b=Math.round(total*.7*100)/100; p2b=Math.round(total*.3*100)/100; }
+  var net = Math.max(0, Math.round((p1b-S.smb)*100)/100);
+  var durStr = ft.dur + 'h';
+  /* pre-bolus */
+  var pb = calcPB(bg, dir);
+  var pbNote = '';
+  if (pb === 0 && bg < 140 && ['FortyFiveDown','SingleDown','DoubleDown'].includes(dir)) {
+    pbNote = '\uD83D\uDD3B \u05DE\u05D2\u05DE\u05D4 \u05D9\u05D5\u05E8\u05D3\u05EA < 140 \u2014 <strong>\u05D4\u05D6\u05E8\u05E7 \u05D5\u05D0\u05DB\u05D5\u05DC \u05DE\u05D9\u05D3!</strong>';
+  } else if (pb > 0) {
+    pbNote = '\u23F1 Pre-bolus: \u05D4\u05D6\u05E8\u05E7 <strong>' + pb + ' \u05D3\u05E7\u05F3</strong> \u05DC\u05E4\u05E0\u05D9 \u05D4\u05D0\u05DB\u05D9\u05DC\u05D4 (' + getIns().name + ')';
+  }
+  /* reasons */
+  var p = [];
+  p.push('<strong>\u05DE\u05E6\u05D1:</strong> '+md.icon+' '+md.name+' \u00B7 \u05D9\u05E2\u05D3 '+md.tgt[0]+'\u2013'+(md.tgt[1]===999?md.tgt[0]+50:md.tgt[1]));
+  p.push('<strong>\u05D0\u05E8\u05D5\u05D7\u05D4:</strong> '+carbs+'\u05D2\u05F3 \u00F7 ICR '+icr+' = '+(carbs/icr).toFixed(2)+' \u05D9\u05D7\u05F3');
+  if (corr>0.05) p.push('<strong>\u05EA\u05D9\u05E7\u05D5\u05DF:</strong> +'+corr.toFixed(2)+' \u05D9\u05D7\u05F3');
+  if (md.sm) p.push('<strong>\u05DE\u05D7\u05DC\u05D4 x'+md.sm+'</strong>');
+  if (md.agr===0) p.push('<strong>'+md.name+':</strong> \u05D4\u05DC\u05D5\u05E4 \u05DE\u05E0\u05D4\u05DC');
+  if (S.smb>0) p.push('<strong>SMB \u05E7\u05D5\u05D6\u05D6:</strong> '+S.smb.toFixed(2)+' \u2192 \u05E0\u05E9\u05D0\u05E8 '+net.toFixed(2));
+  if (isSplit) p.push('<strong>70/30:</strong> \u05E9\u05DC\u05D1 \u05D1\u05F3 \u05DC\u05E4\u05D9 \u05DE\u05D2\u05DE\u05D4 \u2197');
+  if (S.suggestedBolus) p.push('<strong>Loop \u05D4\u05E6\u05D9\u05E2:</strong> '+S.suggestedBolus.toFixed(2)+' \u05D9\u05D7\u05F3');
+  if (S.parsedEmoji) p.push('<strong>\u05D6\u05D5\u05D4\u05D4:</strong> '+(S.parsedEmoji._explicit?S.parsedEmoji.items[0].n:S.parsedEmoji.items.map(function(x){return x.e+x.n;}).join(', ')));
+  p.push('<strong>\u05E1\u05E4\u05D9\u05D2\u05D4:</strong> '+ft.label+' \u00B7 '+ft.dur+'h');
+
+  /* store for second dose + audit */
+  S.currentMealCarbs = carbs; S.currentMealBolus = net; S.currentMealDur = ft.dur;
+  S.secondDoseReady = false; E('sdBox').classList.add('hidden');
+  var foodKey = selectedFood ? selectedFood.key : '';
+  scheduleMealAudit(carbs, net, foodKey, bg);
+
+  E('mealRec').innerHTML =
+    '<div class="rec-box">' +
+      '<div class="rec-hdr">\uD83D\uDCCB \u05D1\u05D5\u05DC\u05D5\u05E1 \u05DE\u05D3\u05D5\u05D9\u05E7 \u00B7 '+md.icon+' '+md.name+'</div>' +
+      '<div class="prec-nums">' +
+        '<div class="pn carbs"><div class="pn-l">Carbs NS</div><div class="pn-v">'+p1c+'</div><div class="pn-u">\u05D2\u05E8\u05DD</div></div>' +
+        '<div class="pn bolus"><div class="pn-l">Bolus</div><div class="pn-v">'+net.toFixed(2)+'</div><div class="pn-u">\u05D9\u05D7\u05F3</div></div>' +
+        '<div class="pn dur"><div class="pn-l">Duration</div><div class="pn-v">'+durStr+'</div><div class="pn-u">\u05E1\u05E4\u05D9\u05D2\u05D4</div></div>' +
+      '</div>' +
+      (S.smb>0 ? '<div class="smb-row">\u26A1 SMB: '+S.smb.toFixed(2)+' \u05D9\u05D7\u05F3 \u05E7\u05D5\u05D6\u05D6</div>' : '') +
+      (pbNote ? '<div class="pb-rec">'+pbNote+'</div>' : '') +
+      '<div class="reas">'+p.join(' \u00B7 ')+'</div>' +
+      (isSplit ? '<div class="phase-tag">\uD83D\uDD04 \u05E9\u05DC\u05D1 \u05D0\u05F3 \u2014 \u05E4\u05D9\u05E6\u05D5\u05DC 70/30</div><button class="phase2-btn" onclick="calcPhase2('+p2c+','+p2b+')">\u23F0 \u05E9\u05DC\u05D1 \u05D1\u05F3 \u2014 '+p2c+'\u05D2\u05F3 \u00B7 '+p2b+' \u05D9\u05D7\u05F3</button>' : '') +
+    '</div>';
+  postAction('meal_start',{carbs:p1c,bolus:net,duration:ft.dur,food_type:S.food,is_fat:ft.fat,prebolus:pb});
+}
+function calcPhase2(c,b) {
+  var net = Math.max(0,Math.round((b-S.smb)*100)/100), md=MODES[S.mode];
+  E('mealRec').insertAdjacentHTML('beforeend',
+    '<div class="rec-box"><div class="rec-hdr">\uD83D\uDCCB \u05E9\u05DC\u05D1 \u05D1\u05F3 \u00B7 '+md.icon+'</div>' +
+    '<div class="prec-nums">' +
+    '<div class="pn carbs"><div class="pn-l">Carbs</div><div class="pn-v">'+c+'</div><div class="pn-u">\u05D2\u05E8\u05DD</div></div>' +
+    '<div class="pn bolus"><div class="pn-l">Bolus</div><div class="pn-v">'+net.toFixed(2)+'</div><div class="pn-u">\u05D9\u05D7\u05F3</div></div>' +
+    '<div class="pn dur"><div class="pn-l">Duration</div><div class="pn-v">2.5h</div><div class="pn-u">\u05E1\u05E4\u05D9\u05D2\u05D4</div></div>' +
+    '</div><div class="reas"><strong>\u05E9\u05DC\u05D1 \u05D1\u05F3:</strong> '+c+'\u05D2\u05F3 + '+b+' \u05D9\u05D7\u05F3 \u2212 '+S.smb.toFixed(2)+' SMB = <strong>'+net.toFixed(2)+' \u05D9\u05D7\u05F3</strong></div></div>');
+  postAction('meal_phase2',{carbs:c,bolus:net,reason:'manual'});
+}
+
+/* ════ RESCUE ════ */
+async function doRescue(lv) {
+  var L = RESCUE[lv];
+  E('rescSent').classList.add('hidden');
+  await postAction('rescue',{level:lv,carbs:L.c,desc:L.d,sgv:S.latest?S.latest.sgv:0});
+  E('rescSent').classList.remove('hidden');
+  E('rescSentTxt').textContent = '\u05D7\u05D9\u05DC\u05D5\u05E5 '+L.n+' \u2013 '+L.c+'\u05D2\u05F3 \u00B7 '+L.d;
+  toast([,'&#x1F7E2;','&#x1F7E1;','&#x1F7E0;','&#x1F534;'][lv]+' \u05D7\u05D9\u05DC\u05D5\u05E5 '+L.n+' \u2013 '+L.c+'\u05D2\u05F3');
+}
+function updateRescuePage() {
+  var md = MODES[S.mode];
+  E('earlyAlert').classList.toggle('hidden',!md.early);
+  if (md.early) E('earlyMode').textContent = md.name;
+}
+
+/* ════ SCHEDULE + CALENDAR ════ */
+var selDays = {};
+function loadEvents() {
+  try { S.events = JSON.parse(localStorage.getItem('lp171_ev')||'[]'); } catch(e) { S.events=[]; }
+  renderEvents();
+}
+function saveEv() { localStorage.setItem('lp171_ev', JSON.stringify(S.events)); }
+function toggleDay(d) {
+  if (selDays[d]) delete selDays[d]; else selDays[d]=true;
+  document.querySelectorAll('.day-btn').forEach(function(b){ b.classList.toggle('on', !!selDays[parseInt(b.dataset.d)]); });
+}
+function cycleEm() { S.evEmIdx=(S.evEmIdx+1)%EV_ICONS.length; E('evEm').textContent=EV_ICONS[S.evEmIdx]; }
+function addEvent() {
+  var name=E('evName').value.trim(), start=E('evStart').value, end=E('evEnd').value;
+  var icon=EV_ICONS[S.evEmIdx], sport=E('evSport').checked, walk=E('evWalk').checked;
+  var days = Object.keys(selDays).map(Number);
+  if (!name||!start||!end||!days.length) { toast('\u26A0\uFE0F \u05DE\u05DC\u05D0 \u05E9\u05DD, \u05E9\u05E2\u05D5\u05EA \u05D5\u05D9\u05D5\u05DD'); return; }
+  if (start>=end) { toast('\u26A0\uFE0F \u05E9\u05E2\u05EA \u05E1\u05D9\u05D5\u05DD \u05D0\u05D7\u05E8\u05D9 \u05D4\u05D4\u05EA\u05D7\u05DC\u05D4'); return; }
+  S.events.push({id:Date.now(),name:name,icon:icon,start:start,end:end,sport:sport,walk:walk,days:days});
+  saveEv(); renderEvents();
+  E('evName').value=''; selDays={};
+  document.querySelectorAll('.day-btn').forEach(function(b){ b.classList.remove('on'); });
+  toast('\u2705 '+icon+' '+name+' \u05E0\u05D5\u05E1\u05E3');
+}
+function deleteEvent(id) { S.events=S.events.filter(function(e){return e.id!==id;}); saveEv(); renderEvents(); }
+function renderEvents() {
+  var now=new Date(), nowD=now.getDay(), nowM=now.getHours()*60+now.getMinutes();
+  var el=E('evList');
+  if (!S.events.length) { el.innerHTML='<div class="ev-empty">\u05D0\u05D9\u05DF \u05D7\u05D5\u05D2\u05D9\u05DD \u05DE\u05D5\u05D2\u05D3\u05E8\u05D9\u05DD</div>'; updateCalendar(); return; }
+  el.innerHTML = S.events.map(function(ev){
+    var sh=parseInt(ev.start),sm=parseInt(ev.start.split(':')[1]||0);
+    var eh=parseInt(ev.end),em2=parseInt(ev.end.split(':')[1]||0);
+    var sp=ev.start.split(':'), ep=ev.end.split(':');
+    var startM=parseInt(sp[0])*60+parseInt(sp[1]);
+    var endM=parseInt(ep[0])*60+parseInt(ep[1]);
+    var isNow=ev.days.includes(nowD)&&nowM>=startM&&nowM<endM;
+    return '<div class="ev-item"><span class="ev-em">'+ev.icon+'</span><div class="ev-info"><div class="ev-name">'+ev.name+'</div><div class="ev-meta">'+ev.days.map(function(d){return DAY_NAMES[d];}).join(' ')+' \u00B7 '+ev.start+'\u2013'+ev.end+'</div><div class="ev-tags">'+(ev.sport?'<span class="ev-tag sport">\u26A1 \u05E1\u05E4\u05D5\u05E8\u05D8</span>':'')+(ev.walk?'<span class="ev-tag walk">\uD83D\uDEB6 \u05D4\u05DC\u05D9\u05DB\u05D4</span>':'')+(isNow?'<span class="ev-tag live">\u25CF \u05E4\u05E2\u05D9\u05DC</span>':'')+'</div></div><button class="ev-del" onclick="deleteEvent('+ev.id+')">&#x2715;</button></div>';
+  }).join('');
+  updateCalendar();
+}
+function getNextEvent() {
+  var now=new Date(), nowD=now.getDay(), nowM=now.getHours()*60+now.getMinutes();
+  var next=null, minDiff=Infinity;
+  S.events.forEach(function(ev){
+    if (!ev.days.includes(nowD)) return;
+    var sp=ev.start.split(':'); var startM=parseInt(sp[0])*60+parseInt(sp[1]);
+    var diff=startM-nowM;
+    if (diff>0&&diff<120&&diff<minDiff) { minDiff=diff; next={ev:ev,diffMin:diff}; }
+  });
+  return next;
+}
+function updateCalendar() {
+  var strip=E('calStrip');
+  var nx=getNextEvent();
+  if (!nx) { strip.classList.add('hidden'); return; }
+  strip.classList.remove('hidden');
+  E('calIcon').textContent=nx.ev.icon;
+  E('calTitle').textContent=nx.ev.name+' \u05D1\u05E2\u05D5\u05D3 '+nx.diffMin+' \u05D3\u05E7\u05F3';
+  E('calSub').textContent=nx.ev.start+'\u2013'+nx.ev.end;
+  var g=S.latest?S.latest.sgv:0;
+  var limit=RULE_OVERRIDES.sport_limit||S.cfg.sportLimit||150;
+  var rec='';
+  if (nx.ev.sport&&g<limit) rec='\u26A0\uFE0F \u05D0\u05DB\u05D5\u05DC '+Math.max(10,Math.round((limit-g)/5))+'\u05D2\u05F3 \u05DC\u05E4\u05E0\u05D9 \u05D4\u05E1\u05E4\u05D5\u05E8\u05D8!';
+  else if (nx.ev.walk&&g<100) rec='\u26A0\uFE0F SGV '+g+' \u2014 \u05D0\u05DB\u05D5\u05DC 10\u05D2\u05F3 \u05DC\u05E4\u05E0\u05D9 \u05D4\u05D4\u05DC\u05D9\u05DB\u05D4';
+  E('calRec').textContent=rec;
+}
+function checkSchedule() {
+  var now=new Date(), nowD=now.getDay(), nowM=now.getHours()*60+now.getMinutes();
+  var inSport=false, sportEnd=null;
+  S.events.forEach(function(ev){
+    if (!ev.sport||!ev.days.includes(nowD)) return;
+    var sp=ev.start.split(':'), ep=ev.end.split(':');
+    var startM=parseInt(sp[0])*60+parseInt(sp[1]);
+    var endM=parseInt(ep[0])*60+parseInt(ep[1]);
+    if (nowM>=startM&&nowM<endM) { inSport=true; sportEnd=endM; }
+  });
+  if (inSport&&S.mode!=='sport') { setMode('sport'); S.sportEndMin=sportEnd; toast('\u26BD \u05DE\u05E6\u05D1 \u05E1\u05E4\u05D5\u05E8\u05D8!'); }
+  if (!inSport&&S.sportEndMin&&nowM>=S.sportEndMin&&S.mode==='sport') { setMode('home'); S.sportEndMin=null; toast('\uD83C\uDFE1 \u05D7\u05D6\u05E8\u05D4 \u05DC\u05DE\u05E6\u05D1 \u05D1\u05D9\u05EA'); }
+  var sb=E('sportBar');
+  if (inSport) {
+    sb.classList.remove('hidden');
+    if (sportEnd) { var eh=Math.floor(sportEnd/60),em=sportEnd%60; E('sportTimer').textContent='\u05DE\u05E1\u05EA\u05D9\u05D9\u05DD \u05D1-'+String(eh).padStart(2,'0')+':'+String(em).padStart(2,'0'); }
+  } else { sb.classList.add('hidden'); }
+  S.events.forEach(function(ev){
+    if (!ev.days.includes(nowD)||S.actBannerShown) return;
+    var sp=ev.start.split(':'); var startM=parseInt(sp[0])*60+parseInt(sp[1]);
+    var diff=startM-nowM;
+    if (diff>=25&&diff<=35) {
+      S.pendingEv=ev; E('actEm').textContent=ev.icon; E('actTitle').textContent='\u05D9\u05D5\u05E6\u05D0 \u05DC-'+ev.name+'?';
+      E('actSub').textContent='\u05E2\u05D5\u05D3 '+diff+' \u05D3\u05E7\u05F3 \u00B7 \u05DE\u05E1\u05EA\u05D9\u05D9\u05DD \u05D1-'+ev.end;
+      E('actBanner').classList.remove('hidden');
+    }
+  });
+  if (S.pendingEv) {
+    var sp2=S.pendingEv.start.split(':'); var startM2=parseInt(sp2[0])*60+parseInt(sp2[1]);
+    if (nowM>=startM2) { E('actBanner').classList.add('hidden'); S.pendingEv=null; S.actBannerShown=false; }
+  }
+  renderEvents();
+}
+function actAnswer(yes) {
+  E('actBanner').classList.add('hidden'); S.actBannerShown=true;
+  if (yes&&S.pendingEv&&S.pendingEv.sport) triggerActivity('sport'); else toast('\uD83D\uDC4D \u05E0\u05E9\u05DE\u05E8');
+  postAction(yes?'activity_confirmed':'activity_declined',{event:S.pendingEv?S.pendingEv.name:''});
+  S.pendingEv=null;
+}
+
+/* ════ FOLLOWERS ════ */
+function renderFollowers() {
+  var body=E('followerBody');
+  E('followerCount').textContent=S.followers.length;
+  body.innerHTML=S.followers.map(function(f,i){
+    return '<div class="fi"><div class="urg-dot '+( f.urgency||'action')+'"></div><div class="fi-info"><div class="fi-name">'+f.name+'</div><div class="fi-det">'+(f.phone||'\u05DC\u05DC\u05D0 \u05DE\u05E1\u05E4\u05E8')+' \u00B7 '+(f.urgency||'action')+'</div></div><button class="fi-del" onclick="removeFollower('+i+')">&#x2715;</button></div>';
+  }).join('')+'<button class="fp-add" onclick="addFollowerPrompt()">+ \u05D4\u05D5\u05E1\u05E3 \u05E2\u05D5\u05E7\u05D1</button>';
+}
+function addFollowerPrompt() {
+  if (S.followers.length>=5) { toast('\u26A0\uFE0F \u05DE\u05E7\u05E1\u05D9\u05DE\u05D5\u05DD 5 \u05E2\u05D5\u05E7\u05D1\u05D9\u05DD'); return; }
+  var name=prompt('\u05E9\u05DD \u05D4\u05E2\u05D5\u05E7\u05D1:'); if (!name) return;
+  var phone=prompt('\u05DE\u05E1\u05E4\u05E8 WhatsApp (\u05E2\u05DD \u05E7\u05D9\u05D3\u05D5\u05DE\u05EA):');
+  var urgency=prompt('\u05D3\u05D7\u05D9\u05E4\u05D5\u05EA (whisper/action/emergency):', 'action')||'action';
+  S.followers.push({name:name,phone:phone,urgency:urgency});
+  localStorage.setItem('lp171_fl',JSON.stringify(S.followers));
+  renderFollowers(); toast('\u2705 '+name+' \u05E0\u05D5\u05E1\u05E3');
+}
+function removeFollower(i) {
+  S.followers.splice(i,1);
+  localStorage.setItem('lp171_fl',JSON.stringify(S.followers));
+  renderFollowers();
+}
+async function notifyFollowers(urgency, message) {
+  var levels={whisper:0,action:1,emergency:2};
+  var mLevel=levels[urgency]||1;
+  for (var j=0;j<S.followers.length;j++) {
+    var f=S.followers[j];
+    var fLevel=levels[f.urgency||'action']||1;
+    if (mLevel>=fLevel && f.phone && S.cfg.waEnabled!==false) sendWA(message+' \u2014 Loopie ('+(S.name||'')+')');
+  }
+}
+
+/* ════ /ACTION ════ */
+async function postAction(action, payload) {
+  payload = payload || {};
+  var base = S.cfg.flaskUrl;
+  var body = Object.assign({action:action,mode:S.mode,role:S.role,name:S.name,timestamp:new Date().toISOString()},payload);
+  if (!base) { console.log('[Action]',body); return; }
+  try { await fetch(base+'/action',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); } catch(e) { console.warn('[Action]',e); }
+}
+
+/* ════ UI UTILS ════ */
+function E(id) { return document.getElementById(id); }
+function showPage(n) {
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.ntab').forEach(function(t){ t.classList.remove('on'); });
+  E('page-'+n).classList.add('active'); E('nav-'+n).classList.add('on');
+  if (n==='meal') updateRescuePage();
+  if (n==='dash') { updateCalendar(); updateInsBar(); }
+}
+function toggleCard(id) {
+  var el=E(id); el.classList.toggle('collapsed');
+  E(id+'-chev').textContent=el.classList.contains('collapsed')?'\u25B6':'\u25BC';
+}
+function step(id,d) { var e=E(id); e.value=Math.max(0,(parseFloat(e.value)||0)+d); }
+var _tt;
+function toast(msg) { var e=E('toast'); e.textContent=msg; e.classList.add('show'); clearTimeout(_tt); _tt=setTimeout(function(){ e.classList.remove('show'); },2800); }
+</script>
+</body>
+</html>
