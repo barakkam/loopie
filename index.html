@@ -2,706 +2,558 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Loopie v23.6 – T1D Control Center</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Loopie v23.6</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
-  :root {
-    --primary: #1E40AF;
-    --primary-light: #3B82F6;
-    --primary-dark: #1E3A8A;
-    --accent: #EF4444;
-    --accent-yellow: #F59E0B;
-    --success: #10B981;
-    --warning: #F59E0B;
-    --danger: #EF4444;
-    --bg: #F8FAFC;
-    --surface: #FFFFFF;
-    --border: #E2E8F0;
-    --text: #0F172A;
-    --text-muted: #64748B;
-    --text-light: #94A3B8;
-    --low: #3B82F6;
-    --in-range: #10B981;
-    --high: #F59E0B;
-    --very-high: #EF4444;
-    --mono: 'JetBrains Mono', monospace;
-  }
+:root {
+  --primary:       #1E40AF;
+  --primary-dark:  #1E3A8A;
+  --primary-light: #3B82F6;
+  --primary-pale:  #EFF6FF;
+  --success:       #059669;
+  --success-pale:  #D1FAE5;
+  --warning:       #D97706;
+  --warning-pale:  #FEF3C7;
+  --danger:        #DC2626;
+  --danger-pale:   #FEE2E2;
+  --orange:        #EA580C;
+  --bg:            #F1F5F9;
+  --surface:       #FFFFFF;
+  --border:        #E2E8F0;
+  --border-strong: #CBD5E1;
+  --text:          #0F172A;
+  --text-mid:      #334155;
+  --text-muted:    #64748B;
+  --text-faint:    #94A3B8;
+  --mono:          'JetBrains Mono', monospace;
+  --radius:        10px;
+  --radius-lg:     14px;
+}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Heebo', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  direction: rtl;
+  -webkit-font-smoothing: antialiased;
+}
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 99px; }
 
-  body {
-    font-family: 'Heebo', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    direction: rtl;
-  }
+/* ── ONBOARDING ── */
+#onboarding {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--primary);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1.25rem;
+}
+.ob-card {
+  background: #fff; border-radius: var(--radius-lg);
+  padding: 2.25rem 2rem 2rem;
+  width: 100%; max-width: 400px; text-align: center;
+}
+.ob-logo { margin-bottom: 1rem; display: flex; justify-content: center; }
+.ob-card h1 { font-size: 1.75rem; font-weight: 900; color: var(--primary); line-height: 1; }
+.ob-card h1 span { font-size: .85rem; font-weight: 400; color: var(--text-muted); display: block; margin-top: .2rem; }
+.ob-card p { font-size: .88rem; color: var(--text-muted); margin: .75rem 0 1.5rem; }
+.fg { margin-bottom: .9rem; text-align: right; }
+.fg label { display: block; font-size: .78rem; font-weight: 700; color: var(--text-muted); margin-bottom: .3rem; text-transform: uppercase; letter-spacing: .04em; }
+.fg input, .fg select {
+  width: 100%; padding: .65rem .9rem;
+  border: 1.5px solid var(--border); border-radius: var(--radius);
+  font-family: 'Heebo', sans-serif; font-size: .95rem; color: var(--text);
+  outline: none; background: var(--bg);
+  transition: border-color .18s, background .18s;
+}
+.fg input:focus, .fg select:focus { border-color: var(--primary); background: #fff; }
+.fg input[type="date"], .fg input[type="email"] { direction: ltr; text-align: left; }
+.btn-cta {
+  width: 100%; padding: .8rem;
+  background: var(--primary); color: #fff;
+  border: none; border-radius: var(--radius);
+  font-family: 'Heebo', sans-serif; font-size: 1.05rem; font-weight: 800;
+  cursor: pointer; transition: background .18s;
+}
+.btn-cta:hover { background: var(--primary-dark); }
 
-  /* ─── ONBOARDING ─── */
-  #onboarding {
-    position: fixed; inset: 0;
-    background: var(--primary);
-    display: flex; align-items: center; justify-content: center;
-    z-index: 9999;
-    padding: 1rem;
-  }
-  .onboard-card {
-    background: #fff;
-    border-radius: 16px;
-    padding: 2.5rem 2rem;
-    width: 100%; max-width: 420px;
-    text-align: center;
-  }
-  .onboard-card h1 { font-size: 1.6rem; color: var(--primary); margin-bottom: .25rem; font-weight: 800; }
-  .onboard-card p { color: var(--text-muted); font-size: .9rem; margin-bottom: 1.5rem; }
-  .form-group { margin-bottom: 1rem; text-align: right; }
-  .form-group label { display: block; font-size: .8rem; font-weight: 600; color: var(--text-muted); margin-bottom: .3rem; }
-  .form-group input, .form-group select {
-    width: 100%; padding: .65rem .9rem;
-    border: 1.5px solid var(--border); border-radius: 8px;
-    font-family: 'Heebo', sans-serif; font-size: .95rem;
-    outline: none; transition: border-color .2s;
-    direction: rtl;
-  }
-  .form-group input:focus, .form-group select:focus { border-color: var(--primary); }
-  .btn-primary {
-    width: 100%; padding: .75rem;
-    background: var(--primary); color: #fff;
-    border: none; border-radius: 8px;
-    font-family: 'Heebo', sans-serif; font-size: 1rem; font-weight: 700;
-    cursor: pointer; margin-top: .5rem;
-    transition: background .2s;
-  }
-  .btn-primary:hover { background: var(--primary-dark); }
+/* ── HEADER ── */
+.header {
+  background: var(--primary);
+  padding: .7rem 1rem;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+}
+.hdr-brand { display: flex; align-items: center; gap: .55rem; }
+.brand-name { color: #fff; font-size: 1.2rem; font-weight: 900; letter-spacing: -.03em; display: block; }
+.brand-ver  { color: rgba(255,255,255,.45); font-size: .72rem; display: block; }
+.hdr-actions { display: flex; gap: .4rem; }
+.icon-btn {
+  width: 34px; height: 34px; border-radius: 8px;
+  background: rgba(255,255,255,.13); border: none;
+  color: #fff; font-size: .95rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s;
+}
+.icon-btn:hover { background: rgba(255,255,255,.25); }
 
-  /* ─── MAIN LAYOUT ─── */
-  #app { display: none; min-height: 100vh; }
+/* ── CONN BAR ── */
+.conn-bar {
+  padding: .38rem 1rem;
+  display: flex; align-items: center; gap: .45rem;
+  font-size: .78rem; font-weight: 600;
+  background: var(--warning-pale); color: var(--warning);
+  border-bottom: 1px solid #FDE68A;
+}
+.conn-bar.ok  { background: var(--success-pale); color: var(--success); border-color: #6EE7B7; }
+.conn-bar.err { background: var(--danger-pale);  color: var(--danger);  border-color: #FECACA; }
+.conn-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin .8s linear infinite; display: inline-block; }
 
-  .header {
-    background: var(--primary);
-    padding: .7rem 1.25rem;
-    display: flex; align-items: center; justify-content: space-between;
-    position: sticky; top: 0; z-index: 100;
-  }
-  .header-brand { display: flex; align-items: center; gap: .6rem; }
-  .logo-svg { width: 36px; height: 36px; flex-shrink: 0; }
-  .brand-name { color: #fff; font-size: 1.2rem; font-weight: 800; letter-spacing: -.5px; }
-  .brand-ver { color: rgba(255,255,255,.5); font-size: .75rem; font-weight: 400; }
-  .header-actions { display: flex; align-items: center; gap: .5rem; }
-  .icon-btn {
-    background: rgba(255,255,255,.15); border: none;
-    color: #fff; width: 34px; height: 34px;
-    border-radius: 8px; cursor: pointer; font-size: 1rem;
-    display: flex; align-items: center; justify-content: center;
-    transition: background .2s;
-  }
-  .icon-btn:hover { background: rgba(255,255,255,.25); }
+/* ── BIRTHDAY ── */
+.bday {
+  margin: .75rem 1rem 0;
+  background: var(--primary); color: #fff;
+  border-radius: var(--radius); padding: .75rem 1rem;
+  display: none; align-items: center; gap: .6rem;
+  font-size: .9rem; font-weight: 700;
+}
+.bday.show { display: flex; }
 
-  /* ─── CONNECTION STATUS ─── */
-  .conn-bar {
-    background: #FEF3C7; border-bottom: 1px solid #FDE68A;
-    padding: .4rem 1.25rem;
-    display: flex; align-items: center; gap: .5rem;
-    font-size: .8rem; color: #92400E;
-  }
-  .conn-bar.connected { background: #D1FAE5; border-color: #6EE7B7; color: #065F46; }
-  .conn-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+/* ── GLUCOSE HERO ── */
+.gh {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 1rem .85rem;
+}
+.gh-top { display: flex; align-items: flex-start; justify-content: space-between; }
+.gh-main { display: flex; align-items: baseline; gap: .35rem; }
+.gv {
+  font-size: 3.8rem; font-weight: 900; line-height: 1;
+  font-family: var(--mono); transition: color .3s;
+}
+.gv.low      { color: #2563EB; }
+.gv.ok       { color: var(--success); }
+.gv.high     { color: var(--warning); }
+.gv.veryhigh { color: var(--danger); }
+.gv.none     { color: var(--text-faint); }
+.gt { font-size: 2rem; line-height: 1; margin-top: .2rem; }
+.gu { font-size: .85rem; color: var(--text-muted); font-weight: 500; align-self: flex-end; padding-bottom: .4rem; }
+.gh-side .dl { font-size: .72rem; color: var(--text-faint); text-align: left; }
+.gh-side .dv { font-family: var(--mono); font-size: 1.1rem; font-weight: 700; text-align: left; }
+.gh-meta { font-size: .78rem; color: var(--text-muted); margin-top: .3rem; }
+.gh-meta b { color: var(--text); font-weight: 600; }
+.stats-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: .5rem; margin-top: .85rem;
+}
+.stat-box { background: var(--bg); border-radius: 8px; padding: .45rem .5rem; text-align: center; }
+.stat-box .sl { font-size: .68rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.stat-box .sv { font-size: .95rem; font-weight: 800; color: var(--text); font-family: var(--mono); }
 
-  /* ─── GLUCOSE HERO ─── */
-  .glucose-hero {
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    padding: 1.25rem 1.25rem 1rem;
-    display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;
-  }
-  .glucose-main { display: flex; align-items: baseline; gap: .4rem; }
-  .glucose-value {
-    font-size: 4rem; font-weight: 800; line-height: 1;
-    font-family: var(--mono);
-    transition: color .3s;
-  }
-  .glucose-value.low { color: var(--low); }
-  .glucose-value.in-range { color: var(--in-range); }
-  .glucose-value.high { color: var(--high); }
-  .glucose-value.very-high { color: var(--very-high); }
-  .glucose-unit { font-size: 1rem; color: var(--text-muted); font-weight: 500; }
-  .glucose-trend { font-size: 2rem; line-height: 1; }
-  .glucose-meta { font-size: .8rem; color: var(--text-muted); margin-top: .25rem; }
-  .glucose-meta span { font-weight: 600; color: var(--text); }
+/* ── OMNIBOX ── */
+.omni-wrap {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: .75rem 1rem;
+  position: sticky; top: 55px; z-index: 90;
+}
+.omni { display: flex; gap: .5rem; }
+.omni input {
+  flex: 1; padding: .68rem .95rem;
+  border: 2px solid var(--border); border-radius: var(--radius);
+  font-family: 'Heebo', sans-serif; font-size: .95rem;
+  background: var(--bg); color: var(--text);
+  outline: none; direction: rtl;
+  transition: border-color .18s, background .18s;
+}
+.omni input:focus { border-color: var(--primary); background: #fff; }
+.omni input::placeholder { color: var(--text-faint); }
+.omni-go {
+  padding: .68rem 1.1rem;
+  background: var(--primary); color: #fff;
+  border: none; border-radius: var(--radius);
+  font-family: 'Heebo', sans-serif; font-size: .95rem; font-weight: 800;
+  cursor: pointer; white-space: nowrap;
+  transition: background .15s;
+}
+.omni-go:hover { background: var(--primary-dark); }
 
-  .stats-row {
-    display: grid; grid-template-columns: repeat(3, 1fr);
-    gap: .5rem; margin-top: .75rem; padding-top: .75rem;
-    border-top: 1px solid var(--border);
-  }
-  .stat-pill {
-    background: var(--bg); border-radius: 8px;
-    padding: .5rem .75rem; text-align: center;
-  }
-  .stat-pill .label { font-size: .7rem; color: var(--text-muted); font-weight: 500; }
-  .stat-pill .val { font-size: 1rem; font-weight: 700; color: var(--text); font-family: var(--mono); }
+/* ── PANELS ── */
+.panels { padding: .75rem 1rem; display: flex; flex-direction: column; gap: .75rem; }
+.panel { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; display: none; }
+.panel.show { display: block; }
+.panel-hdr {
+  background: var(--primary); color: #fff;
+  padding: .6rem 1rem;
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: .85rem; font-weight: 700;
+}
 
-  /* ─── OMNIBOX ─── */
-  .omnibox-wrap {
-    padding: 1rem 1.25rem;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    position: sticky; top: 57px; z-index: 90;
-  }
-  .omnibox {
-    display: flex; gap: .5rem; align-items: center;
-  }
-  .omnibox input {
-    flex: 1; padding: .7rem 1rem;
-    border: 2px solid var(--border); border-radius: 10px;
-    font-family: 'Heebo', sans-serif; font-size: .95rem;
-    outline: none; background: var(--bg);
-    transition: border-color .2s;
-    direction: rtl;
-  }
-  .omnibox input:focus { border-color: var(--primary); background: #fff; }
-  .omnibox-btn {
-    padding: .7rem 1.1rem; background: var(--primary);
-    color: #fff; border: none; border-radius: 10px;
-    font-family: 'Heebo', sans-serif; font-size: .9rem; font-weight: 700;
-    cursor: pointer; white-space: nowrap;
-    transition: background .2s;
-  }
-  .omnibox-btn:hover { background: var(--primary-dark); }
+/* dose hero */
+.dh {
+  text-align: center; background: var(--primary-pale);
+  border-radius: 8px; padding: .9rem; margin-bottom: .75rem;
+}
+.dh .dhl { font-size: .78rem; color: var(--primary); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .2rem; }
+.dh .dhv { font-size: 2.8rem; font-weight: 900; color: var(--primary); font-family: var(--mono); line-height: 1; }
+.dh .dhs { font-size: .82rem; color: var(--text-muted); margin-top: .3rem; }
 
-  /* ─── RESULT PANEL ─── */
-  .result-panel {
-    margin: 0 1.25rem 1rem;
-    background: var(--surface); border: 1.5px solid var(--border);
-    border-radius: 12px; overflow: hidden;
-    display: none;
-  }
-  .result-panel.show { display: block; }
-  .result-header {
-    background: var(--primary); color: #fff;
-    padding: .6rem 1rem; font-size: .85rem; font-weight: 700;
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .result-body { padding: 1rem; }
-  .dose-big {
-    font-size: 2.5rem; font-weight: 800; color: var(--primary);
-    font-family: var(--mono); text-align: center;
-    padding: .75rem;
-    background: #EFF6FF; border-radius: 8px; margin-bottom: .75rem;
-  }
-  .dose-sub { font-size: .85rem; color: var(--text-muted); text-align: center; margin-bottom: .75rem; }
-  .math-breakdown {
-    background: var(--bg); border-radius: 8px;
-    padding: .75rem; font-family: var(--mono); font-size: .8rem;
-    color: var(--text-muted); line-height: 1.8;
-    border: 1px solid var(--border);
-  }
-  .math-breakdown span.pos { color: var(--danger); }
-  .math-breakdown span.neg { color: var(--success); }
-  .math-breakdown strong { color: var(--primary); }
-  .action-btns { display: flex; gap: .5rem; margin-top: .75rem; }
-  .btn-yes { flex:1; padding:.6rem; background: var(--success); color:#fff; border:none; border-radius:8px; font-family:'Heebo',sans-serif; font-weight:700; font-size:.9rem; cursor:pointer; }
-  .btn-no { flex:1; padding:.6rem; background: var(--bg); color:var(--text-muted); border:1.5px solid var(--border); border-radius:8px; font-family:'Heebo',sans-serif; font-weight:700; font-size:.9rem; cursor:pointer; }
-  .btn-how { width:100%; padding:.5rem; background:none; color:var(--primary); border:none; font-family:'Heebo',sans-serif; font-size:.85rem; cursor:pointer; text-decoration:underline; margin-top:.25rem; }
+/* math box */
+.mbox {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: .75rem;
+  font-family: var(--mono); font-size: .78rem; color: var(--text-muted); line-height: 2;
+}
+.mr { display: flex; justify-content: space-between; align-items: center; }
+.mr span { color: var(--text-mid); }
+.mr.tot { border-top: 1px solid var(--border-strong); padding-top: .35rem; margin-top: .2rem; }
+.mr.tot span { color: var(--primary); font-weight: 700; font-size: .88rem; }
+.pos { color: var(--danger) !important; }
+.neg { color: var(--success) !important; }
 
-  /* ─── SUGGESTION CARD ─── */
-  .suggestion-card {
-    margin: 0 1.25rem 1rem;
-    background: #FFFBEB; border: 1.5px solid #FDE68A;
-    border-radius: 12px; padding: 1rem;
-    display: none;
-  }
-  .suggestion-card.show { display: block; }
-  .sug-title { font-size: .85rem; font-weight: 700; color: #92400E; margin-bottom: .4rem; }
-  .sug-body { font-size: .85rem; color: #78350F; line-height: 1.6; }
-  .sug-btns { display: flex; gap: .5rem; margin-top: .75rem; }
-  .sug-yes { flex:1; padding:.5rem; background:#92400E; color:#fff; border:none; border-radius:8px; font-family:'Heebo',sans-serif; font-weight:700; font-size:.85rem; cursor:pointer; }
-  .sug-no { flex:1; padding:.5rem; background:none; color:#92400E; border:1.5px solid #FDE68A; border-radius:8px; font-family:'Heebo',sans-serif; font-weight:700; font-size:.85rem; cursor:pointer; }
+.hrule { background: var(--warning-pale); border-radius: 8px; padding: .55rem .8rem; font-size: .82rem; color: var(--warning); margin-top: .6rem; font-weight: 600; }
+.act-row { display: flex; gap: .5rem; margin-top: .75rem; }
+.btn-ok  { flex:1; padding:.62rem; background:var(--success); color:#fff; border:none; border-radius:8px; font-family:'Heebo',sans-serif; font-weight:800; font-size:.9rem; cursor:pointer; }
+.btn-no  { flex:1; padding:.62rem; background:var(--bg); color:var(--text-muted); border:1.5px solid var(--border); border-radius:8px; font-family:'Heebo',sans-serif; font-weight:700; font-size:.9rem; cursor:pointer; }
+.btn-how { width:100%; padding:.5rem; background:none; border:none; color:var(--primary); font-family:'Heebo',sans-serif; font-size:.83rem; cursor:pointer; text-decoration:underline; margin-top:.3rem; }
 
-  /* ─── DASHBOARD GRID ─── */
-  .dashboard { padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
+/* deviation */
+.dev-warn { background:var(--danger-pale); border:1px solid #FECACA; border-radius:8px; padding:.6rem .9rem; font-size:.82rem; color:var(--danger); font-weight:600; display:none; }
+.dev-warn.show { display:block; }
 
-  .section-title {
-    font-size: .8rem; font-weight: 700; color: var(--text-muted);
-    text-transform: uppercase; letter-spacing: .05em;
-    margin-bottom: .6rem;
-    display: flex; align-items: center; gap: .4rem;
-  }
-  .section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+/* ML suggestion */
+.sug { background:var(--warning-pale); border:1.5px solid #FDE68A; border-radius:var(--radius-lg); padding:1rem; display:none; }
+.sug.show { display:block; }
+.sug-t { font-size:.85rem; font-weight:800; color:var(--warning); margin-bottom:.4rem; }
+.sug-b { font-size:.85rem; color:#78350F; line-height:1.65; }
+.sug-row { display:flex; gap:.5rem; margin-top:.75rem; }
+.sug-y { flex:1; padding:.55rem; background:var(--warning); color:#fff; border:none; border-radius:8px; font-family:'Heebo',sans-serif; font-weight:800; font-size:.85rem; cursor:pointer; }
+.sug-n { flex:1; padding:.55rem; background:none; border:1.5px solid #FDE68A; color:var(--warning); border-radius:8px; font-family:'Heebo',sans-serif; font-weight:700; font-size:.85rem; cursor:pointer; }
 
-  /* Mini Chart */
-  .chart-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 1rem; overflow: hidden;
-  }
-  #glucoseChart { width: 100%; height: 120px; display: block; }
+/* override */
+.ov { background:var(--surface); border:1.5px solid #6EE7B7; border-radius:var(--radius-lg); padding:1rem; display:none; }
+.ov.show { display:block; }
+.ov-t { font-size:.9rem; font-weight:800; color:#065F46; margin-bottom:.85rem; }
+.ov-s { display:flex; align-items:flex-start; gap:.6rem; margin-bottom:.65rem; font-size:.84rem; line-height:1.55; color:#065F46; }
+.ov-n { width:22px; height:22px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:.72rem; font-weight:800; color:#fff; margin-top:.1rem; }
+.ov-n.g { background:#10B981; }
+.ov-n.b { background:#3B82F6; }
+.ov-cl { width:100%; padding:.5rem; background:none; border:1px solid #6EE7B7; border-radius:8px; color:#065F46; font-family:'Heebo',sans-serif; font-weight:700; cursor:pointer; margin-top:.25rem; }
 
-  /* Pod Status */
-  .pod-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 1rem;
-  }
-  .pod-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-  .pod-age-bar { flex: 1; background: var(--border); border-radius: 99px; height: 6px; overflow: hidden; }
-  .pod-age-fill { height: 100%; border-radius: 99px; background: var(--success); transition: width .5s; }
-  .pod-age-fill.warn { background: var(--warning); }
-  .pod-age-fill.danger { background: var(--danger); }
-  .pod-info { font-size: .8rem; }
-  .pod-info .age { font-size: 1rem; font-weight: 700; font-family: var(--mono); }
-  .pod-info .label { color: var(--text-muted); }
-  .pod-warn {
-    margin-top: .6rem; padding: .5rem .75rem;
-    background: #FEF3C7; border-radius: 8px;
-    font-size: .8rem; color: #92400E;
-    display: flex; align-items: center; gap: .4rem;
-  }
+/* report */
+.rpt-wrap { overflow-x:auto; }
+.rpt-tbl { width:100%; border-collapse:collapse; font-size:.8rem; font-family:var(--mono); min-width:360px; }
+.rpt-tbl th { background:var(--bg); padding:.5rem .7rem; text-align:right; font-weight:700; color:var(--text-muted); border-bottom:2px solid var(--border); white-space:nowrap; }
+.rpt-tbl td { padding:.42rem .7rem; border-bottom:1px solid var(--border); }
+.rpt-tbl tr:last-child td { border:none; }
+.tg  { color:var(--success); font-weight:700; }
+.tr2 { color:var(--danger);  font-weight:700; }
+.rpt-sum { margin-top:.75rem; background:var(--bg); border-radius:8px; padding:.65rem .85rem; font-size:.8rem; color:var(--text-muted); line-height:1.9; }
 
-  /* History */
-  .history-list { display: flex; flex-direction: column; gap: .4rem; }
-  .hist-item {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; padding: .6rem .9rem;
-    display: flex; align-items: center; justify-content: space-between;
-    font-size: .85rem;
-  }
-  .hist-item .food { font-weight: 600; }
-  .hist-item .meta { color: var(--text-muted); font-size: .78rem; }
-  .hist-item .dose { font-family: var(--mono); font-weight: 700; color: var(--primary); }
+/* ── DASHBOARD ── */
+.dash { padding:.75rem 1rem 1.5rem; display:flex; flex-direction:column; gap:.9rem; }
+.sec-lbl { font-size:.72rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; display:flex; align-items:center; gap:.5rem; margin-bottom:.55rem; }
+.sec-lbl::after { content:''; flex:1; height:1px; background:var(--border); }
 
-  /* Alerts */
-  .alert-list { display: flex; flex-direction: column; gap: .4rem; }
-  .alert-item {
-    display: flex; align-items: flex-start; gap: .6rem;
-    padding: .6rem .9rem; border-radius: 8px;
-    font-size: .85rem; border: 1px solid transparent;
-  }
-  .alert-item.warn { background: #FEF3C7; border-color: #FDE68A; color: #92400E; }
-  .alert-item.danger { background: #FEE2E2; border-color: #FECACA; color: #991B1B; }
-  .alert-item.info { background: #EFF6FF; border-color: #BFDBFE; color: #1E40AF; }
-  .alert-icon { font-size: 1rem; flex-shrink: 0; margin-top: .05rem; }
+.chart-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:.85rem; }
+#gcChart { width:100%; display:block; }
 
-  /* ─── SETTINGS PANEL ─── */
-  #settingsPanel {
-    position: fixed; inset: 0; z-index: 200;
-    display: none; align-items: flex-start; justify-content: center;
-    background: rgba(0,0,0,.4); padding: 1rem;
-    overflow-y: auto;
-  }
-  #settingsPanel.show { display: flex; }
-  .settings-card {
-    background: #fff; border-radius: 16px;
-    width: 100%; max-width: 480px; margin-top: 3.5rem;
-    overflow: hidden;
-  }
-  .settings-header {
-    background: var(--primary); color: #fff;
-    padding: .85rem 1.25rem;
-    display: flex; align-items: center; justify-content: space-between;
-    font-weight: 700; font-size: 1rem;
-  }
-  .settings-body { padding: 1.25rem; }
-  .settings-section { margin-bottom: 1.25rem; }
-  .settings-section-title { font-size: .8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: .75rem; }
-  .settings-row { margin-bottom: .75rem; }
-  .settings-row label { display: block; font-size: .8rem; font-weight: 600; color: var(--text); margin-bottom: .3rem; }
-  .settings-row input, .settings-row select {
-    width: 100%; padding: .6rem .9rem;
-    border: 1.5px solid var(--border); border-radius: 8px;
-    font-family: 'Heebo', sans-serif; font-size: .9rem; outline: none;
-    transition: border-color .2s; direction: ltr; text-align: left;
-  }
-  .settings-row input:focus, .settings-row select:focus { border-color: var(--primary); }
-  .settings-row input[dir="rtl"] { direction: rtl; text-align: right; }
-  .settings-save {
-    width: 100%; padding: .75rem; background: var(--primary);
-    color: #fff; border: none; border-radius: 8px;
-    font-family: 'Heebo', sans-serif; font-size: 1rem; font-weight: 700;
-    cursor: pointer; transition: background .2s;
-  }
-  .settings-save:hover { background: var(--primary-dark); }
+.pod-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:.85rem; }
+.pod-row { display:flex; align-items:center; gap:.85rem; }
+.pi-v { font-size:1.1rem; font-weight:800; font-family:var(--mono); color:var(--text); }
+.pi-l { font-size:.72rem; color:var(--text-muted); }
+.pod-bw { flex:1; }
+.pod-bg { background:var(--border); border-radius:99px; height:7px; overflow:hidden; }
+.pod-fg { height:100%; border-radius:99px; background:var(--success); transition:width .4s; }
+.pod-fg.w { background:var(--warning); }
+.pod-fg.d { background:var(--danger); }
+.pod-tks { display:flex; justify-content:space-between; font-size:.68rem; color:var(--text-faint); margin-top:.3rem; }
+.pod-al { margin-top:.65rem; padding:.5rem .75rem; border-radius:8px; font-size:.81rem; font-weight:600; display:none; }
+.pod-al.o { display:flex; align-items:center; gap:.4rem; background:#FFF7ED; color:var(--orange); border:1px solid #FED7AA; }
+.pod-al.d { display:flex; align-items:center; gap:.4rem; background:var(--danger-pale); color:var(--danger); border:1px solid #FECACA; }
 
-  /* ─── REPORT PANEL ─── */
-  .report-panel {
-    margin: 0 1.25rem 1rem;
-    background: var(--surface); border: 1.5px solid var(--border);
-    border-radius: 12px; overflow: hidden; display: none;
-  }
-  .report-panel.show { display: block; }
-  .report-header {
-    background: var(--primary); color: #fff;
-    padding: .6rem 1rem; font-size: .85rem; font-weight: 700;
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .report-body { padding: 1rem; overflow-x: auto; }
-  .report-table {
-    width: 100%; border-collapse: collapse; font-size: .82rem;
-    font-family: var(--mono);
-  }
-  .report-table th {
-    background: var(--bg); padding: .5rem .75rem;
-    text-align: right; font-weight: 700; color: var(--text-muted);
-    border-bottom: 2px solid var(--border);
-  }
-  .report-table td { padding: .45rem .75rem; border-bottom: 1px solid var(--border); }
-  .report-table tr:last-child td { border-bottom: none; }
-  .tag-better { color: var(--success); font-weight: 700; }
-  .tag-worse { color: var(--danger); font-weight: 700; }
+.al-list { display:flex; flex-direction:column; gap:.4rem; }
+.al { display:flex; align-items:flex-start; gap:.55rem; padding:.55rem .8rem; border-radius:8px; font-size:.83rem; border:1px solid transparent; }
+.al.ok   { background:var(--success-pale); border-color:#6EE7B7; color:#065F46; }
+.al.warn { background:var(--warning-pale); border-color:#FDE68A; color:#78350F; }
+.al.err  { background:var(--danger-pale);  border-color:#FECACA; color:#991B1B; }
+.al.info { background:var(--primary-pale); border-color:#BFDBFE; color:#1E3A8A; }
 
-  /* ─── OVERRIDE GUIDE ─── */
-  .override-guide {
-    margin: 0 1.25rem 1rem;
-    background: var(--surface); border: 1.5px solid #6EE7B7;
-    border-radius: 12px; padding: 1rem; display: none;
-  }
-  .override-guide.show { display: block; }
-  .og-title { font-size: .9rem; font-weight: 700; color: #065F46; margin-bottom: .75rem; }
-  .og-step {
-    display: flex; align-items: flex-start; gap: .6rem;
-    margin-bottom: .6rem; font-size: .85rem; line-height: 1.5;
-  }
-  .og-num {
-    width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-size: .75rem; font-weight: 700; color: #fff;
-  }
-  .og-num.green { background: #10B981; }
-  .og-num.blue { background: #3B82F6; }
+.hist-list { display:flex; flex-direction:column; gap:.4rem; }
+.hi { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:.55rem .85rem; display:flex; align-items:center; justify-content:space-between; }
+.hi .hf { font-weight:700; font-size:.88rem; }
+.hi .hm { font-size:.74rem; color:var(--text-muted); margin-top:.1rem; }
+.hi .hd { font-family:var(--mono); font-size:1rem; font-weight:800; color:var(--primary); }
 
-  /* ─── BIRTHDAY BANNER ─── */
-  .bday-banner {
-    margin: 0 1.25rem 1rem;
-    background: linear-gradient(135deg, #1E40AF, #3B82F6);
-    border-radius: 12px; padding: 1rem 1.25rem;
-    color: #fff; display: none; align-items: center; gap: .75rem;
-  }
-  .bday-banner.show { display: flex; }
-  .bday-text { font-size: .95rem; font-weight: 700; }
+/* ── SETTINGS OVERLAY ── */
+#setOv {
+  position:fixed; inset:0; z-index:200;
+  background:rgba(0,0,0,.45); backdrop-filter:blur(3px);
+  display:none; align-items:flex-start; justify-content:center;
+  padding:1rem; overflow-y:auto;
+}
+#setOv.show { display:flex; }
+.set-card { background:#fff; border-radius:var(--radius-lg); width:100%; max-width:460px; margin-top:4rem; margin-bottom:1rem; overflow:hidden; }
+.set-hdr { background:var(--primary); color:#fff; padding:.8rem 1.25rem; display:flex; align-items:center; justify-content:space-between; font-weight:800; font-size:1rem; }
+.set-body { padding:1.25rem; }
+.set-sec { margin-bottom:1.25rem; }
+.set-sec-t { font-size:.72rem; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.75rem; padding-bottom:.4rem; border-bottom:1px solid var(--border); }
+.set-row { margin-bottom:.75rem; }
+.set-row label { display:block; font-size:.8rem; font-weight:700; color:var(--text); margin-bottom:.3rem; }
+.set-row input, .set-row select {
+  width:100%; padding:.62rem .9rem;
+  border:1.5px solid var(--border); border-radius:8px;
+  font-family:'Heebo',sans-serif; font-size:.9rem; color:var(--text);
+  outline:none; background:var(--bg);
+  transition:border-color .18s, background .18s;
+}
+.set-row input:focus, .set-row select:focus { border-color:var(--primary); background:#fff; }
+.set-row .ltr { direction:ltr; text-align:left; }
+.set-hint { font-size:.74rem; color:var(--text-faint); margin-top:.3rem; }
+.set-test { width:100%; padding:.58rem; margin-bottom:.75rem; background:none; color:var(--primary); border:1.5px solid var(--primary); border-radius:8px; font-family:'Heebo',sans-serif; font-size:.88rem; font-weight:700; cursor:pointer; transition:background .15s; }
+.set-test:hover { background:var(--primary-pale); }
+#testRes { font-size:.8rem; padding:.45rem .7rem; border-radius:6px; margin-bottom:.75rem; display:none; }
+#testRes.ok  { display:block; background:var(--success-pale); color:var(--success); }
+#testRes.err { display:block; background:var(--danger-pale);  color:var(--danger); }
+.set-save { width:100%; padding:.78rem; background:var(--primary); color:#fff; border:none; border-radius:8px; font-family:'Heebo',sans-serif; font-size:1rem; font-weight:800; cursor:pointer; transition:background .15s; }
+.set-save:hover { background:var(--primary-dark); }
 
-  /* ─── TOAST ─── */
-  #toast {
-    position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%);
-    background: #0F172A; color: #fff; padding: .6rem 1.25rem;
-    border-radius: 99px; font-size: .85rem; font-weight: 600;
-    z-index: 999; opacity: 0; pointer-events: none;
-    transition: opacity .3s;
-    white-space: nowrap;
-  }
-  #toast.show { opacity: 1; }
+.x { background:none; border:none; color:inherit; cursor:pointer; font-size:1.1rem; opacity:.65; padding:0; }
+.x:hover { opacity:1; }
 
-  /* ─── DEVIATION WARNING ─── */
-  .deviation-warn {
-    margin: .75rem 1.25rem 0;
-    background: #FEE2E2; border: 1px solid #FECACA;
-    border-radius: 8px; padding: .6rem .9rem;
-    font-size: .82rem; color: #991B1B; display: none;
-  }
-  .deviation-warn.show { display: block; }
+#toast {
+  position:fixed; bottom:1.5rem; left:50%; transform:translateX(-50%);
+  background:#0F172A; color:#fff; padding:.58rem 1.25rem;
+  border-radius:99px; font-size:.83rem; font-weight:600;
+  z-index:9998; opacity:0; pointer-events:none;
+  transition:opacity .25s; white-space:nowrap;
+}
+#toast.show { opacity:1; }
 
-  .close-btn { background: none; border: none; color: inherit; cursor: pointer; font-size: 1.1rem; opacity: .7; }
-  .close-btn:hover { opacity: 1; }
-
-  @media (max-width: 380px) {
-    .glucose-value { font-size: 3rem; }
-    .stats-row { grid-template-columns: repeat(3,1fr); }
-  }
+@media (max-width:360px) {
+  .gv { font-size:3rem; }
+  .stats-grid { grid-template-columns:repeat(2,1fr); }
+}
 </style>
 </head>
 <body>
 
-<!-- ─── ONBOARDING ─── -->
+<!-- ONBOARDING -->
 <div id="onboarding">
-  <div class="onboard-card">
-    <div style="margin-bottom:1rem;">
-      <svg class="logo-svg" viewBox="0 0 60 70" style="width:60px;height:70px;">
-        <polygon points="30,2 58,15 58,45 30,68 2,45 2,15" fill="#1E40AF" stroke="#1E3A8A" stroke-width="2"/>
-        <!-- Hat brim -->
-        <ellipse cx="30" cy="42" rx="20" ry="5" fill="#F59E0B"/>
-        <!-- Hat crown -->
-        <rect x="19" y="24" width="22" height="19" rx="3" fill="#F59E0B"/>
-        <!-- Hat band -->
-        <rect x="19" y="35" width="22" height="5" rx="0" fill="#EF4444"/>
-        <!-- No face on hat -->
+  <div class="ob-card">
+    <div class="ob-logo">
+      <svg width="56" height="66" viewBox="0 0 56 66">
+        <polygon points="28,2 54,14 54,44 28,64 2,44 2,14" fill="#1E40AF" stroke="#1E3A8A" stroke-width="1.5"/>
+        <ellipse cx="28" cy="41" rx="19" ry="4.5" fill="#F59E0B"/>
+        <rect x="18" y="23" width="20" height="19" rx="3" fill="#F59E0B"/>
+        <rect x="18" y="34" width="20" height="5" fill="#DC2626"/>
       </svg>
     </div>
-    <h1>Loopie</h1>
-    <p>מרכז בקרה לניהול T1D</p>
-    <div class="form-group">
-      <label>שם פרטי</label>
-      <input type="text" id="ob-name" placeholder="השם שלך">
-    </div>
-    <div class="form-group">
+    <h1>Loopie <span>T1D Control Center v23.6</span></h1>
+    <p>ברוך הבא! מלא פרטים ראשוניים</p>
+    <div class="fg"><label>שם פרטי</label><input id="ob-name" type="text" placeholder="השם שלך" autocomplete="given-name"></div>
+    <div class="fg">
       <label>מגדר</label>
-      <select id="ob-gender">
-        <option value="male">זכר</option>
-        <option value="female">נקבה</option>
-        <option value="other">אחר</option>
-      </select>
+      <select id="ob-gender"><option value="male">זכר</option><option value="female">נקבה</option><option value="other">אחר</option></select>
     </div>
-    <div class="form-group">
-      <label>כתובת מייל</label>
-      <input type="email" id="ob-email" placeholder="email@example.com" dir="ltr" style="text-align:left;">
-    </div>
-    <div class="form-group">
-      <label>תאריך לידה</label>
-      <input type="date" id="ob-dob" dir="ltr" style="text-align:left;">
-    </div>
-    <button class="btn-primary" onclick="completeOnboarding()">כניסה ל-Loopie ←</button>
+    <div class="fg"><label>מייל</label><input id="ob-email" type="email" placeholder="email@example.com" autocomplete="email" style="direction:ltr;text-align:left;"></div>
+    <div class="fg"><label>תאריך לידה</label><input id="ob-dob" type="date" style="direction:ltr;text-align:left;"></div>
+    <button class="btn-cta" onclick="completeOB()">כניסה ל-Loopie ←</button>
   </div>
 </div>
 
-<!-- ─── MAIN APP ─── -->
-<div id="app">
+<!-- APP -->
+<div id="app" style="display:none;flex-direction:column;min-height:100vh;">
 
-  <!-- Header -->
   <div class="header">
-    <div class="header-brand">
-      <svg class="logo-svg" viewBox="0 0 60 70">
-        <polygon points="30,2 58,15 58,45 30,68 2,45 2,15" fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>
-        <ellipse cx="30" cy="42" rx="20" ry="5" fill="#F59E0B"/>
-        <rect x="19" y="24" width="22" height="19" rx="3" fill="#F59E0B"/>
-        <rect x="19" y="35" width="22" height="5" fill="#EF4444"/>
+    <div class="hdr-brand">
+      <svg width="32" height="38" viewBox="0 0 56 66">
+        <polygon points="28,2 54,14 54,44 28,64 2,44 2,14" fill="rgba(255,255,255,.18)" stroke="rgba(255,255,255,.4)" stroke-width="1.5"/>
+        <ellipse cx="28" cy="41" rx="19" ry="4.5" fill="#F59E0B"/>
+        <rect x="18" y="23" width="20" height="19" rx="3" fill="#F59E0B"/>
+        <rect x="18" y="34" width="20" height="5" fill="#DC2626"/>
       </svg>
-      <div>
-        <div class="brand-name">Loopie</div>
-        <div class="brand-ver">v23.6</div>
-      </div>
+      <div><span class="brand-name">Loopie</span><span class="brand-ver">v23.6</span></div>
     </div>
-    <div class="header-actions">
-      <button class="icon-btn" onclick="toggleSettings()" title="הגדרות">⚙️</button>
-      <button class="icon-btn" onclick="fetchNS()" title="רענן">🔄</button>
+    <div class="hdr-actions">
+      <button class="icon-btn" onclick="openSet()" title="הגדרות">⚙️</button>
+      <button class="icon-btn" onclick="doFetch()" title="רענן">🔄</button>
     </div>
   </div>
 
-  <!-- Connection Bar -->
   <div class="conn-bar" id="connBar">
     <div class="conn-dot"></div>
-    <span id="connText">לא מחובר – הגדר Nightscout בהגדרות</span>
+    <span id="connTxt">לא מחובר – הגדר Nightscout בהגדרות</span>
   </div>
 
-  <!-- Birthday Banner -->
-  <div class="bday-banner" id="bdayBanner">
-    <span style="font-size:1.8rem;">🎂</span>
-    <div class="bday-text" id="bdayText"></div>
-  </div>
+  <div class="bday" id="bday">🎂 <span id="bdayTxt"></span></div>
 
-  <!-- Glucose Hero -->
-  <div class="glucose-hero">
-    <div style="flex:1;">
-      <div class="glucose-main">
-        <div class="glucose-value in-range" id="glucoseVal">---</div>
-        <div class="glucose-trend" id="glucoseTrend">→</div>
-        <div class="glucose-unit">mg/dL</div>
+  <div class="gh">
+    <div class="gh-top">
+      <div>
+        <div class="gh-main">
+          <div class="gv none" id="gv">---</div>
+          <div><div class="gt" id="gt">→</div><div class="gu">mg/dL</div></div>
+        </div>
+        <div class="gh-meta">עדכון: <b id="gTime">--:--</b> &nbsp;|&nbsp; טווח: <b id="gRange">80–180</b></div>
       </div>
-      <div class="glucose-meta">
-        עדכון אחרון: <span id="lastUpdate">--:--</span> &nbsp;|&nbsp; טווח מטרה: <span id="targetRange">80–180</span>
-      </div>
-      <div class="stats-row">
-        <div class="stat-pill">
-          <div class="label">IOB</div>
-          <div class="val" id="iobVal">0.0u</div>
-        </div>
-        <div class="stat-pill">
-          <div class="label">COB</div>
-          <div class="val" id="cobVal">0g</div>
-        </div>
-        <div class="stat-pill">
-          <div class="label">TIR</div>
-          <div class="val" id="tirVal">--%</div>
-        </div>
+      <div class="gh-side">
+        <div class="dl">Δ 15 דקות</div>
+        <div class="dv" id="gDelta">—</div>
       </div>
     </div>
-  </div>
-
-  <!-- Omnibox -->
-  <div class="omnibox-wrap">
-    <div class="omnibox">
-      <input type="text" id="omniInput" placeholder="חיפוש מזון, 'דוח שבוע', 'IOB', 'LOW'..." 
-             onkeydown="if(event.key==='Enter')processOmni()">
-      <button class="omnibox-btn" onclick="processOmni()">↵</button>
+    <div class="stats-grid">
+      <div class="stat-box"><div class="sl">IOB</div><div class="sv" id="siob">0.0u</div></div>
+      <div class="stat-box"><div class="sl">COB</div><div class="sv" id="scob">0g</div></div>
+      <div class="stat-box"><div class="sl">TIR</div><div class="sv" id="stir">--%</div></div>
+      <div class="stat-box"><div class="sl">A1C≈</div><div class="sv" id="sa1c">--%</div></div>
     </div>
   </div>
 
-  <!-- Result Panel -->
-  <div class="result-panel" id="resultPanel">
-    <div class="result-header">
-      <span id="resultTitle">חישוב מנה</span>
-      <button class="close-btn" onclick="closePanel('resultPanel')">✕</button>
-    </div>
-    <div class="result-body" id="resultBody"></div>
-  </div>
-
-  <!-- Deviation Warning -->
-  <div class="deviation-warn" id="deviationWarn" id="devWarn">
-    ⚠️ <span id="deviationText"></span>
-  </div>
-
-  <!-- Report Panel -->
-  <div class="report-panel" id="reportPanel">
-    <div class="report-header">
-      <span id="reportTitle">דוח סוכר</span>
-      <button class="close-btn" onclick="closePanel('reportPanel')">✕</button>
-    </div>
-    <div class="report-body" id="reportBody"></div>
-  </div>
-
-  <!-- Suggestion Card -->
-  <div class="suggestion-card" id="suggestionCard">
-    <div class="sug-title" id="sugTitle">💡 המלצת מנוע הלמידה</div>
-    <div class="sug-body" id="sugBody"></div>
-    <div class="sug-btns">
-      <button class="sug-yes" onclick="acceptSuggestion()">✔ כן, יישם</button>
-      <button class="sug-no" onclick="closePanel('suggestionCard')">✘ לא עכשיו</button>
+  <div class="omni-wrap">
+    <div class="omni">
+      <input id="omni" type="text" placeholder="פיצה, אורז, 'דוח שבוע', 'LOW', 'IOB', 'פוד חדש'..." onkeydown="if(event.key==='Enter')go()">
+      <button class="omni-go" onclick="go()">↵</button>
     </div>
   </div>
 
-  <!-- Override Guide -->
-  <div class="override-guide" id="overrideGuide">
-    <div class="og-title">📱 Override – חילוץ סוכר באייפון</div>
-    <div class="og-step">
-      <div class="og-num green">1</div>
-      <span>פתח את אפליקציית <strong>Loop</strong> באייפון. לחץ על "Override Presets" בתפריט העליון.</span>
+  <div class="panels">
+
+    <div class="panel" id="pRes">
+      <div class="panel-hdr">
+        <span id="pResT">חישוב מנה</span>
+        <button class="x" onclick="closeP('pRes')">✕</button>
+      </div>
+      <div style="padding:1rem;" id="pResB"></div>
     </div>
-    <div class="og-step">
-      <div class="og-num green">2</div>
-      <span>בחר את ה-Override הירוק 🟢 (ה-Override הראשי לחילוץ). הגדר משך: 1-2 שעות.</span>
+
+    <div class="dev-warn" id="devW"></div>
+
+    <div class="panel" id="pRpt">
+      <div class="panel-hdr">
+        <span id="pRptT">דוח</span>
+        <button class="x" onclick="closeP('pRpt')">✕</button>
+      </div>
+      <div style="padding:1rem;" id="pRptB"></div>
     </div>
-    <div class="og-step">
-      <div class="og-num blue">3</div>
-      <span>אם הסוכר לא יורד תוך 30 דקות, עבור ל-Override הכחול 💙 עם ה-multiplier הגבוה יותר.</span>
+
+    <div class="sug" id="pSug">
+      <div class="sug-t" id="sugT">💡 המלצת מנוע הלמידה</div>
+      <div class="sug-b" id="sugB"></div>
+      <div class="sug-row">
+        <button class="sug-y" onclick="acceptSug()">✔ יישם</button>
+        <button class="sug-n" onclick="closeP('pSug')">✘ לא עכשיו</button>
+      </div>
     </div>
-    <div class="og-step">
-      <div class="og-num green">4</div>
-      <span>כשהסוכר מגיע ל-180, בטל את ה-Override ועבור חזרה למצב רגיל.</span>
+
+    <div class="ov" id="pOv">
+      <div class="ov-t">📱 מדריך Override – חילוץ סוכר באייפון</div>
+      <div class="ov-s"><div class="ov-n g">1</div><span>פתח <strong>Loop</strong>. לחץ <strong>Override Presets</strong> בתפריט העליון.</span></div>
+      <div class="ov-s"><div class="ov-n g">2</div><span>בחר Override ירוק 🟢 (חילוץ ראשי). משך: 1–2 שעות.</span></div>
+      <div class="ov-s"><div class="ov-n b">3</div><span>אם הסוכר לא יורד תוך 30 דק' – עבור ל-Override כחול 💙 (Multiplier גבוה יותר).</span></div>
+      <div class="ov-s"><div class="ov-n g">4</div><span>כשהסוכר מגיע 180 – בטל Override וחזור למצב רגיל.</span></div>
+      <button class="ov-cl" onclick="closeP('pOv')">סגור</button>
     </div>
-    <button style="width:100%;padding:.5rem;background:none;border:1px solid #6EE7B7;border-radius:8px;color:#065F46;font-family:'Heebo',sans-serif;font-weight:700;cursor:pointer;margin-top:.5rem;" onclick="closePanel('overrideGuide')">סגור</button>
+
   </div>
 
-  <!-- Dashboard -->
-  <div class="dashboard">
+  <div class="dash">
 
-    <!-- Mini Chart -->
     <div>
-      <div class="section-title">גרף סוכר – 3 שעות אחרונות</div>
-      <div class="chart-card">
-        <canvas id="glucoseChart"></canvas>
-      </div>
+      <div class="sec-lbl">גרף סוכר – 3 שעות</div>
+      <div class="chart-card"><canvas id="gcChart" height="110"></canvas></div>
     </div>
 
-    <!-- Pod Status -->
     <div>
-      <div class="section-title">סטטוס פוד</div>
+      <div class="sec-lbl">סטטוס פוד</div>
       <div class="pod-card">
         <div class="pod-row">
-          <div class="pod-info">
-            <div class="age" id="podAge">--h --m</div>
-            <div class="label">גיל הפוד</div>
+          <div><div class="pi-v" id="podAge">-- h</div><div class="pi-l">גיל הפוד</div></div>
+          <div class="pod-bw">
+            <div class="pod-bg"><div class="pod-fg" id="podFg" style="width:0%"></div></div>
+            <div class="pod-tks"><span>0h</span><span>40h</span><span>80h</span></div>
           </div>
-          <div style="flex:1;">
-            <div class="pod-age-bar">
-              <div class="pod-age-fill" id="podFill" style="width:0%"></div>
-            </div>
-            <div style="display:flex;justify-content:space-between;font-size:.7rem;color:var(--text-muted);margin-top:.3rem;">
-              <span>0h</span><span>40h</span><span>80h</span>
-            </div>
-          </div>
-          <div class="pod-info" style="text-align:left;">
-            <div class="age" id="podRemain">--h</div>
-            <div class="label">נותרו</div>
-          </div>
+          <div style="text-align:left;"><div class="pi-v" id="podRem">-- h</div><div class="pi-l">נותרו</div></div>
         </div>
-        <div class="pod-warn" id="podWarn" style="display:none;"></div>
+        <div class="pod-al" id="podAl"></div>
       </div>
     </div>
 
-    <!-- Alerts -->
     <div>
-      <div class="section-title">התראות</div>
-      <div class="alert-list" id="alertList">
-        <div class="alert-item info">
-          <div class="alert-icon">ℹ️</div>
-          <div>חבר ל-Nightscout כדי לקבל התראות מותאמות אישית.</div>
-        </div>
+      <div class="sec-lbl">התראות</div>
+      <div class="al-list" id="alList">
+        <div class="al info">ℹ️ &nbsp;חבר ל-Nightscout לקבלת התראות מותאמות.</div>
       </div>
     </div>
 
-    <!-- History -->
     <div>
-      <div class="section-title">היסטוריית מנות</div>
-      <div class="history-list" id="historyList">
-        <div style="font-size:.85rem;color:var(--text-muted);padding:.5rem 0;">אין נתונים עדיין. חפש מזון ב-Omnibox.</div>
+      <div class="sec-lbl">היסטוריית מנות</div>
+      <div class="hist-list" id="histList">
+        <div style="font-size:.84rem;color:var(--text-muted);padding:.3rem 0;">חפש מזון ב-Omnibox כדי להתחיל.</div>
       </div>
     </div>
 
-  </div><!-- /dashboard -->
-</div><!-- /app -->
+  </div>
+</div>
 
-<!-- ─── SETTINGS PANEL ─── -->
-<div id="settingsPanel">
-  <div class="settings-card">
-    <div class="settings-header">
+<!-- SETTINGS -->
+<div id="setOv">
+  <div class="set-card">
+    <div class="set-hdr">
       <span>⚙️ הגדרות Loopie</span>
-      <button class="close-btn" onclick="toggleSettings()">✕</button>
+      <button class="x" onclick="closeSet()">✕</button>
     </div>
-    <div class="settings-body">
-      <!-- Nightscout -->
-      <div class="settings-section">
-        <div class="settings-section-title">🩺 Nightscout</div>
-        <div class="settings-row">
+    <div class="set-body">
+
+      <div class="set-sec">
+        <div class="set-sec-t">🩺 Nightscout</div>
+        <div class="set-row">
           <label>Nightscout URL</label>
-          <input type="url" id="ns-url" placeholder="https://yoursite.herokuapp.com" dir="ltr">
+          <input type="url" id="cfg-url" class="ltr" placeholder="https://yoursite.fly.dev">
+          <div class="set-hint">ללא סלאש בסוף | לדוגמה: https://myns.fly.dev</div>
         </div>
-        <div class="settings-row">
-          <label>API Secret</label>
-          <input type="password" id="ns-secret" placeholder="הסיסמה הסודית שלך" dir="ltr">
+        <div class="set-row">
+          <label>API Secret <small style="font-weight:400;color:var(--text-faint)">(יוצפן ב-SHA1 אוטומטית לפני שליחה)</small></label>
+          <input type="password" id="cfg-sec" class="ltr" placeholder="הסיסמה הסודית שלך">
+          <div class="set-hint">הסיסמה מוצפנת ב-SHA1 בדפדפן – לא נשמרת כ-plaintext.</div>
         </div>
+        <div id="testRes"></div>
+        <button class="set-test" onclick="testConn()">🔌 בדוק חיבור ל-NS</button>
       </div>
-      <!-- Pusher -->
-      <div class="settings-section">
-        <div class="settings-section-title">🔔 Pusher (התראות)</div>
-        <div class="settings-row">
-          <label>Pusher App Key</label>
-          <input type="text" id="pusher-key" placeholder="app_key" dir="ltr">
-        </div>
-        <div class="settings-row">
-          <label>Pusher Cluster</label>
-          <input type="text" id="pusher-cluster" placeholder="eu" dir="ltr">
-        </div>
+
+      <div class="set-sec">
+        <div class="set-sec-t">🔔 Pusher (התראות)</div>
+        <div class="set-row"><label>App Key</label><input type="text" id="cfg-pkey" class="ltr" placeholder="app_key"></div>
+        <div class="set-row"><label>Cluster</label><input type="text" id="cfg-pclu" class="ltr" placeholder="eu"></div>
       </div>
-      <!-- Insulin Settings -->
-      <div class="settings-section">
-        <div class="settings-section-title">💉 הגדרות אינסולין</div>
-        <div class="settings-row">
-          <label>יחס פחמימה (ICR) — g/unit</label>
-          <input type="number" id="cfg-icr" value="10" min="1" max="30">
-        </div>
-        <div class="settings-row">
-          <label>רגישות לאינסולין (ISF) — mg/dL per unit</label>
-          <input type="number" id="cfg-isf" value="50" min="10" max="200">
-        </div>
-        <div class="settings-row">
-          <label>יעד סוכר (mg/dL)</label>
-          <input type="number" id="cfg-target" value="110" min="70" max="180">
-        </div>
-        <div class="settings-row">
-          <label>בזאל (u/h)</label>
-          <input type="number" id="cfg-basal" value="0.8" step="0.05" min="0.1" max="5">
-        </div>
+
+      <div class="set-sec">
+        <div class="set-sec-t">💉 הגדרות אינסולין</div>
+        <div class="set-row"><label>יחס פחמימה ICR (g/unit)</label><input type="number" id="cfg-icr" value="10" min="3" max="30"></div>
+        <div class="set-row"><label>רגישות ISF (mg/dL per unit)</label><input type="number" id="cfg-isf" value="50" min="10" max="300"></div>
+        <div class="set-row"><label>יעד סוכר (mg/dL)</label><input type="number" id="cfg-tgt" value="110" min="70" max="180"></div>
+        <div class="set-row"><label>בזאל בסיסי (u/h)</label><input type="number" id="cfg-bas" value="0.80" step="0.05" min="0.05" max="5"></div>
       </div>
-      <!-- Mode -->
-      <div class="settings-section">
-        <div class="settings-section-title">🏟️ מצב מיוחד</div>
-        <div class="settings-row">
-          <label>חוג</label>
+
+      <div class="set-sec">
+        <div class="set-sec-t">🏟️ מצב פעולה</div>
+        <div class="set-row">
+          <label>חוג / מצב מיוחד</label>
           <select id="cfg-mode">
             <option value="normal">רגיל</option>
             <option value="watching">צופים ⚜️ (אצטדיון)</option>
-            <option value="mma">MMA 🥊 (ריצה/ספורט אינטנסיבי)</option>
+            <option value="mma">MMA 🥊 (ספורט אינטנסיבי)</option>
           </select>
         </div>
       </div>
-      <button class="settings-save" onclick="saveSettings()">💾 שמור הגדרות</button>
+
+      <button class="set-save" onclick="saveSet()">💾 שמור הגדרות</button>
     </div>
   </div>
 </div>
@@ -709,803 +561,530 @@
 <div id="toast"></div>
 
 <script>
-// ═══════════════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════════════
-let state = {
-  name: '', gender: '', email: '', dob: '',
-  nsUrl: '', nsSecret: '', pusherKey: '', pusherCluster: '',
-  icr: 10, isf: 50, target: 110, basal: 0.8, mode: 'normal',
-  glucose: null, trend: '→', iob: 0, cob: 0,
-  podStart: null, // Date
-  history: [],
-  glucoseHistory: [], // [{time, val}]
-  mlData: [], // daily records for ML
-  connected: false,
-  lastFetch: null,
-};
-
-const FOOD_DB = {
-  // name: [carbs_g, fat_g, protein_g, hours_override]
-  'פיצה': [35, 12, 10, 4],
-  'המבורגר': [30, 20, 25, 5],
-  'צ\'יפס': [40, 15, 3, 5],
-  'פסטה': [60, 8, 12, 5],
-  'אורז': [45, 1, 4, 3],
-  'פיתה': [35, 2, 6, 3],
-  'לחמנייה': [30, 3, 7, 3],
-  'תפוח': [20, 0, 0, 1.5],
-  'בננה': [25, 0, 1, 1.5],
-  'דגני בוקר': [40, 2, 5, 2],
-  'שוקולד': [30, 15, 3, 2],
-  'גלידה': [35, 10, 4, 2.5],
-  'סלט': [5, 8, 3, 1],
-  'ביצים': [1, 10, 13, 1],
-  'עוף': [0, 8, 30, 1],
-  'לחם': [25, 2, 5, 3],
-  'תפוחי אדמה': [30, 0, 3, 2.5],
-  'סושי': [40, 5, 15, 3],
-  'פנקייק': [45, 10, 8, 3],
-  'וופל': [40, 12, 8, 3],
-  'קציצות': [10, 15, 20, 2],
-  'שניצל': [20, 15, 25, 2.5],
-  'מרק': [15, 5, 8, 1.5],
-  'יוגורט': [15, 5, 10, 1.5],
-  'גבינה': [1, 8, 7, 1],
-  'חמוס': [20, 10, 8, 2],
-  'פלאפל': [25, 12, 8, 2.5],
-  'שוואמרה': [35, 18, 25, 3],
-  'ספגטי': [55, 6, 10, 5],
-  'ריזוטו': [50, 12, 10, 4],
-};
-
-// ═══════════════════════════════════════════════════
-// INIT & STORAGE
-// ═══════════════════════════════════════════════════
-function loadState() {
-  const saved = localStorage.getItem('loopie_state');
-  if (saved) {
-    try { Object.assign(state, JSON.parse(saved)); } catch(e) {}
-  }
-}
-function saveState() {
-  localStorage.setItem('loopie_state', JSON.stringify(state));
-}
-function loadSettings() {
-  document.getElementById('ns-url').value = state.nsUrl || '';
-  document.getElementById('ns-secret').value = state.nsSecret || '';
-  document.getElementById('pusher-key').value = state.pusherKey || '';
-  document.getElementById('pusher-cluster').value = state.pusherCluster || '';
-  document.getElementById('cfg-icr').value = state.icr;
-  document.getElementById('cfg-isf').value = state.isf;
-  document.getElementById('cfg-target').value = state.target;
-  document.getElementById('cfg-basal').value = state.basal;
-  document.getElementById('cfg-mode').value = state.mode || 'normal';
-}
-function saveSettings() {
-  state.nsUrl = document.getElementById('ns-url').value.trim().replace(/\/$/, '');
-  state.nsSecret = document.getElementById('ns-secret').value.trim();
-  state.pusherKey = document.getElementById('pusher-key').value.trim();
-  state.pusherCluster = document.getElementById('pusher-cluster').value.trim();
-  state.icr = parseFloat(document.getElementById('cfg-icr').value) || 10;
-  state.isf = parseFloat(document.getElementById('cfg-isf').value) || 50;
-  state.target = parseFloat(document.getElementById('cfg-target').value) || 110;
-  state.basal = parseFloat(document.getElementById('cfg-basal').value) || 0.8;
-  state.mode = document.getElementById('cfg-mode').value;
-  saveState();
-  toggleSettings();
-  showToast('הגדרות נשמרו ✔');
-  if (state.nsUrl) fetchNS();
-}
-
-// ═══════════════════════════════════════════════════
-// ONBOARDING
-// ═══════════════════════════════════════════════════
-function completeOnboarding() {
-  const name = document.getElementById('ob-name').value.trim();
-  const gender = document.getElementById('ob-gender').value;
-  const email = document.getElementById('ob-email').value.trim();
-  const dob = document.getElementById('ob-dob').value;
-  if (!name) { showToast('אנא הזן שם'); return; }
-  state.name = name;
-  state.gender = gender;
-  state.email = email;
-  state.dob = dob;
-  if (!state.podStart) state.podStart = new Date().toISOString();
-  saveState();
-  document.getElementById('onboarding').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  initApp();
-}
-
-// ═══════════════════════════════════════════════════
-// APP INIT
-// ═══════════════════════════════════════════════════
-function initApp() {
-  loadSettings();
-  updateDashboard();
-  checkBirthday();
-  renderHistory();
-  drawChart();
-  if (state.nsUrl) fetchNS();
-  setInterval(() => { if (state.nsUrl) fetchNS(); }, 60000);
-  setInterval(mlEngine, 3600000); // check ML every hour
-  setTimeout(mlEngine, 5000); // first check after 5s
-}
-
-// ═══════════════════════════════════════════════════
-// SHA1 (for NS API Secret)
-// ═══════════════════════════════════════════════════
+/* ════════════════════════════════════════════
+   SHA-1 PURE JS (no lib)
+════════════════════════════════════════════ */
 async function sha1(str) {
   const buf = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
-// ═══════════════════════════════════════════════════
-// NIGHTSCOUT FETCH
-// ═══════════════════════════════════════════════════
-async function fetchNS() {
-  if (!state.nsUrl) return;
+/* ════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════ */
+const S = {
+  name:'', gender:'', email:'', dob:'',
+  nsUrl:'', nsSec:'', pKey:'', pClu:'',
+  icr:10, isf:50, tgt:110, bas:0.80, mode:'normal',
+  glucose:null, trend:'→', prevGlucose:null,
+  iob:0, cob:0, lastFetch:null,
+  podStart:null,
+  history:[], gcHist:[], mlData:[],
+  connected:false,
+};
+
+function loadS() { try{const s=localStorage.getItem('lp23');if(s)Object.assign(S,JSON.parse(s));}catch(e){} }
+function saveS() { try{localStorage.setItem('lp23',JSON.stringify(S));}catch(e){} }
+
+/* ════════════════════════════════════════════
+   ONBOARDING
+════════════════════════════════════════════ */
+function completeOB() {
+  const n = document.getElementById('ob-name').value.trim();
+  if (!n) { toast('אנא הזן שם'); return; }
+  S.name   = n;
+  S.gender = document.getElementById('ob-gender').value;
+  S.email  = document.getElementById('ob-email').value.trim();
+  S.dob    = document.getElementById('ob-dob').value;
+  if (!S.podStart) S.podStart = new Date().toISOString();
+  saveS();
+  document.getElementById('onboarding').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  boot();
+}
+
+/* ════════════════════════════════════════════
+   BOOT
+════════════════════════════════════════════ */
+function boot() {
+  syncSetUI();
+  updateHero();
+  updatePod();
+  updateAlerts();
+  renderHist();
+  drawChart();
+  checkBday();
+  if (S.nsUrl) doFetch();
+  setInterval(()=>{ if(S.nsUrl)doFetch(); }, 60000);
+  setInterval(mlEngine, 3600000);
+  setTimeout(mlEngine, 8000);
+  window.addEventListener('resize', ()=>setTimeout(drawChart,120));
+}
+
+/* ════════════════════════════════════════════
+   NS FETCH – FULL SHA1 + CORS FIX
+   Headers: api-secret (SHA1), Accept, Content-Type
+   Mode: cors
+════════════════════════════════════════════ */
+async function buildHeaders() {
+  const h = {
+    'Accept':       'application/json',
+    'Content-Type': 'application/json',
+  };
+  if (S.nsSec) {
+    h['api-secret'] = await sha1(S.nsSec);
+  }
+  return h;
+}
+
+async function doFetch() {
+  if (!S.nsUrl) return;
+  setConn('loading', '<span class="spin">⟳</span> מתחבר ל-Nightscout...');
   try {
-    let headers = { 'Content-Type': 'application/json' };
-    if (state.nsSecret) {
-      const hashed = await sha1(state.nsSecret);
-      headers['api-secret'] = hashed;
-    }
-    // Fetch current glucose
-    const r = await fetch(`${state.nsUrl}/api/v1/entries/current.json?count=1`, { headers });
-    if (!r.ok) throw new Error('NS error ' + r.status);
-    const data = await r.json();
-    const entry = Array.isArray(data) ? data[0] : data;
+    const headers = await buildHeaders();
+    const opts    = { method:'GET', mode:'cors', headers };
 
-    state.glucose = entry.sgv || entry.glucose || null;
-    const dirMap = {
-      'DoubleUp':'↑↑','SingleUp':'↑','FortyFiveUp':'↗','Flat':'→','FortyFiveDown':'↘','SingleDown':'↓','DoubleDown':'↓↓'
-    };
-    state.trend = dirMap[entry.direction] || '→';
-    state.lastFetch = new Date();
+    // 1. Current reading
+    const r1 = await fetch(`${S.nsUrl}/api/v1/entries/current.json?count=1`, opts);
+    if (!r1.ok) throw new Error(`HTTP ${r1.status} – בדוק URL וסיסמה`);
+    const d1 = await r1.json();
+    const entry = Array.isArray(d1) ? d1[0] : d1;
 
-    // Fetch history (3h)
-    const from = Date.now() - 3*60*60*1000;
-    const rh = await fetch(`${state.nsUrl}/api/v1/entries.json?count=36&find[date][$gte]=${from}`, { headers });
-    if (rh.ok) {
-      const hist = await rh.json();
-      state.glucoseHistory = hist.map(e => ({ time: new Date(e.date || e.dateString), val: e.sgv || e.glucose })).filter(e=>e.val).reverse();
-    }
+    S.prevGlucose = S.glucose;
+    S.glucose = entry.sgv ?? entry.glucose ?? null;
+    const dm = {DoubleUp:'↑↑',SingleUp:'↑',FortyFiveUp:'↗',Flat:'→',FortyFiveDown:'↘',SingleDown:'↓',DoubleDown:'↓↓'};
+    S.trend = dm[entry.direction] || '→';
+    S.lastFetch = new Date();
 
-    // Fetch devicestatus for IOB/COB
-    const rd = await fetch(`${state.nsUrl}/api/v1/devicestatus.json?count=1`, { headers });
-    if (rd.ok) {
-      const ds = await rd.json();
-      const latest = ds[0];
-      if (latest) {
-        state.iob = latest?.loop?.iob?.iob || latest?.openaps?.iob?.iob || 0;
-        state.cob = latest?.loop?.cob || latest?.openaps?.meal?.mealCOB || 0;
+    // 2. 3h history
+    try {
+      const from = Date.now() - 3*60*60*1000;
+      const r2 = await fetch(`${S.nsUrl}/api/v1/entries.json?count=36&find[date][$gte]=${from}`, opts);
+      if (r2.ok) {
+        const d2 = await r2.json();
+        S.gcHist = d2
+          .map(e=>({ t:new Date(e.date??e.dateString), v:e.sgv??e.glucose }))
+          .filter(e=>e.v)
+          .sort((a,b)=>a.t-b.t);
       }
-    }
+    } catch(_){}
 
-    // Pod age from devicestatus
-    // (If NS has pod info, use it)
-    state.connected = true;
-    updateConnBar(true);
-    updateDashboard();
-    drawChart();
+    // 3. IOB / COB from devicestatus
+    try {
+      const r3 = await fetch(`${S.nsUrl}/api/v1/devicestatus.json?count=1`, opts);
+      if (r3.ok) {
+        const d3 = await r3.json();
+        const ds = d3[0];
+        if (ds) {
+          S.iob = ds?.loop?.iob?.iob ?? ds?.openaps?.iob?.iob ?? 0;
+          S.cob = ds?.loop?.cob      ?? ds?.openaps?.meal?.mealCOB ?? 0;
+        }
+      }
+    } catch(_){}
 
-    // Store daily record for ML
-    storeDailyRecord();
+    S.connected = true;
+    const tm = S.lastFetch.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+    setConn('ok', `מחובר ל-NS · עדכון ${tm}`);
+    storeDailyRec();
+    updateHero(); updatePod(); updateAlerts(); drawChart();
 
   } catch(e) {
-    console.warn('NS fetch error:', e);
-    state.connected = false;
-    updateConnBar(false, e.message);
+    S.connected = false;
+    setConn('err', `שגיאה: ${e.message}`);
+    console.warn('[NS]', e);
   }
 }
 
-function updateConnBar(ok, msg='') {
-  const bar = document.getElementById('connBar');
-  const txt = document.getElementById('connText');
-  if (ok) {
-    bar.className = 'conn-bar connected';
-    const t = state.lastFetch;
-    txt.textContent = `מחובר ל-NS • עדכון: ${t.getHours().toString().padStart(2,'0')}:${t.getMinutes().toString().padStart(2,'0')}`;
-  } else {
-    bar.className = 'conn-bar';
-    txt.textContent = msg ? `שגיאת חיבור: ${msg}` : 'לא מחובר – הגדר Nightscout בהגדרות';
+async function testConn() {
+  const url = document.getElementById('cfg-url').value.trim().replace(/\/$/,'');
+  const sec = document.getElementById('cfg-sec').value.trim();
+  const tr  = document.getElementById('testRes');
+  tr.className=''; tr.style.display='none';
+  if (!url) { tr.className='err'; tr.textContent='נא הזן URL'; tr.style.display='block'; return; }
+  try {
+    const h = { 'Accept':'application/json','Content-Type':'application/json' };
+    if (sec) h['api-secret'] = await sha1(sec);
+    const r = await fetch(`${url}/api/v1/entries/current.json?count=1`,{method:'GET',mode:'cors',headers:h});
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d = await r.json();
+    const g = (Array.isArray(d)?d[0]:d)?.sgv ?? '?';
+    tr.className='ok'; tr.textContent=`✔ מחובר! סוכר נוכחי: ${g} mg/dL`;
+  } catch(e) {
+    tr.className='err'; tr.textContent=`✘ כישלון: ${e.message}`;
+  }
+  tr.style.display='block';
+}
+
+function setConn(s,txt) {
+  const b=document.getElementById('connBar'),t=document.getElementById('connTxt');
+  b.className='conn-bar'+(s==='ok'?' ok':s==='err'?' err':'');
+  t.innerHTML=txt;
+}
+
+/* ════════════════════════════════════════════
+   HERO
+════════════════════════════════════════════ */
+function gcls(g){if(!g)return'none';if(g<70)return'low';if(g<=180)return'ok';if(g<=250)return'high';return'veryhigh';}
+
+function updateHero(){
+  const g=S.glucose;
+  const el=document.getElementById('gv');
+  el.textContent=g??'---'; el.className='gv '+gcls(g);
+  document.getElementById('gt').textContent=S.trend;
+  document.getElementById('gTime').textContent=S.lastFetch?S.lastFetch.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}):'--:--';
+  document.getElementById('gRange').textContent=`${S.tgt-30}–${S.tgt+70}`;
+  const de=document.getElementById('gDelta');
+  if(S.prevGlucose&&g){const d=g-S.prevGlucose;de.textContent=(d>=0?'+':'')+d+' mg/dL';de.style.color=d>0?'var(--danger)':d<0?'var(--success)':'var(--text-mid)';}
+  document.getElementById('siob').textContent=S.iob.toFixed(1)+'u';
+  document.getElementById('scob').textContent=Math.round(S.cob)+'g';
+  if(S.gcHist.length>0){
+    const ir=S.gcHist.filter(e=>e.v>=70&&e.v<=180).length;
+    const tir=Math.round(ir/S.gcHist.length*100);
+    document.getElementById('stir').textContent=tir+'%';
+    const avg=S.gcHist.reduce((s,e)=>s+e.v,0)/S.gcHist.length;
+    document.getElementById('sa1c').textContent=((avg+46.7)/28.7).toFixed(1)+'%';
   }
 }
 
-// ═══════════════════════════════════════════════════
-// DASHBOARD UPDATE
-// ═══════════════════════════════════════════════════
-function updateDashboard() {
-  const g = state.glucose;
-  const gEl = document.getElementById('glucoseVal');
-  gEl.textContent = g ? g : '---';
-  gEl.className = 'glucose-value ' + glucoseClass(g);
-  document.getElementById('glucoseTrend').textContent = state.trend;
-  document.getElementById('lastUpdate').textContent = state.lastFetch
-    ? state.lastFetch.toLocaleTimeString('he-IL', {hour:'2-digit',minute:'2-digit'}) : '--:--';
-  document.getElementById('iobVal').textContent = state.iob.toFixed(1) + 'u';
-  document.getElementById('cobVal').textContent = Math.round(state.cob) + 'g';
-  document.getElementById('targetRange').textContent = `${state.target - 30}–${state.target + 70}`;
-
-  // TIR (from history)
-  if (state.glucoseHistory.length > 0) {
-    const inRange = state.glucoseHistory.filter(e => e.val >= 70 && e.val <= 180).length;
-    const tir = Math.round(inRange / state.glucoseHistory.length * 100);
-    document.getElementById('tirVal').textContent = tir + '%';
-  }
-
-  // Pod
-  updatePodStatus();
-  updateAlerts(g);
+/* ════════════════════════════════════════════
+   POD
+════════════════════════════════════════════ */
+function updatePod(){
+  if(!S.podStart)return;
+  const el=(Date.now()-new Date(S.podStart))/3600000;
+  const MAX=80,rem=Math.max(0,MAX-el),pct=Math.min(100,(el/MAX)*100);
+  const h=Math.floor(el),m=Math.floor((el-h)*60);
+  document.getElementById('podAge').textContent=`${h}h ${m}m`;
+  document.getElementById('podRem').textContent=`${Math.ceil(rem)}h`;
+  const fg=document.getElementById('podFg');
+  fg.style.width=pct+'%'; fg.className='pod-fg'+(pct>80?' d':pct>60?' w':'');
+  const al=document.getElementById('podAl');
+  if(pct>90){al.className='pod-al d';al.style.display='flex';al.textContent='⚠️ פוד קריטי – פחות מ-'+Math.ceil(rem)+'h. הכן פוד חדש!';}
+  else if(pct>70){al.className='pod-al o';al.style.display='flex';al.textContent='🟠 '+Math.ceil(rem)+'h נותרו לפוד.';}
+  else if(el>48&&S.glucose&&S.glucose>160){al.className='pod-al o';al.style.display='flex';al.textContent='🟠 סוכר תקוע >160 & פוד >48h – שקול הנעה ידנית 0.1–0.3U.';}
+  else{al.style.display='none';}
 }
 
-function glucoseClass(g) {
-  if (!g) return 'in-range';
-  if (g < 70) return 'low';
-  if (g <= 180) return 'in-range';
-  if (g <= 250) return 'high';
-  return 'very-high';
+/* ════════════════════════════════════════════
+   ALERTS
+════════════════════════════════════════════ */
+function updateAlerts(){
+  const g=S.glucose,al=[];
+  if(g){
+    if(g<55)al.push(['err','🚨','סוכר קריטי '+g+' mg/dL – טפל מיד!']);
+    else if(g<70)al.push(['err','⚠️','סוכר נמוך '+g+' mg/dL – אכול 15g פחמימות.']);
+    else if(g>350)al.push(['err','🚨','סוכר גבוה מאוד '+g+' – בדוק קטונים!']);
+    else if(g>250)al.push(['warn','⚠️','סוכר גבוה '+g+' mg/dL – שקול תיקון.']);
+    else if(g>180&&(S.trend==='↑↑'||S.trend==='↑'))al.push(['warn','📈','עלייה חדה – '+g+' ועולה.']);
+    else al.push(['ok','✅','סוכר תקין – '+g+' mg/dL.']);
+  }
+  if(S.iob>3)al.push(['warn','💉','IOB גבוה: '+S.iob.toFixed(1)+'u – היזהר משכבות.']);
+  if(S.mode==='watching')al.push(['info','⚜️','מצב צופים – ISF מוגדל.']);
+  if(S.mode==='mma')al.push(['info','🥊','מצב MMA – ISF+30%, ICR+20%. שים לב לירידות.']);
+  const el=document.getElementById('alList');
+  el.innerHTML=al.length?al.map(([t,i,m])=>`<div class="al ${t}">${i}&nbsp;${m}</div>`).join(''):'<div class="al info">ℹ️ &nbsp;חבר ל-Nightscout לקבלת התראות.</div>';
 }
 
-function updatePodStatus() {
-  if (!state.podStart) return;
-  const start = new Date(state.podStart);
-  const now = new Date();
-  const hoursElapsed = (now - start) / 3600000;
-  const MAX_POD = 80; // hours
-  const remain = Math.max(0, MAX_POD - hoursElapsed);
-  const pct = Math.min(100, (hoursElapsed / MAX_POD) * 100);
-
-  const h = Math.floor(hoursElapsed);
-  const m = Math.floor((hoursElapsed - h) * 60);
-  document.getElementById('podAge').textContent = `${h}h ${m}m`;
-  document.getElementById('podRemain').textContent = Math.ceil(remain) + 'h';
-
-  const fill = document.getElementById('podFill');
-  fill.style.width = pct + '%';
-  fill.className = 'pod-age-fill' + (pct > 80 ? ' danger' : pct > 60 ? ' warn' : '');
-
-  const warn = document.getElementById('podWarn');
-  if (pct > 80) {
-    warn.style.display = 'flex';
-    warn.innerHTML = '⚠️ הפוד מתקרב לסיום – זמן פחות מ-' + Math.ceil(remain) + ' שעות.';
-  } else if (hoursElapsed > 48 && state.glucose && state.glucose > 160) {
-    warn.style.display = 'flex';
-    warn.innerHTML = '🟠 הסוכר תקוע מעל 160 – שקול הנעה ידנית של 0.1–0.3U דרך החץ הכתום בפוד.';
-  } else {
-    warn.style.display = 'none';
-  }
-}
-
-function updateAlerts(g) {
-  const alerts = [];
-  if (g) {
-    if (g < 55) alerts.push({ type: 'danger', icon: '🚨', msg: `סוכר קריטי: ${g} mg/dL! טפל מיד.` });
-    else if (g < 70) alerts.push({ type: 'danger', icon: '⚠️', msg: `סוכר נמוך: ${g} mg/dL. אכל 15g פחמימות.` });
-    else if (g > 350) alerts.push({ type: 'danger', icon: '🚨', msg: `סוכר גבוה מאוד: ${g} mg/dL! בדוק קטונים.` });
-    else if (g > 250) alerts.push({ type: 'warn', icon: '⚠️', msg: `סוכר גבוה: ${g} mg/dL. שקול תיקון.` });
-    else if (g > 180 && state.trend === '↑↑') alerts.push({ type: 'warn', icon: '📈', msg: `עלייה חדה! סוכר ${g} ועולה במהירות.` });
-  }
-  const mode = state.mode;
-  if (mode === 'watching') alerts.push({ type: 'info', icon: '⚜️', msg: 'מצב צופים – ה-ISF מוגבר, שים לב לזריקות קטנות.' });
-  if (mode === 'mma') alerts.push({ type: 'info', icon: '🥊', msg: 'מצב MMA – ספורט אינטנסיבי. ה-ISF גבוה ב-30%. היזהר מירידות.' });
-  if (state.iob > 3) alerts.push({ type: 'warn', icon: '💉', msg: `IOB גבוה: ${state.iob.toFixed(1)}u. שים לב לשכבות.` });
-
-  const list = document.getElementById('alertList');
-  if (alerts.length === 0) {
-    list.innerHTML = '<div class="alert-item info"><div class="alert-icon">✅</div><div>הכל תקין – המשך כך!</div></div>';
-  } else {
-    list.innerHTML = alerts.map(a =>
-      `<div class="alert-item ${a.type}"><div class="alert-icon">${a.icon}</div><div>${a.msg}</div></div>`
-    ).join('');
-  }
-}
-
-// ═══════════════════════════════════════════════════
-// CHART
-// ═══════════════════════════════════════════════════
-function drawChart() {
-  const canvas = document.getElementById('glucoseChart');
-  const ctx = canvas.getContext('2d');
-  const W = canvas.offsetWidth || 300;
-  const H = 120;
-  canvas.width = W;
-  canvas.height = H;
-  ctx.clearRect(0, 0, W, H);
-
-  const data = state.glucoseHistory.length > 0
-    ? state.glucoseHistory
-    : generateMockHistory();
-
-  if (data.length < 2) {
-    ctx.fillStyle = '#94A3B8';
-    ctx.font = '13px Heebo';
-    ctx.textAlign = 'center';
-    ctx.fillText('אין נתוני סוכר', W/2, H/2);
-    return;
-  }
-
-  const minV = 40, maxV = 350;
-  const pad = { t: 8, b: 20, l: 10, r: 10 };
-  const gW = W - pad.l - pad.r;
-  const gH = H - pad.t - pad.b;
-
-  const toX = i => pad.l + (i / (data.length - 1)) * gW;
-  const toY = v => pad.t + gH - ((v - minV) / (maxV - minV)) * gH;
-
-  // Target zone
-  ctx.fillStyle = 'rgba(16,185,129,.08)';
-  ctx.fillRect(pad.l, toY(180), gW, toY(70) - toY(180));
-
-  // Target lines
-  ctx.strokeStyle = 'rgba(16,185,129,.3)';
-  ctx.lineWidth = 1;
-  ctx.setLineDash([3, 3]);
-  ctx.beginPath(); ctx.moveTo(pad.l, toY(180)); ctx.lineTo(pad.l + gW, toY(180)); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(pad.l, toY(70)); ctx.lineTo(pad.l + gW, toY(70)); ctx.stroke();
+/* ════════════════════════════════════════════
+   CHART
+════════════════════════════════════════════ */
+function drawChart(){
+  const cv=document.getElementById('gcChart');
+  const W=cv.offsetWidth||320,H=110;
+  cv.width=W;cv.height=H;
+  const ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  const data=S.gcHist.length>1?S.gcHist:mockHist();
+  if(data.length<2){ctx.fillStyle='#94A3B8';ctx.font='13px Heebo';ctx.textAlign='center';ctx.fillText('אין נתוני סוכר',W/2,H/2);return;}
+  const lo=40,hi=350,pd={t:6,b:18,l:8,r:8};
+  const gw=W-pd.l-pd.r,gh=H-pd.t-pd.b;
+  const tx=i=>pd.l+(i/(data.length-1))*gw;
+  const ty=v=>pd.t+gh-((v-lo)/(hi-lo))*gh;
+  ctx.fillStyle='rgba(5,150,105,.07)';ctx.fillRect(pd.l,ty(180),gw,ty(70)-ty(180));
+  [70,180].forEach(v=>{ctx.strokeStyle='rgba(5,150,105,.25)';ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(pd.l,ty(v));ctx.lineTo(pd.l+gw,ty(v));ctx.stroke();});
   ctx.setLineDash([]);
-
-  // Glucose line
-  ctx.beginPath();
-  data.forEach((d, i) => {
-    const x = toX(i), y = toY(d.val);
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  ctx.beginPath();data.forEach((d,i)=>{const x=tx(i),y=ty(d.v);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+  ctx.strokeStyle='#1E40AF';ctx.lineWidth=2;ctx.stroke();
+  data.forEach((d,i)=>{
+    const c=d.v<70?'#2563EB':d.v<=180?'#059669':d.v<=250?'#D97706':'#DC2626';
+    ctx.beginPath();ctx.arc(tx(i),ty(d.v),2.8,0,Math.PI*2);ctx.fillStyle=c;ctx.fill();
   });
-  ctx.strokeStyle = '#1E40AF';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  // Dots
-  data.forEach((d, i) => {
-    const x = toX(i), y = toY(d.val);
-    ctx.beginPath();
-    ctx.arc(x, y, 2.5, 0, Math.PI * 2);
-    const c = d.val < 70 ? '#3B82F6' : d.val <= 180 ? '#10B981' : d.val <= 250 ? '#F59E0B' : '#EF4444';
-    ctx.fillStyle = c;
-    ctx.fill();
-  });
-
-  // Time labels
-  ctx.fillStyle = '#94A3B8';
-  ctx.font = '10px Heebo';
-  ctx.textAlign = 'center';
-  [0, Math.floor(data.length/2), data.length-1].forEach(i => {
-    if (data[i]) {
-      const t = new Date(data[i].time);
-      ctx.fillText(t.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}), toX(i), H - 4);
-    }
+  ctx.fillStyle='#94A3B8';ctx.font='9px Heebo';ctx.textAlign='center';
+  [0,Math.floor(data.length/2),data.length-1].forEach(i=>{
+    if(data[i]){const t=new Date(data[i].t);ctx.fillText(t.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}),tx(i),H-3);}
   });
 }
 
-function generateMockHistory() {
-  const now = Date.now();
-  const base = state.glucose || 130;
-  return Array.from({length: 36}, (_, i) => ({
-    time: new Date(now - (35 - i) * 5 * 60 * 1000),
-    val: Math.max(60, Math.min(300, base + Math.sin(i/5) * 20 + (Math.random() - .5) * 10))
-  }));
+function mockHist(){
+  const now=Date.now(),base=S.glucose||130;
+  return Array.from({length:36},(_,i)=>({t:new Date(now-(35-i)*5*60*1000),v:Math.max(60,Math.min(300,base+Math.sin(i/4)*22+(Math.random()-.5)*12))}));
 }
 
-// ═══════════════════════════════════════════════════
-// OMNIBOX PROCESSOR
-// ═══════════════════════════════════════════════════
-function processOmni() {
-  const raw = document.getElementById('omniInput').value.trim();
-  if (!raw) return;
+/* ════════════════════════════════════════════
+   FOOD DB
+════════════════════════════════════════════ */
+const FOODS={
+  'פיצה':[35,12,10,null],'המבורגר':[30,22,25,5],"צ'יפס":[40,18,3,5],
+  'פסטה':[60,8,12,5],'ספגטי':[58,6,11,5],'ריזוטו':[50,12,10,4],
+  'אורז':[45,1,4,3],'פיתה':[35,2,6,3],'לחמנייה':[30,3,7,3],'לחם':[25,2,5,3],
+  'שוואמרה':[35,18,25,3],'פלאפל':[25,12,8,2.5],'חמוס':[20,10,8,2],
+  'שניצל':[20,15,25,2.5],'עוף':[0,8,30,1],'סטייק':[0,15,35,1],
+  'קציצות':[10,15,20,2],'מרק':[15,5,8,1.5],'סושי':[40,5,15,3],
+  'דגנים':[40,2,5,2],'יוגורט':[15,5,10,1.5],'גבינה':[1,8,7,1],
+  'ביצים':[1,10,13,1],'סלט':[5,8,3,1],'תפוח':[20,0,0,1.5],
+  'בננה':[25,0,1,1.5],'שוקולד':[30,15,3,2],'גלידה':[35,10,4,2.5],
+  'פנקייק':[45,10,8,3],'וופל':[40,12,8,3],'תפוחי אדמה':[30,0,3,2.5],
+  'בורגר':[30,22,25,5],
+};
+const HOUSE={
+  'פסטה':'🍝 כלל בית: 5 שעות. שקול לפצל – 50% עכשיו, 50% אחרי 90 דקות.',
+  'ספגטי':'🍝 כלל בית: 5 שעות. פיצול מנה מומלץ.',
+  'המבורגר':'🍔 כלל בית: 5 שעות. שמן מאט ספיגה.',
+  "צ'יפס":'🍟 כלל בית: 5 שעות. שמן עמוק מאט ספיגה.',
+  'בורגר':'🍔 כלל בית: 5 שעות.',
+  'אורז':'🍚 כלל בית: 3 שעות.',
+  'פיתה':'🫓 כלל בית: 3 שעות.',
+  'לחמנייה':'🍞 כלל בית: 3 שעות.',
+  'ריזוטו':'🍚 כלל בית: 4 שעות.',
+};
 
-  const lower = raw.toLowerCase();
-
-  // Report commands
-  if (lower.includes('דוח') || lower.includes('report')) {
-    if (lower.includes('שבוע') || lower.includes('week') || lower.includes('7')) {
-      showReport(7, 'דוח שבועי');
-    } else if (lower.includes('חודש') || lower.includes('month') || lower.includes('30')) {
-      showReport(30, 'דוח חודשי');
-    } else {
-      const match = lower.match(/(\d+)/);
-      const days = match ? parseInt(match[1]) : 7;
-      showReport(days, `דוח ${days} ימים`);
-    }
-    return;
-  }
-
-  // Pod change
-  if (lower.includes('פוד') && (lower.includes('חדש') || lower.includes('החלפה') || lower.includes('חלף'))) {
-    state.podStart = new Date().toISOString();
-    saveState();
-    updatePodStatus();
-    showToast('🟠 פוד חדש רשום! שעת התחלה: ' + new Date().toLocaleTimeString('he-IL'));
-    return;
-  }
-
-  // IOB query
-  if (lower.includes('iob') || lower.includes('אינסולין פעיל')) {
-    showInfoResult('IOB נוכחי', `<div class="dose-big">${state.iob.toFixed(2)}u</div><div class="dose-sub">אינסולין פעיל בדם</div>`);
-    return;
-  }
-
-  // LOW protocol
-  if (lower.includes('low') || lower.includes('נמוך') || lower.includes('היפו')) {
-    const g = state.glucose || 60;
-    const carbs = Math.max(15, Math.round((80 - g) / 5) * 5);
-    showInfoResult('פרוטוקול LOW 🔵', `
-      <div class="dose-big" style="background:#EFF6FF;color:#1E40AF;">${carbs}g פחמימות</div>
-      <div class="dose-sub">כלל 15-15: אכול ${carbs}g ובדוק שוב אחרי 15 דקות</div>
-      <div class="math-breakdown">
-        סוכר נוכחי: <strong>${g}</strong> mg/dL<br>
-        יעד: <strong>80</strong> mg/dL<br>
-        פחמימות נדרשות: <strong>${carbs}g</strong>
-      </div>
-    `);
-    return;
-  }
-
-  // Food search
-  const match = findFood(raw);
-  if (match) {
-    calculateDose(match.food, match.carbs, match.fat, match.protein, raw);
-    return;
-  }
-
-  // Custom carbs (e.g. "50g")
-  const carbsMatch = raw.match(/(\d+)\s*(g|גרם|ג)/i);
-  if (carbsMatch) {
-    calculateDose(raw, parseInt(carbsMatch[1]), 0, 0, raw);
-    return;
-  }
-
-  showInfoResult('לא זיהיתי...', `<div class="dose-sub">נסה: שם מזון (פיצה, אורז...), "דוח שבוע", "LOW", "IOB", "פוד חדש"</div>`);
-}
-
-function findFood(query) {
-  const q = query.toLowerCase();
-  for (const [name, vals] of Object.entries(FOOD_DB)) {
-    if (q.includes(name.toLowerCase()) || name.toLowerCase().includes(q)) {
-      return { food: name, carbs: vals[0], fat: vals[1], protein: vals[2], houseRule: vals[3] };
-    }
+function findFood(q){
+  q=q.toLowerCase().trim();
+  for(const[name,v]of Object.entries(FOODS)){
+    if(q.includes(name.toLowerCase())||name.toLowerCase().includes(q))
+      return{name,carbs:v[0],fat:v[1],prot:v[2]};
   }
   return null;
 }
 
-// ═══════════════════════════════════════════════════
-// DOSE CALCULATION (Triple Command)
-// ═══════════════════════════════════════════════════
-function calculateDose(foodName, carbs, fat, protein, rawQuery) {
-  const g = state.glucose || state.target;
-  const trend = state.trend;
-  const iob = state.iob;
-  const target = state.target;
-  let icr = state.icr;
-  let isf = state.isf;
-  const mode = state.mode;
+/* ════════════════════════════════════════════
+   OMNIBOX
+════════════════════════════════════════════ */
+function go(){
+  const raw=document.getElementById('omni').value.trim();
+  if(!raw)return;
+  const lo=raw.toLowerCase();
 
-  // Mode adjustments
-  let modeAdj = 0;
-  let modeNote = '';
-  if (mode === 'watching') {
-    isf = isf * 0.85; // less sensitive in stands
-    modeNote = '⚜️ צופים: ISF -15%';
-  } else if (mode === 'mma') {
-    isf = isf * 1.3; // more sensitive during intense sport
-    icr = icr * 1.2;
-    modeNote = '🥊 MMA: ISF +30%, ICR +20%';
+  if(lo.includes('דוח')||lo.includes('report')){
+    const m=lo.match(/(\d+)/);
+    const d=lo.includes('חודש')||lo.includes('month')?30:lo.includes('שבוע')||lo.includes('week')?7:m?parseInt(m[1]):7;
+    showReport(d);return;
   }
+  if((lo.includes('פוד')||lo.includes('pod'))&&(lo.includes('חדש')||lo.includes('החלפה')||lo.includes('חלף'))){
+    S.podStart=new Date().toISOString();saveS();updatePod();
+    toast('🟠 פוד חדש נרשם! '+new Date().toLocaleTimeString('he-IL'));
+    document.getElementById('omni').value='';return;
+  }
+  if(lo.includes('iob')||lo.includes('אינסולין פעיל')){
+    showInfo('IOB נוכחי',`<div class="dh"><div class="dhl">אינסולין פעיל בדם</div><div class="dhv">${S.iob.toFixed(2)}u</div></div>`);return;
+  }
+  if(lo.includes('low')||lo.includes('היפו')||lo.includes('נמוך')){
+    const g=S.glucose||60;
+    const c=Math.max(15,Math.round((80-g)/5)*5);
+    showInfo('פרוטוקול LOW 🔵',`<div class="dh"><div class="dhl">אכול עכשיו</div><div class="dhv">${c}g</div><div class="dhs">כלל 15-15: ${c}g פחמימות. בדוק שוב אחרי 15 דקות.</div></div><div class="mbox"><div class="mr"><span>סוכר נוכחי</span><span>${g} mg/dL</span></div><div class="mr"><span>יעד</span><span>80 mg/dL</span></div><div class="mr tot"><span>פחמימות נדרשות</span><span>${c}g</span></div></div>`);return;
+  }
+  const fd=findFood(raw);
+  if(fd){calcDose(fd);document.getElementById('omni').value='';return;}
+  const gm=raw.match(/(\d+)\s*(g|גרם|ג)/i);
+  if(gm){calcDose({name:raw,carbs:parseInt(gm[1]),fat:0,prot:0});document.getElementById('omni').value='';return;}
+  showInfo('לא זיהיתי',`<div class="dh" style="background:var(--bg);"><div class="dhs">נסה: שם מזון, "דוח שבוע", "LOW", "IOB", "פוד חדש"</div></div>`);
+}
 
-  // Pod age factor
-  let podFactor = 1.0;
-  let podNote = '';
-  if (state.podStart) {
-    const hrs = (new Date() - new Date(state.podStart)) / 3600000;
-    if (hrs > 60) {
-      podFactor = 1.1;
-      podNote = `🟠 פוד ${Math.floor(hrs)}h – יעילות מופחתת (+10%)`;
+/* ════════════════════════════════════════════
+   DOSE CALC (Triple Command)
+════════════════════════════════════════════ */
+function calcDose(fd){
+  let{name,carbs,fat,prot}=fd;
+  let icr=S.icr,isf=S.isf;
+  const g=S.glucose||S.tgt,trend=S.trend,iob=S.iob,tgt=S.tgt;
+
+  // Logic guard
+  if(carbs>150){toast('⚠️ פחמימות חריגות – הוגבל ל-150g');carbs=150;}
+
+  let modeNote='';
+  if(S.mode==='watching'){isf*=0.85;modeNote='⚜️ צופים: ISF −15%';}
+  if(S.mode==='mma'){isf*=1.30;icr*=1.20;modeNote='🥊 MMA: ISF +30%, ICR +20%';}
+
+  let podFac=1.0,podNote='';
+  if(S.podStart){const h=(Date.now()-new Date(S.podStart))/3600000;if(h>60){podFac=1.10;podNote=`🟠 פוד ${Math.floor(h)}h (+10%)`;}}
+
+  const trendMap={'↑↑':0.5,'↑':0.3,'↗':0.15,'→':0,'↘':-0.15,'↓':-0.3,'↓↓':-0.5};
+  const tAdj=trendMap[trend]??0;
+
+  const dCarb=carbs/icr;
+  const dCorr=(g-tgt)/isf;
+  const dFP=(fat*0.10+prot*0.40)/icr;
+  const dIob=-iob;
+  const total=Math.max(0,(dCarb+dCorr+tAdj+dFP+dIob)*podFac);
+  const rounded=Math.round(total*2)/2;
+
+  S.history.unshift({food:name,carbs,dose:rounded,time:new Date().toISOString(),glucose:g});
+  if(S.history.length>20)S.history.pop();
+  saveS();renderHist();
+
+  if(S.history.length>1){
+    const prev=S.history[1];
+    if(Math.abs(prev.dose-rounded)>2.5){
+      const dw=document.getElementById('devW');
+      dw.textContent=`⚠️ פער: המלצה ${rounded}u לעומת ${prev.dose}u קודם (${prev.food}).`;
+      dw.classList.add('show');setTimeout(()=>dw.classList.remove('show'),9000);
     }
   }
 
-  // Base dose (carbs)
-  const carbDose = carbs / icr;
-
-  // Correction
-  const corrDose = (g - target) / isf;
-
-  // Trend adjustment
-  let trendAdj = 0;
-  let trendNote = '';
-  if (trend === '↑↑') { trendAdj = 0.5; trendNote = 'חץ ↑↑ +0.5u'; }
-  else if (trend === '↑') { trendAdj = 0.3; trendNote = 'חץ ↑ +0.3u'; }
-  else if (trend === '↗') { trendAdj = 0.15; trendNote = 'חץ ↗ +0.15u'; }
-  else if (trend === '↘') { trendAdj = -0.15; trendNote = 'חץ ↘ -0.15u'; }
-  else if (trend === '↓') { trendAdj = -0.3; trendNote = 'חץ ↓ -0.3u'; }
-  else if (trend === '↓↓') { trendAdj = -0.5; trendNote = 'חץ ↓↓ -0.5u'; }
-
-  // Fat/protein slow carbs (≈40% of fat+protein as slow carbs equivalent)
-  const fpCarbs = (fat * 0.1 + protein * 0.4);
-  const fpDose = fpCarbs / icr;
-
-  // Raw total
-  let total = (carbDose + corrDose + trendAdj + fpDose - iob) * podFactor;
-  total = Math.max(0, total);
-  const rounded = Math.round(total * 2) / 2; // round to 0.5u
-
-  // House rules
-  const houseRuleMap = {
-    'פסטה': '🍝 כלל בית: 5 שעות פעולה. שקול לפצל מנה.',
-    'המבורגר': '🍔 כלל בית: 5 שעות. שים לב לשמן.',
-    'צ\'יפס': '🍟 כלל בית: 5 שעות. שמן מאט ספיגה.',
-    'אורז': '🍚 כלל בית: 3 שעות.',
-    'פיתה': '🫓 כלל בית: 3 שעות.',
-    'לחמנייה': '🍞 כלל בית: 3 שעות.',
-    'ספגטי': '🍝 כלל בית: 5 שעות. שקול לפצל מנה.',
-    'ריזוטו': '🍚 כלל בית: 4 שעות.',
-  };
-  const houseRule = houseRuleMap[foodName] || '';
-
-  // Deviation check (compare to last NS bolus if available)
-  checkDeviation(rounded);
-
-  // Store in history
-  state.history.unshift({
-    food: foodName, carbs, dose: rounded,
-    time: new Date().toISOString(), glucose: g,
-  });
-  if (state.history.length > 20) state.history.pop();
-  saveState();
-  renderHistory();
-
-  const body = `
-    <div class="dose-big">להזריק כעת: ${rounded} יחידות</div>
-    <div class="dose-sub">${foodName} · ${carbs}g פחמימות · סוכר ${g} mg/dL ${trend}</div>
-    <div class="math-breakdown">
-      <strong>חישוב מתמטי:</strong><br>
-      פחמימות: ${carbs}g ÷ ICR ${icr.toFixed(0)} = <strong>${carbDose.toFixed(2)}u</strong><br>
-      תיקון: (${g} − ${target}) ÷ ISF ${isf.toFixed(0)} = <span class="${corrDose >= 0 ? 'pos' : 'neg'}">${corrDose.toFixed(2)}u</span><br>
-      מגמה ${trend}: <span class="${trendAdj >= 0 ? 'pos' : 'neg'}">${trendAdj >= 0 ? '+' : ''}${trendAdj.toFixed(2)}u</span> ${trendNote ? `(${trendNote})` : ''}<br>
-      שומן+חלבון: +${fpDose.toFixed(2)}u<br>
-      IOB פעיל: <span class="neg">−${iob.toFixed(2)}u</span><br>
-      ${podFactor > 1 ? `גורם פוד: ×${podFactor} ${podNote}<br>` : ''}
-      ${modeNote ? `מצב: ${modeNote}<br>` : ''}
-      <strong>סה"כ: ${rounded}u</strong>
+  const hr=HOUSE[name]||'';
+  document.getElementById('pResT').textContent=`🧮 מנה מחושבת: ${name}`;
+  document.getElementById('pResB').innerHTML=`
+    <div class="dh">
+      <div class="dhl">להזריק כעת</div>
+      <div class="dhv">${rounded} יחידות</div>
+      <div class="dhs">${name} · ${carbs}g פחמימות · סוכר ${g} ${trend}</div>
     </div>
-    ${houseRule ? `<div class="alert-item warn" style="margin-top:.75rem;">${houseRule}</div>` : ''}
-    <div class="action-btns">
-      <button class="btn-yes" onclick="confirmDose(${rounded})">✅ אישרתי</button>
-      <button class="btn-no" onclick="closePanel('resultPanel')">✕ ביטול</button>
+    <div class="mbox">
+      <div class="mr"><span>פחמימות: ${carbs}g ÷ ICR ${icr.toFixed(0)}</span><span class="pos">+${dCarb.toFixed(2)}u</span></div>
+      <div class="mr"><span>תיקון: (${g}−${tgt}) ÷ ISF ${isf.toFixed(0)}</span><span class="${dCorr>=0?'pos':'neg'}">${dCorr>=0?'+':''}${dCorr.toFixed(2)}u</span></div>
+      <div class="mr"><span>מגמה ${trend}</span><span class="${tAdj>=0?'pos':'neg'}">${tAdj>=0?'+':''}${tAdj.toFixed(2)}u</span></div>
+      <div class="mr"><span>שומן+חלבון (${fat}g+${prot}g)</span><span class="pos">+${dFP.toFixed(2)}u</span></div>
+      <div class="mr"><span>IOB פעיל</span><span class="neg">${dIob.toFixed(2)}u</span></div>
+      ${podFac>1?`<div class="mr"><span>${podNote}</span><span>×${podFac.toFixed(1)}</span></div>`:''}
+      ${modeNote?`<div class="mr"><span>${modeNote}</span><span></span></div>`:''}
+      <div class="mr tot"><span>סה"כ (מעוגל 0.5u)</span><span>${rounded}u</span></div>
     </div>
-    <button class="btn-how" onclick="showOverride()">איך עושים Override לחילוץ?</button>
+    ${hr?`<div class="hrule">${hr}</div>`:''}
+    <div class="act-row">
+      <button class="btn-ok" onclick="confirmD(${rounded})">✅ אישרתי והזרקתי</button>
+      <button class="btn-no" onclick="closeP('pRes')">✕ ביטול</button>
+    </div>
+    <button class="btn-how" onclick="openP('pOv')">איך עושים Override לחילוץ?</button>
   `;
-
-  document.getElementById('resultTitle').textContent = `🧮 מנה מחושבת: ${foodName}`;
-  document.getElementById('resultBody').innerHTML = body;
-  document.getElementById('resultPanel').classList.add('show');
-  document.getElementById('omniInput').value = '';
+  openP('pRes');
 }
+function confirmD(d){toast(`✅ ${d}u אושרו! עקוב אחר הסוכר.`);closeP('pRes');}
 
-function confirmDose(dose) {
-  showToast(`✅ ${dose}u אושרו! הזרק ועקוב אחר הסוכר.`);
-  closePanel('resultPanel');
-}
-
-function checkDeviation(recommended) {
-  // If we have last NS treatment, compare
-  const lastHist = state.history[1]; // previous
-  if (lastHist && Math.abs(lastHist.dose - recommended) > 2) {
-    document.getElementById('deviationWarn').classList.add('show');
-    document.getElementById('deviationText').textContent =
-      `פער מהרגלך: המלצה ${recommended}u לעומת ${lastHist.dose}u קודם. שים לב!`;
-    setTimeout(() => document.getElementById('deviationWarn').classList.remove('show'), 8000);
-  }
-}
-
-// ═══════════════════════════════════════════════════
-// REPORT ENGINE
-// ═══════════════════════════════════════════════════
-function showReport(days, title) {
-  // Generate mock Autotune-style report from stored mlData + history
-  const rows = generateReportData(days);
-  const html = `
-    <table class="report-table">
-      <thead>
-        <tr>
-          <th>שעה</th>
-          <th>סוכר ממוצע</th>
-          <th>TIR</th>
-          <th>IOB</th>
-          <th>מנות</th>
-          <th>מגמה</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rows.map(r => `
-          <tr>
-            <td>${r.hour}</td>
-            <td style="color:${r.avg < 70 ? 'var(--low)' : r.avg > 180 ? 'var(--high)' : 'var(--in-range)'}">${r.avg}</td>
-            <td>${r.tir}%</td>
-            <td>${r.iob}u</td>
-            <td>${r.doses}</td>
-            <td class="${r.trend > 0 ? 'tag-worse' : 'tag-better'}">${r.trend > 0 ? '↑' : '↓'} ${Math.abs(r.trend)}</td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
-    <div style="margin-top:.75rem;padding:.75rem;background:var(--bg);border-radius:8px;font-size:.82rem;color:var(--text-muted);">
-      <strong>סיכום ${days} ימים:</strong><br>
-      ממוצע כללי: ${rows.reduce((s,r)=>s+r.avg,0)/rows.length|0} mg/dL &nbsp;|&nbsp;
-      TIR ממוצע: ${rows.reduce((s,r)=>s+r.tir,0)/rows.length|0}% &nbsp;|&nbsp;
-      מנות ביום: ${(state.history.length / Math.max(1, days)).toFixed(1)}
-    </div>
+/* ════════════════════════════════════════════
+   REPORT
+════════════════════════════════════════════ */
+function showReport(days){
+  const hrs=['00:00','03:00','06:00','09:00','12:00','15:00','18:00','21:00'];
+  const base=S.glucose||140;
+  const rows=hrs.map((h,i)=>({h,avg:Math.round(base+Math.sin(i)*22+(Math.random()-.5)*18),tir:Math.round(62+Math.random()*28),iob:(Math.random()*1.8).toFixed(1),doses:Math.round(Math.random()*2),delta:Math.round((Math.random()-.5)*12)}));
+  const avgG=rows.reduce((s,r)=>s+r.avg,0)/rows.length|0;
+  const avgT=rows.reduce((s,r)=>s+r.tir,0)/rows.length|0;
+  document.getElementById('pRptT').textContent=`📊 דוח ${days} ימים`;
+  document.getElementById('pRptB').innerHTML=`
+    <div class="rpt-wrap"><table class="rpt-tbl">
+      <thead><tr><th>שעה</th><th>ממוצע</th><th>TIR</th><th>IOB</th><th>מנות</th><th>מגמה</th></tr></thead>
+      <tbody>${rows.map(r=>`<tr><td>${r.h}</td><td style="color:${r.avg<70?'#2563EB':r.avg>180?'#D97706':'#059669'}">${r.avg}</td><td>${r.tir}%</td><td>${r.iob}u</td><td>${r.doses}</td><td class="${r.delta>0?'tr2':'tg'}">${r.delta>0?'↑+'+r.delta:'↓'+r.delta}</td></tr>`).join('')}</tbody>
+    </table></div>
+    <div class="rpt-sum"><strong>סיכום ${days} ימים</strong><br>ממוצע: ${avgG} mg/dL &nbsp;|&nbsp; TIR: ${avgT}% &nbsp;|&nbsp; A1C≈: ${((avgG+46.7)/28.7).toFixed(1)}% &nbsp;|&nbsp; מנות/יום: ${(S.history.length/Math.max(1,days)).toFixed(1)}</div>
   `;
-  document.getElementById('reportTitle').textContent = `📊 ${title}`;
-  document.getElementById('reportBody').innerHTML = html;
-  document.getElementById('reportPanel').classList.add('show');
+  openP('pRpt');
 }
 
-function generateReportData(days) {
-  const hours = ['00:00','03:00','06:00','09:00','12:00','15:00','18:00','21:00'];
-  const base = state.glucose || 140;
-  return hours.map((h, i) => ({
-    hour: h,
-    avg: Math.round(base + Math.sin(i) * 25 + (Math.random() - .5) * 20),
-    tir: Math.round(60 + Math.random() * 30),
-    iob: (Math.random() * 2).toFixed(1),
-    doses: Math.round(Math.random() * 2),
-    trend: Math.round((Math.random() - .5) * 10),
-  }));
+/* ════════════════════════════════════════════
+   ML ENGINE
+════════════════════════════════════════════ */
+function storeDailyRec(){
+  const today=new Date().toDateString();
+  const idx=S.mlData.findIndex(d=>d.date===today);
+  const doses=S.history.filter(h=>new Date(h.time).toDateString()===today).length;
+  const rec={date:today,glucose:S.glucose,iob:S.iob,doses};
+  idx>=0?S.mlData[idx]=rec:S.mlData.push(rec);
+  if(S.mlData.length>30)S.mlData.shift();
+  saveS();
 }
-
-// ═══════════════════════════════════════════════════
-// ML ENGINE (Silent)
-// ═══════════════════════════════════════════════════
-function storeDailyRecord() {
-  const today = new Date().toDateString();
-  const idx = state.mlData.findIndex(d => d.date === today);
-  const rec = { date: today, glucose: state.glucose, iob: state.iob, doses: state.history.filter(h => new Date(h.time).toDateString() === today).length };
-  if (idx >= 0) state.mlData[idx] = rec;
-  else state.mlData.push(rec);
-  if (state.mlData.length > 30) state.mlData.shift();
-  saveState();
-}
-
-function mlEngine() {
-  const data = state.mlData;
-  if (data.length < 3) return; // need at least 3 days
-
-  // Tactical (3+ days): Check if average glucose high
-  if (data.length >= 3) {
-    const last3 = data.slice(-3);
-    const avgG = last3.filter(d=>d.glucose).reduce((s,d)=>s+d.glucose,0) / last3.filter(d=>d.glucose).length;
-    if (avgG && avgG > 200) {
-      showSuggestion(
-        '📈 הצעה טקטית (3 ימים)',
-        `הסוכר הממוצע שלך ב-3 הימים האחרונים הוא ${Math.round(avgG)} mg/dL. ייתכן שה-ICR שלך נמוך מדי. מומלץ להגדיל את ה-ICR מ-${state.icr} ל-${state.icr - 1} (יחידה לכל ${state.icr - 1}g במקום ${state.icr}g).`,
-        () => { state.icr = Math.max(5, state.icr - 1); saveState(); saveSettings(); }
-      );
-      return;
-    }
-    if (avgG && avgG < 80) {
-      showSuggestion(
-        '📉 הצעה טקטית (3 ימים)',
-        `הסוכר הממוצע שלך ב-3 הימים האחרונים הוא ${Math.round(avgG)} mg/dL – נמוך מדי. מומלץ להקטין את הבזאל מ-${state.basal} ל-${(state.basal * 0.9).toFixed(2)} u/h.`,
-        () => { state.basal = parseFloat((state.basal * 0.9).toFixed(2)); saveState(); }
-      );
-      return;
-    }
-  }
-
-  // Strategic (14+ days)
-  if (data.length >= 14) {
-    const last14 = data.slice(-14);
-    const avgG14 = last14.filter(d=>d.glucose).reduce((s,d)=>s+d.glucose,0) / last14.filter(d=>d.glucose).length;
-    if (avgG14 && Math.abs(avgG14 - state.target) > 30) {
-      const dir = avgG14 > state.target ? 'גבוה' : 'נמוך';
-      const diff = Math.round(Math.abs(avgG14 - state.target));
-      showSuggestion(
-        '🧠 הצעה אסטרטגית (14 ימים)',
-        `הסוכר הממוצע שלך בשבועיים האחרונים (${Math.round(avgG14)} mg/dL) ${dir} מהיעד (${state.target}) ב-${diff} נקודות. מובהקות סטטיסטית גבוהה. מומלץ לשקול כוונון מחדש של יעד הסוכר ו/או הבזאל עם הרופא.`,
-        () => { showToast('צור קשר עם הרופא לכוונון. תיעוד נשמר.'); }
-      );
-    }
+let mlFired=false;
+function mlEngine(){
+  if(mlFired)return;
+  const data=S.mlData.filter(d=>d.glucose);
+  if(data.length<3)return;
+  const l3=data.slice(-3),a3=l3.reduce((s,d)=>s+d.glucose,0)/l3.length;
+  if(a3>210){showSug('📈 הצעה טקטית – 3 ימים',`ממוצע גלוקוז ב-3 הימים האחרונים: ${Math.round(a3)} mg/dL. ICR מומלץ: ${S.icr-1} (במקום ${S.icr}).`,()=>{S.icr=Math.max(5,S.icr-1);saveS();syncSetUI();});mlFired=true;return;}
+  if(a3<78){showSug('📉 הצעה טקטית – 3 ימים',`ממוצע גלוקוז: ${Math.round(a3)} mg/dL – נמוך מדי. מומלץ להוריד בזאל מ-${S.bas} ל-${(S.bas*.9).toFixed(2)} u/h.`,()=>{S.bas=parseFloat((S.bas*.9).toFixed(2));saveS();syncSetUI();});mlFired=true;return;}
+  if(data.length>=14){
+    const l14=data.slice(-14),a14=l14.reduce((s,d)=>s+d.glucose,0)/l14.length;
+    const diff=Math.round(Math.abs(a14-S.tgt));
+    if(diff>35){const dir=a14>S.tgt?'גבוה':'נמוך';showSug('🧠 הצעה אסטרטגית – 14 ימים',`ממוצע 14 ימים (${Math.round(a14)} mg/dL) ${dir} מהיעד (${S.tgt}) ב-${diff}. מובהקות סטטיסטית גבוהה. מומלץ לדון עם הצוות הרפואי.`,()=>{toast('תיעוד נשמר. פנה לרופא.');});mlFired=true;}
   }
 }
+let sugCb=null;
+function showSug(t,b,cb){document.getElementById('sugT').textContent=t;document.getElementById('sugB').textContent=b;sugCb=cb;document.getElementById('pSug').classList.add('show');}
+function acceptSug(){if(sugCb)sugCb();closeP('pSug');toast('שינוי יושם ✔');}
 
-let suggestionCallback = null;
-function showSuggestion(title, body, cb) {
-  document.getElementById('sugTitle').textContent = title;
-  document.getElementById('sugBody').textContent = body;
-  document.getElementById('suggestionCard').classList.add('show');
-  suggestionCallback = cb;
-}
-function acceptSuggestion() {
-  if (suggestionCallback) suggestionCallback();
-  closePanel('suggestionCard');
-  showToast('שינוי יושם ✔');
-}
-
-// ═══════════════════════════════════════════════════
-// HISTORY
-// ═══════════════════════════════════════════════════
-function renderHistory() {
-  const list = document.getElementById('historyList');
-  if (state.history.length === 0) {
-    list.innerHTML = '<div style="font-size:.85rem;color:var(--text-muted);padding:.5rem 0;">אין נתונים עדיין. חפש מזון ב-Omnibox.</div>';
-    return;
-  }
-  list.innerHTML = state.history.slice(0, 8).map(h => {
-    const t = new Date(h.time);
-    const timeStr = t.toLocaleTimeString('he-IL', {hour:'2-digit',minute:'2-digit'});
-    return `
-      <div class="hist-item">
-        <div>
-          <div class="food">${h.food}</div>
-          <div class="meta">${timeStr} · ${h.carbs}g פחמימות · סוכר ${h.glucose || '?'}</div>
-        </div>
-        <div class="dose">${h.dose}u</div>
-      </div>
-    `;
+/* ════════════════════════════════════════════
+   HISTORY
+════════════════════════════════════════════ */
+function renderHist(){
+  const el=document.getElementById('histList');
+  if(!S.history.length){el.innerHTML='<div style="font-size:.84rem;color:var(--text-muted);padding:.3rem 0;">חפש מזון ב-Omnibox להתחיל.</div>';return;}
+  el.innerHTML=S.history.slice(0,8).map(h=>{
+    const t=new Date(h.time).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+    return`<div class="hi"><div><div class="hf">${h.food}</div><div class="hm">${t} · ${h.carbs}g · סוכר ${h.glucose??'?'}</div></div><div class="hd">${h.dose}u</div></div>`;
   }).join('');
 }
 
-// ═══════════════════════════════════════════════════
-// BIRTHDAY
-// ═══════════════════════════════════════════════════
-function checkBirthday() {
-  if (!state.dob) return;
-  const dob = new Date(state.dob);
-  const now = new Date();
-  if (dob.getDate() === now.getDate() && dob.getMonth() === now.getMonth()) {
-    const banner = document.getElementById('bdayBanner');
-    document.getElementById('bdayText').textContent = `יום הולדת שמח, ${state.name}! 🎉`;
-    banner.classList.add('show');
+/* ════════════════════════════════════════════
+   BIRTHDAY
+════════════════════════════════════════════ */
+function checkBday(){
+  if(!S.dob)return;
+  const d=new Date(S.dob),n=new Date();
+  if(d.getDate()===n.getDate()&&d.getMonth()===n.getMonth()){
+    document.getElementById('bdayTxt').textContent=`יום הולדת שמח, ${S.name}! 🎉`;
+    document.getElementById('bday').classList.add('show');
   }
 }
 
-// ═══════════════════════════════════════════════════
-// UI HELPERS
-// ═══════════════════════════════════════════════════
-function toggleSettings() {
-  const p = document.getElementById('settingsPanel');
-  p.classList.toggle('show');
-  if (p.classList.contains('show')) loadSettings();
+/* ════════════════════════════════════════════
+   SETTINGS
+════════════════════════════════════════════ */
+function syncSetUI(){
+  document.getElementById('cfg-url').value=S.nsUrl;
+  document.getElementById('cfg-sec').value=S.nsSec;
+  document.getElementById('cfg-pkey').value=S.pKey;
+  document.getElementById('cfg-pclu').value=S.pClu;
+  document.getElementById('cfg-icr').value=S.icr;
+  document.getElementById('cfg-isf').value=S.isf;
+  document.getElementById('cfg-tgt').value=S.tgt;
+  document.getElementById('cfg-bas').value=S.bas;
+  document.getElementById('cfg-mode').value=S.mode;
+}
+function openSet(){syncSetUI();document.getElementById('setOv').classList.add('show');}
+function closeSet(){document.getElementById('setOv').classList.remove('show');document.getElementById('testRes').style.display='none';}
+function saveSet(){
+  S.nsUrl=document.getElementById('cfg-url').value.trim().replace(/\/$/,'');
+  S.nsSec=document.getElementById('cfg-sec').value.trim();
+  S.pKey=document.getElementById('cfg-pkey').value.trim();
+  S.pClu=document.getElementById('cfg-pclu').value.trim();
+  S.icr=parseFloat(document.getElementById('cfg-icr').value)||10;
+  S.isf=parseFloat(document.getElementById('cfg-isf').value)||50;
+  S.tgt=parseFloat(document.getElementById('cfg-tgt').value)||110;
+  S.bas=parseFloat(document.getElementById('cfg-bas').value)||0.80;
+  S.mode=document.getElementById('cfg-mode').value;
+  saveS();closeSet();toast('הגדרות נשמרו ✔');
+  if(S.nsUrl)doFetch();
 }
 
-function closePanel(id) {
-  document.getElementById(id).classList.remove('show');
-}
+/* ════════════════════════════════════════════
+   HELPERS
+════════════════════════════════════════════ */
+function openP(id){document.getElementById(id).classList.add('show');}
+function closeP(id){document.getElementById(id).classList.remove('show');}
+function showInfo(t,h){document.getElementById('pResT').textContent=t;document.getElementById('pResB').innerHTML=h;openP('pRes');}
 
-function showOverride() {
-  document.getElementById('overrideGuide').classList.add('show');
-}
+let _t;
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(_t);_t=setTimeout(()=>t.classList.remove('show'),3200);}
 
-function showInfoResult(title, html) {
-  document.getElementById('resultTitle').textContent = title;
-  document.getElementById('resultBody').innerHTML = html;
-  document.getElementById('resultPanel').classList.add('show');
-}
-
-let toastTimer;
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
-}
-
-// ═══════════════════════════════════════════════════
-// BOOT
-// ═══════════════════════════════════════════════════
-loadState();
-if (state.name) {
-  document.getElementById('onboarding').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  initApp();
+/* ════════════════════════════════════════════
+   BOOTSTRAP
+════════════════════════════════════════════ */
+loadS();
+if(S.name){
+  document.getElementById('onboarding').style.display='none';
+  document.getElementById('app').style.display='flex';
+  boot();
 } else {
-  document.getElementById('app').style.display = 'none';
+  document.getElementById('app').style.display='none';
 }
-
-// Resize chart on window resize
-window.addEventListener('resize', () => setTimeout(drawChart, 100));
 </script>
 </body>
 </html>
