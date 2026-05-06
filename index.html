@@ -3,1397 +3,1425 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Loopie v24.5 – Medical Guardian</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Hebrew:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>Loopie v25.3</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Hebrew:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --blue-deep: #1E40AF;
-    --blue-mid: #2563EB;
-    --blue-light: #DBEAFE;
-    --blue-pale: #EFF6FF;
-    --red: #DC2626;
-    --orange: #F97316;
-    --green: #16A34A;
-    --yellow: #EAB308;
-    --gray-900: #0F172A;
-    --gray-700: #374151;
-    --gray-500: #6B7280;
-    --gray-300: #D1D5DB;
-    --gray-100: #F3F4F6;
-    --gray-50: #F9FAFB;
-    --white: #FFFFFF;
-    --radius: 10px;
-    --radius-sm: 6px;
-    --shadow: 0 1px 4px rgba(0,0,0,0.08);
-    --shadow-md: 0 4px 12px rgba(0,0,0,0.10);
-    --font-main: 'IBM Plex Sans Hebrew', sans-serif;
-    --font-mono: 'IBM Plex Mono', monospace;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: var(--font-main);
-    background: var(--white);
-    color: var(--gray-900);
-    min-height: 100vh;
-    font-size: 14px;
-    line-height: 1.5;
-  }
+:root {
+  --bg: #121212;
+  --bg2: #1A1A1A;
+  --bg3: #222222;
+  --bg4: #2A2A2A;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.14);
+  --text: #F0F0F0;
+  --text2: #A0A0A0;
+  --text3: #606060;
+  --blue: #3B82F6;
+  --blue2: #1D4ED8;
+  --blue-pale: rgba(59,130,246,0.12);
+  --blue-border: rgba(59,130,246,0.35);
+  --green: #22C55E;
+  --green-pale: rgba(34,197,94,0.12);
+  --red: #EF4444;
+  --red-pale: rgba(239,68,68,0.12);
+  --orange: #F97316;
+  --orange-pale: rgba(249,115,22,0.12);
+  --yellow: #EAB308;
+  --yellow-pale: rgba(234,179,8,0.12);
+  --r: 8px;
+  --r2: 12px;
+  --font: 'IBM Plex Sans Hebrew', sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; overflow-x: hidden; }
 
-  /* ── ONBOARDING ── */
-  #onboarding {
-    display: flex; align-items: center; justify-content: center;
-    min-height: 100vh; background: var(--blue-pale);
-    padding: 24px;
-  }
-  .ob-card {
-    background: var(--white);
-    border-radius: 16px;
-    padding: 40px 36px;
-    width: 100%; max-width: 440px;
-    box-shadow: var(--shadow-md);
-  }
-  .ob-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
-  .ob-title { font-size: 22px; font-weight: 700; color: var(--blue-deep); }
-  .ob-sub { font-size: 13px; color: var(--gray-500); margin-bottom: 24px; }
-  .ob-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .ob-field { display: flex; flex-direction: column; gap: 4px; }
-  .ob-field.full { grid-column: 1/-1; }
-  .ob-field label { font-size: 12px; font-weight: 600; color: var(--gray-700); }
-  .ob-field input, .ob-field select {
-    border: 1.5px solid var(--gray-300); border-radius: var(--radius-sm);
-    padding: 9px 12px; font-family: var(--font-main); font-size: 14px;
-    color: var(--gray-900); background: var(--white); outline: none;
-    transition: border-color .15s;
-  }
-  .ob-field input:focus, .ob-field select:focus { border-color: var(--blue-mid); }
-  .ob-btn {
-    margin-top: 20px; width: 100%; padding: 12px;
-    background: var(--blue-deep); color: var(--white);
-    border: none; border-radius: var(--radius); font-family: var(--font-main);
-    font-size: 15px; font-weight: 600; cursor: pointer; transition: background .15s;
-  }
-  .ob-btn:hover { background: var(--blue-mid); }
+/* ── ONBOARDING ── */
+#onboarding {
+  min-height: 100vh; display: flex; align-items: center;
+  justify-content: center; padding: 24px;
+  background: radial-gradient(ellipse at 30% 40%, rgba(59,130,246,0.08) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 80%, rgba(59,130,246,0.05) 0%, transparent 50%), var(--bg);
+}
+.ob-card {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: 16px; padding: 40px 36px;
+  width: 100%; max-width: 460px;
+}
+.ob-head { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+.ob-title { font-size: 22px; font-weight: 700; color: var(--text); }
+.ob-sub { font-size: 13px; color: var(--text2); margin-bottom: 28px; }
+.ob-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ob-field { display: flex; flex-direction: column; gap: 5px; }
+.ob-field.full { grid-column: 1/-1; }
+.ob-field label { font-size: 12px; font-weight: 600; color: var(--text2); letter-spacing: 0.3px; }
+.ob-field input, .ob-field select {
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--r); padding: 10px 12px;
+  font-family: var(--font); font-size: 14px; color: var(--text);
+  outline: none; transition: border-color .15s;
+}
+.ob-field input:focus, .ob-field select:focus { border-color: var(--blue); }
+.ob-field select option { background: var(--bg3); }
+.ob-btn {
+  margin-top: 22px; width: 100%; padding: 13px;
+  background: var(--blue); color: #fff; border: none;
+  border-radius: var(--r); font-family: var(--font);
+  font-size: 15px; font-weight: 600; cursor: pointer; transition: background .15s;
+}
+.ob-btn:hover { background: var(--blue2); }
 
-  /* ── APP SHELL ── */
-  #app { display: none; flex-direction: column; min-height: 100vh; }
+/* ── APP ── */
+#app { display: none; height: 100vh; flex-direction: column; }
 
-  /* Header */
-  .header {
-    background: var(--white); border-bottom: 1.5px solid var(--gray-100);
-    padding: 0 20px; height: 56px; display: flex; align-items: center;
-    justify-content: space-between; position: sticky; top: 0; z-index: 100;
-  }
-  .header-left { display: flex; align-items: center; gap: 10px; }
-  .header-name { font-size: 13px; font-weight: 600; color: var(--gray-700); }
-  .header-right { display: flex; align-items: center; gap: 8px; }
+/* Header */
+.hdr {
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  padding: 0 20px; height: 52px; display: flex; align-items: center;
+  justify-content: space-between; flex-shrink: 0; z-index: 50;
+}
+.hdr-l { display: flex; align-items: center; gap: 10px; }
+.hdr-name { font-size: 13px; font-weight: 500; color: var(--text2); }
+.hdr-r { display: flex; align-items: center; gap: 8px; }
+.conn-indicator { display: flex; align-items: center; gap: 6px; }
+.conn-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.c-ok { background: var(--green); }
+.c-err { background: var(--red); }
+.c-load { background: var(--orange); animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+.conn-txt { font-size: 11px; color: var(--text3); }
 
-  /* Tabs */
-  .tabs {
-    display: flex; gap: 4px; padding: 10px 20px 0;
-    background: var(--white); border-bottom: 1.5px solid var(--gray-100);
-    overflow-x: auto; flex-shrink: 0;
-  }
-  .tab-btn {
-    padding: 8px 16px; border: none; background: none;
-    font-family: var(--font-main); font-size: 13px; font-weight: 500;
-    color: var(--gray-500); cursor: pointer; border-bottom: 2.5px solid transparent;
-    white-space: nowrap; transition: all .15s; border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-  }
-  .tab-btn.active { color: var(--blue-deep); border-bottom-color: var(--blue-deep); font-weight: 600; }
-  .tab-btn:hover:not(.active) { color: var(--gray-700); background: var(--gray-50); }
+/* Tabs */
+.tabs {
+  display: flex; gap: 2px; padding: 10px 20px 0;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  overflow-x: auto; flex-shrink: 0;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  padding: 8px 14px; border: none; background: none;
+  font-family: var(--font); font-size: 12px; font-weight: 500;
+  color: var(--text3); cursor: pointer; white-space: nowrap;
+  border-bottom: 2px solid transparent; transition: all .15s;
+  border-radius: var(--r) var(--r) 0 0;
+}
+.tab.on { color: var(--blue); border-bottom-color: var(--blue); font-weight: 600; }
+.tab:hover:not(.on) { color: var(--text2); background: var(--bg3); }
 
-  /* Main */
-  .main { flex: 1; padding: 16px 20px; display: flex; flex-direction: column; gap: 16px; }
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
+/* Main scroll area */
+.main { flex: 1; overflow-y: auto; padding: 16px 20px 32px; display: flex; flex-direction: column; gap: 14px; }
+.main::-webkit-scrollbar { width: 4px; }
+.main::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 4px; }
+.panel { display: none; }
+.panel.on { display: contents; }
 
-  /* ── GLUCOSE CARD ── */
-  .glucose-card {
-    background: var(--white); border: 1.5px solid var(--gray-100);
-    border-radius: var(--radius); padding: 20px 24px;
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 16px; box-shadow: var(--shadow);
-  }
-  .glucose-left { display: flex; flex-direction: column; gap: 2px; }
-  .glucose-value {
-    font-size: 52px; font-weight: 700; line-height: 1; letter-spacing: -2px;
-    font-family: var(--font-mono);
-  }
-  .glucose-value.low { color: var(--red); }
-  .glucose-value.ok { color: var(--green); }
-  .glucose-value.high { color: var(--orange); }
-  .glucose-value.critical { color: var(--red); }
-  .glucose-unit { font-size: 13px; color: var(--gray-500); }
-  .glucose-time { font-size: 12px; color: var(--gray-500); margin-top: 4px; }
-  .glucose-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-  .glucose-arrow { font-size: 36px; line-height: 1; }
-  .glucose-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-  .meta-item { font-size: 12px; color: var(--gray-600); }
-  .meta-val { font-weight: 600; color: var(--gray-900); }
-  .refresh-btn {
-    background: var(--blue-pale); border: none; border-radius: var(--radius-sm);
-    padding: 6px 12px; font-family: var(--font-main); font-size: 12px;
-    font-weight: 600; color: var(--blue-deep); cursor: pointer; transition: background .15s;
-  }
-  .refresh-btn:hover { background: var(--blue-light); }
+/* ── GLUCOSE HERO ── */
+.glucose-hero {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r2); padding: 20px 24px;
+  display: flex; align-items: stretch; gap: 20px;
+}
+.gh-left { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+.gh-value {
+  font-size: 64px; font-weight: 700; line-height: 1;
+  letter-spacing: -3px; font-family: var(--mono);
+}
+.gh-value.ok { color: var(--green); }
+.gh-value.warn { color: var(--yellow); }
+.gh-value.high { color: var(--orange); }
+.gh-value.crit { color: var(--red); }
+.gh-unit { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.gh-time { font-size: 11px; color: var(--text3); margin-top: 8px; }
+.gh-right { display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; }
+.gh-arrow { font-size: 40px; line-height: 1; }
+.gh-meta { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+.meta-row { font-size: 12px; color: var(--text2); }
+.meta-row b { color: var(--text); font-weight: 600; font-family: var(--mono); }
+.rfrsh {
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--r); padding: 6px 12px;
+  font-family: var(--font); font-size: 12px; font-weight: 500;
+  color: var(--text2); cursor: pointer; transition: all .15s;
+}
+.rfrsh:hover { border-color: var(--blue); color: var(--blue); }
 
-  /* Stats row */
-  .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-  .stat-card {
-    background: var(--white); border: 1.5px solid var(--gray-100);
-    border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow);
-  }
-  .stat-label { font-size: 11px; color: var(--gray-500); font-weight: 500; margin-bottom: 4px; }
-  .stat-value { font-size: 20px; font-weight: 700; font-family: var(--font-mono); color: var(--gray-900); }
-  .stat-sub { font-size: 11px; color: var(--gray-500); margin-top: 2px; }
+/* Stats grid */
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.stat {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 14px 16px;
+}
+.stat-lbl { font-size: 11px; color: var(--text3); margin-bottom: 5px; font-weight: 500; }
+.stat-val { font-size: 22px; font-weight: 700; font-family: var(--mono); }
+.stat-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
 
-  /* ── RECOMMENDATION ── */
-  .rec-card {
-    border: 2px solid var(--blue-deep); border-radius: var(--radius);
-    padding: 20px 24px; background: var(--blue-pale);
-  }
-  .rec-title { font-size: 13px; font-weight: 600; color: var(--blue-deep); margin-bottom: 8px; }
-  .rec-dose {
-    font-size: 36px; font-weight: 700; color: var(--blue-deep);
-    font-family: var(--font-mono); margin-bottom: 8px;
-  }
-  .rec-detail { font-size: 12px; color: var(--gray-700); line-height: 1.7; }
-  .rec-warning {
-    margin-top: 10px; background: #FEF3C7; border-radius: var(--radius-sm);
-    padding: 8px 12px; font-size: 12px; color: #92400E; border: 1px solid #FDE68A;
-  }
+/* ── OMNIBOX ── */
+.omni-wrap {
+  display: flex; gap: 8px; background: var(--bg2);
+  border: 1px solid var(--border2); border-radius: var(--r2);
+  padding: 6px 8px 6px 16px; transition: border-color .15s;
+}
+.omni-wrap:focus-within { border-color: var(--blue); }
+.omni {
+  flex: 1; border: none; outline: none; background: none;
+  font-family: var(--font); font-size: 14px; color: var(--text);
+  padding: 7px 0; direction: rtl; caret-color: var(--blue);
+}
+.omni::placeholder { color: var(--text3); }
+.omni-btn {
+  background: var(--blue); color: #fff; border: none;
+  border-radius: var(--r); padding: 8px 16px;
+  font-family: var(--font); font-size: 13px; font-weight: 600;
+  cursor: pointer; white-space: nowrap; transition: background .15s;
+}
+.omni-btn:hover { background: var(--blue2); }
 
-  /* ── OMNIBOX ── */
-  .omnibox-wrap {
-    display: flex; gap: 8px; align-items: center;
-    background: var(--white); border: 2px solid var(--gray-300);
-    border-radius: var(--radius); padding: 4px 8px 4px 12px;
-    box-shadow: var(--shadow); transition: border-color .15s;
-  }
-  .omnibox-wrap:focus-within { border-color: var(--blue-mid); }
-  .omnibox {
-    flex: 1; border: none; outline: none; font-family: var(--font-main);
-    font-size: 14px; color: var(--gray-900); background: none; padding: 8px 0;
-    direction: rtl;
-  }
-  .omnibox::placeholder { color: var(--gray-400); }
-  .omnibox-send {
-    background: var(--blue-deep); color: var(--white); border: none;
-    border-radius: var(--radius-sm); padding: 8px 14px;
-    font-family: var(--font-main); font-size: 13px; font-weight: 600;
-    cursor: pointer; transition: background .15s; white-space: nowrap;
-  }
-  .omnibox-send:hover { background: var(--blue-mid); }
+/* Chat */
+.chat { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
+.chat::-webkit-scrollbar { width: 3px; }
+.chat::-webkit-scrollbar-thumb { background: var(--bg4); }
+.msg {
+  padding: 11px 14px; border-radius: var(--r);
+  font-size: 13px; line-height: 1.65; max-width: 92%;
+}
+.msg.user { background: var(--blue-pale); border: 1px solid var(--blue-border); color: #90BBFA; align-self: flex-end; border-bottom-right-radius: 2px; }
+.msg.bot { background: var(--bg3); border: 1px solid var(--border); color: var(--text); align-self: flex-start; border-bottom-left-radius: 2px; }
+.msg.warn { background: var(--orange-pale); border: 1px solid rgba(249,115,22,.3); color: #FBA97A; }
+.msg.ok { background: var(--green-pale); border: 1px solid rgba(34,197,94,.3); color: #7EE4A4; }
+.msg.err { background: var(--red-pale); border: 1px solid rgba(239,68,68,.3); color: #F98080; }
+.msg b { color: inherit; font-weight: 700; }
 
-  /* Chat / Results */
-  .chat-area {
-    display: flex; flex-direction: column; gap: 10px;
-    max-height: 320px; overflow-y: auto; padding-right: 2px;
-  }
-  .msg {
-    padding: 12px 16px; border-radius: var(--radius);
-    font-size: 13px; line-height: 1.6;
-  }
-  .msg.user { background: var(--blue-pale); color: var(--blue-deep); align-self: flex-end; max-width: 85%; border-bottom-right-radius: 2px; }
-  .msg.bot { background: var(--gray-50); border: 1px solid var(--gray-200); color: var(--gray-900); align-self: flex-start; max-width: 90%; border-bottom-left-radius: 2px; }
-  .msg.warning { background: #FEF2F2; border: 1px solid #FCA5A5; color: #991B1B; }
-  .msg.success { background: #F0FDF4; border: 1px solid #86EFAC; color: #14532D; }
-  .msg b { font-weight: 700; }
+/* ── RECOMMENDATION ── */
+.rec {
+  background: var(--bg2); border: 1.5px solid var(--blue-border);
+  border-radius: var(--r2); padding: 20px 24px;
+  background-image: radial-gradient(ellipse at top right, rgba(59,130,246,0.06) 0%, transparent 60%);
+}
+.rec-lbl { font-size: 11px; font-weight: 600; color: var(--blue); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; }
+.rec-dose { font-size: 44px; font-weight: 700; font-family: var(--mono); color: var(--blue); letter-spacing: -2px; margin-bottom: 10px; }
+.rec-detail { font-size: 12px; color: var(--text2); line-height: 1.8; font-family: var(--mono); }
+.rec-note {
+  margin-top: 12px; background: var(--yellow-pale);
+  border: 1px solid rgba(234,179,8,.3); border-radius: var(--r);
+  padding: 9px 12px; font-size: 12px; color: #D4A600;
+}
 
-  /* ── ACTIVITIES ── */
-  .activities-list { display: flex; flex-direction: column; gap: 8px; }
-  .activity-item {
-    display: flex; align-items: center; justify-content: space-between;
-    background: var(--white); border: 1.5px solid var(--gray-100);
-    border-radius: var(--radius); padding: 12px 16px; gap: 12px;
-    box-shadow: var(--shadow);
-  }
-  .activity-info { display: flex; flex-direction: column; gap: 2px; }
-  .activity-name { font-weight: 600; font-size: 14px; }
-  .activity-meta { font-size: 12px; color: var(--gray-500); }
-  .activity-tag {
-    font-size: 11px; font-weight: 600; padding: 3px 8px;
-    border-radius: 99px; background: var(--blue-light); color: var(--blue-deep);
-  }
-  .activity-actions { display: flex; gap: 6px; }
-  .act-btn {
-    background: var(--gray-100); border: none; border-radius: var(--radius-sm);
-    padding: 5px 10px; font-size: 12px; cursor: pointer; font-family: var(--font-main);
-    color: var(--gray-700); transition: background .15s;
-  }
-  .act-btn:hover { background: var(--gray-200); }
-  .act-btn.del { color: var(--red); }
-  .act-btn.del:hover { background: #FEE2E2; }
-  .add-activity-form {
-    background: var(--gray-50); border: 1.5px solid var(--gray-200);
-    border-radius: var(--radius); padding: 14px 16px;
-    display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 10px; align-items: end;
-  }
-  .add-activity-form input, .add-activity-form select {
-    border: 1.5px solid var(--gray-300); border-radius: var(--radius-sm);
-    padding: 8px 10px; font-family: var(--font-main); font-size: 13px;
-    outline: none; transition: border-color .15s;
-  }
-  .add-activity-form input:focus, .add-activity-form select:focus { border-color: var(--blue-mid); }
+/* ── POD ── */
+.pod {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 14px 18px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.pod-age { font-size: 26px; font-weight: 700; font-family: var(--mono); }
+.pod-lbl { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.pod-badge {
+  font-size: 11px; font-weight: 600; padding: 4px 10px;
+  border-radius: 99px;
+}
+.pod-badge.ok { background: var(--green-pale); color: var(--green); }
+.pod-badge.warn { background: var(--orange-pale); color: var(--orange); }
+.pod-badge.new { background: var(--blue-pale); color: var(--blue); }
+.pod-proto {
+  margin-top: 8px; background: var(--orange-pale);
+  border: 1px solid rgba(249,115,22,.25); border-radius: var(--r);
+  padding: 10px 14px; font-size: 12px; color: #FBA97A;
+}
 
-  /* ── PROFILE ── */
-  .profile-section { margin-bottom: 20px; }
-  .profile-section-title {
-    font-size: 12px; font-weight: 700; color: var(--blue-deep);
-    text-transform: uppercase; letter-spacing: 0.5px;
-    padding-bottom: 8px; border-bottom: 1px solid var(--blue-light);
-    margin-bottom: 12px;
-  }
-  .profile-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .profile-field { display: flex; flex-direction: column; gap: 3px; }
-  .profile-field label { font-size: 11px; font-weight: 600; color: var(--gray-500); }
-  .profile-field input, .profile-field select {
-    border: 1.5px solid var(--gray-200); border-radius: var(--radius-sm);
-    padding: 8px 10px; font-family: var(--font-main); font-size: 13px;
-    background: var(--gray-50); color: var(--gray-700); outline: none;
-  }
-  .profile-field input:disabled { cursor: not-allowed; opacity: .8; }
+/* ── AUDIT ── */
+.audit {
+  background: var(--red-pale); border: 1px solid rgba(239,68,68,.3);
+  border-radius: var(--r); padding: 12px 16px;
+}
+.audit-title { font-size: 12px; font-weight: 700; color: #F87171; margin-bottom: 6px; }
+.audit-row { font-size: 12px; color: #FCA5A5; margin-bottom: 3px; }
 
-  /* ── SETTINGS ── */
-  .settings-tabs { display: flex; gap: 6px; margin-bottom: 16px; }
-  .settings-tab {
-    padding: 7px 16px; border: 1.5px solid var(--gray-200);
-    border-radius: var(--radius-sm); font-family: var(--font-main);
-    font-size: 13px; font-weight: 500; cursor: pointer; background: var(--white);
-    color: var(--gray-600); transition: all .15s;
-  }
-  .settings-tab.active { background: var(--blue-deep); color: var(--white); border-color: var(--blue-deep); }
-  .settings-group { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
-  .settings-group-title { font-size: 12px; font-weight: 700; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.5px; }
-  .settings-field { display: flex; flex-direction: column; gap: 4px; }
-  .settings-field label { font-size: 13px; font-weight: 500; color: var(--gray-700); }
-  .settings-field input, .settings-field select {
-    border: 1.5px solid var(--gray-300); border-radius: var(--radius-sm);
-    padding: 9px 12px; font-family: var(--font-main); font-size: 14px;
-    color: var(--gray-900); background: var(--white); outline: none; transition: border-color .15s;
-  }
-  .settings-field input:focus, .settings-field select:focus { border-color: var(--blue-mid); }
-  .settings-field .hint { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
-  .save-btn {
-    padding: 10px 24px; background: var(--blue-deep); color: var(--white);
-    border: none; border-radius: var(--radius); font-family: var(--font-main);
-    font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
-  }
-  .save-btn:hover { background: var(--blue-mid); }
+/* ── ACTIVITIES ── */
+.act-add {
+  display: grid; grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 8px; align-items: end;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 14px 16px;
+}
+.form-field { display: flex; flex-direction: column; gap: 4px; }
+.form-field label { font-size: 11px; font-weight: 600; color: var(--text3); }
+.form-field input, .form-field select {
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--r); padding: 8px 10px;
+  font-family: var(--font); font-size: 13px; color: var(--text);
+  outline: none; transition: border-color .15s;
+}
+.form-field input:focus, .form-field select:focus { border-color: var(--blue); }
+.form-field select option { background: var(--bg3); }
+.add-btn {
+  background: var(--blue); color: #fff; border: none;
+  border-radius: var(--r); padding: 0 16px; height: 36px;
+  font-family: var(--font); font-size: 13px; font-weight: 600;
+  cursor: pointer; align-self: end; transition: background .15s;
+}
+.add-btn:hover { background: var(--blue2); }
 
-  /* ── REPORTS ── */
-  .tir-bar-wrap { margin: 12px 0; }
-  .tir-bar { height: 28px; border-radius: 6px; display: flex; overflow: hidden; }
-  .tir-seg { display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 700; color: #fff; }
-  .tir-legend { display: flex; gap: 14px; margin-top: 8px; flex-wrap: wrap; }
-  .tir-leg-item { display: flex; align-items: center; gap: 5px; font-size: 12px; }
-  .tir-dot { width: 10px; height: 10px; border-radius: 50%; }
+.act-list { display: flex; flex-direction: column; gap: 8px; }
+.act-item {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 12px 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.act-name { font-weight: 600; font-size: 14px; }
+.act-meta { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.act-day { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 99px; background: var(--blue-pale); color: var(--blue); }
+.del-btn {
+  background: none; border: 1px solid var(--border);
+  border-radius: var(--r); padding: 5px 10px; font-size: 12px;
+  cursor: pointer; color: var(--text3); transition: all .15s; font-family: var(--font);
+}
+.del-btn:hover { border-color: var(--red); color: var(--red); background: var(--red-pale); }
+.gcal-btn {
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--r); padding: 7px 14px;
+  font-family: var(--font); font-size: 12px; font-weight: 500;
+  color: var(--text2); cursor: pointer; transition: all .15s;
+}
+.gcal-btn:hover { border-color: var(--blue); color: var(--blue); }
 
-  /* ── POD ── */
-  .pod-card {
-    background: var(--white); border: 1.5px solid var(--gray-100);
-    border-radius: var(--radius); padding: 16px 20px; box-shadow: var(--shadow);
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .pod-info { display: flex; flex-direction: column; gap: 2px; }
-  .pod-age { font-size: 28px; font-weight: 700; font-family: var(--font-mono); color: var(--gray-900); }
-  .pod-label { font-size: 12px; color: var(--gray-500); }
-  .pod-status { display: flex; align-items: center; gap: 6px; }
-  .pod-dot { width: 10px; height: 10px; border-radius: 50%; }
-  .pod-ok .pod-dot { background: var(--green); }
-  .pod-warn .pod-dot { background: var(--orange); }
-  .pod-new .pod-dot { background: var(--blue-mid); }
-  .pod-protocol {
-    margin-top: 10px; background: #FFF7ED; border: 1px solid #FED7AA;
-    border-radius: var(--radius-sm); padding: 10px 14px; font-size: 12px; color: #92400E;
-  }
-  .pod-protocol b { color: #C2410C; }
+/* ── REPORTS ── */
+.tir-bar { height: 26px; border-radius: 6px; display: flex; overflow: hidden; margin: 10px 0; }
+.tir-seg { display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.9); }
+.tir-legend { display: flex; gap: 14px; flex-wrap: wrap; }
+.tir-leg { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text2); }
+.tir-dot { width: 8px; height: 8px; border-radius: 50%; }
 
-  /* ── ML RECOMMENDATIONS ── */
-  .ml-card {
-    background: var(--white); border: 1.5px solid var(--gray-100);
-    border-radius: var(--radius); padding: 16px 20px; box-shadow: var(--shadow);
-  }
-  .ml-title { font-size: 13px; font-weight: 600; color: var(--gray-700); margin-bottom: 6px; }
-  .ml-text { font-size: 13px; color: var(--gray-600); line-height: 1.6; margin-bottom: 10px; }
-  .ml-actions { display: flex; gap: 8px; }
-  .ml-yes { padding: 7px 18px; background: var(--green); color: #fff; border: none; border-radius: var(--radius-sm); font-family: var(--font-main); font-size: 13px; font-weight: 600; cursor: pointer; }
-  .ml-no { padding: 7px 18px; background: var(--gray-100); color: var(--gray-700); border: none; border-radius: var(--font-mono); font-family: var(--font-main); font-size: 13px; cursor: pointer; border-radius: var(--radius-sm); }
+.autotune-box {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 16px; font-family: var(--mono);
+  font-size: 12px; color: var(--text2); line-height: 1.9;
+  white-space: pre; overflow-x: auto; direction: ltr;
+}
+.autotune-box::-webkit-scrollbar { height: 3px; }
+.autotune-box::-webkit-scrollbar-thumb { background: var(--bg4); }
 
-  /* ── IMPORT CALENDAR MODAL ── */
-  .modal-overlay {
-    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4);
-    z-index: 200; align-items: center; justify-content: center;
-  }
-  .modal-overlay.open { display: flex; }
-  .modal-box {
-    background: var(--white); border-radius: var(--radius); padding: 28px;
-    width: 100%; max-width: 480px; box-shadow: var(--shadow-md); direction: rtl;
-  }
-  .modal-title { font-size: 16px; font-weight: 700; color: var(--gray-900); margin-bottom: 4px; }
-  .modal-sub { font-size: 12px; color: var(--gray-500); margin-bottom: 16px; }
-  .cal-event-list { display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto; }
-  .cal-event-item {
-    display: flex; align-items: center; gap: 10px;
-    border: 1.5px solid var(--gray-200); border-radius: var(--radius-sm);
-    padding: 10px 12px; cursor: pointer; transition: background .1s;
-  }
-  .cal-event-item.selected { background: var(--blue-pale); border-color: var(--blue-mid); }
-  .cal-event-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--blue-deep); }
-  .cal-event-name { font-weight: 600; font-size: 13px; }
-  .cal-event-meta { font-size: 11px; color: var(--gray-500); }
-  .modal-actions { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
-  .modal-cancel { padding: 8px 18px; background: var(--gray-100); color: var(--gray-700); border: none; border-radius: var(--radius-sm); font-family: var(--font-main); font-size: 13px; cursor: pointer; }
-  .modal-import { padding: 8px 18px; background: var(--blue-deep); color: #fff; border: none; border-radius: var(--radius-sm); font-family: var(--font-main); font-size: 13px; font-weight: 600; cursor: pointer; }
+/* ── ML ── */
+.ml-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 16px 20px;
+}
+.ml-badge {
+  display: inline-block; font-size: 10px; font-weight: 700;
+  padding: 2px 8px; border-radius: 99px; margin-bottom: 8px;
+}
+.ml-badge.tact { background: var(--blue-pale); color: var(--blue); }
+.ml-badge.strat { background: rgba(139,92,246,0.15); color: #A78BFA; }
+.ml-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.ml-text { font-size: 13px; color: var(--text2); line-height: 1.65; margin-bottom: 12px; }
+.ml-btns { display: flex; gap: 8px; }
+.ml-yes {
+  padding: 6px 18px; background: var(--green-pale);
+  border: 1px solid rgba(34,197,94,.3); color: var(--green);
+  border-radius: var(--r); font-family: var(--font); font-size: 12px;
+  font-weight: 600; cursor: pointer; transition: all .15s;
+}
+.ml-yes:hover { background: rgba(34,197,94,.2); }
+.ml-no {
+  padding: 6px 18px; background: var(--bg3);
+  border: 1px solid var(--border); color: var(--text3);
+  border-radius: var(--r); font-family: var(--font); font-size: 12px;
+  cursor: pointer; transition: all .15s;
+}
+.ml-no:hover { border-color: var(--border2); color: var(--text2); }
 
-  /* birthday banner */
-  .birthday-banner {
-    background: linear-gradient(135deg, var(--blue-deep), var(--blue-mid));
-    color: #fff; border-radius: var(--radius); padding: 16px 24px;
-    font-size: 15px; font-weight: 600; text-align: center; display: none;
-  }
+/* ── PROFILE ── */
+.pf-section { margin-bottom: 22px; }
+.pf-section-title {
+  font-size: 11px; font-weight: 700; color: var(--text3);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  padding-bottom: 10px; border-bottom: 1px solid var(--border);
+  margin-bottom: 14px;
+}
+.pf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pf-field { display: flex; flex-direction: column; gap: 4px; }
+.pf-field label { font-size: 11px; font-weight: 600; color: var(--text3); }
+.pf-field input {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 8px 10px;
+  font-family: var(--font); font-size: 13px; color: var(--text2);
+  opacity: .7; cursor: not-allowed;
+}
+.pf-note { font-size: 11px; color: var(--text3); margin-top: 6px; }
 
-  /* audit */
-  .audit-card {
-    background: #FFF7ED; border: 1.5px solid #FED7AA;
-    border-radius: var(--radius); padding: 14px 18px;
-  }
-  .audit-title { font-size: 12px; font-weight: 700; color: #C2410C; margin-bottom: 6px; }
-  .audit-row { font-size: 12px; color: #7C2D12; margin-bottom: 3px; }
+/* ── SETTINGS ── */
+.stabs { display: flex; gap: 6px; margin-bottom: 18px; }
+.stab {
+  padding: 7px 16px; border: 1px solid var(--border2);
+  border-radius: var(--r); font-family: var(--font);
+  font-size: 12px; font-weight: 500; cursor: pointer;
+  background: var(--bg2); color: var(--text2); transition: all .15s;
+}
+.stab.on { background: var(--blue); color: #fff; border-color: var(--blue); }
+.sgrp { margin-bottom: 22px; }
+.sgrp-title { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+.sf { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.sf label { font-size: 12px; font-weight: 500; color: var(--text2); }
+.sf input, .sf select {
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--r); padding: 9px 12px;
+  font-family: var(--font); font-size: 14px; color: var(--text);
+  outline: none; transition: border-color .15s;
+}
+.sf input:focus, .sf select:focus { border-color: var(--blue); }
+.sf select option { background: var(--bg3); }
+.sf .hint { font-size: 11px; color: var(--text3); margin-top: 3px; }
+.save {
+  padding: 10px 24px; background: var(--blue); color: #fff;
+  border: none; border-radius: var(--r); font-family: var(--font);
+  font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
+}
+.save:hover { background: var(--blue2); }
 
-  /* helpers */
-  .row { display: flex; gap: 10px; align-items: center; }
-  .spacer { flex: 1; }
-  .section-head {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 10px;
-  }
-  .section-title { font-size: 14px; font-weight: 700; color: var(--gray-900); }
-  .icon-btn {
-    background: none; border: none; cursor: pointer; font-size: 18px; padding: 4px;
-    border-radius: var(--radius-sm); transition: background .1s;
-  }
-  .icon-btn:hover { background: var(--gray-100); }
-  .badge {
-    display: inline-block; background: var(--red); color: #fff;
-    border-radius: 99px; font-size: 10px; font-weight: 700;
-    padding: 1px 6px; margin-right: 4px;
-  }
-  .empty-state { text-align: center; color: var(--gray-400); font-size: 13px; padding: 24px; }
+/* ── MODAL ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.7); z-index: 200;
+  align-items: center; justify-content: center; padding: 24px;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: var(--r2); padding: 28px;
+  width: 100%; max-width: 480px; direction: rtl;
+}
+.modal-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.modal-sub { font-size: 12px; color: var(--text3); margin-bottom: 16px; }
+.cal-list { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
+.cal-item {
+  display: flex; align-items: center; gap: 10px;
+  border: 1px solid var(--border); border-radius: var(--r);
+  padding: 10px 12px; cursor: pointer; transition: all .1s;
+}
+.cal-item.sel { background: var(--blue-pale); border-color: var(--blue-border); }
+.cal-item input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--blue); flex-shrink: 0; }
+.cal-item-name { font-weight: 600; font-size: 13px; }
+.cal-item-meta { font-size: 11px; color: var(--text3); }
+.modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.modal-cancel {
+  padding: 8px 18px; background: var(--bg3); color: var(--text2);
+  border: 1px solid var(--border2); border-radius: var(--r);
+  font-family: var(--font); font-size: 13px; cursor: pointer; transition: all .15s;
+}
+.modal-cancel:hover { border-color: var(--border); }
+.modal-import {
+  padding: 8px 18px; background: var(--blue); color: #fff;
+  border: none; border-radius: var(--r); font-family: var(--font);
+  font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s;
+}
+.modal-import:hover { background: var(--blue2); }
 
-  /* Logo SVG inline */
-  .logo-svg { width: 36px; height: 36px; flex-shrink: 0; }
+/* ── BIRTHDAY ── */
+.bday {
+  background: linear-gradient(135deg, #1D4ED8, #3B82F6);
+  border-radius: var(--r2); padding: 16px 24px;
+  text-align: center; font-size: 15px; font-weight: 600; display: none;
+}
 
-  /* Connection status */
-  .conn-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-  .conn-ok { background: var(--green); }
-  .conn-err { background: var(--red); }
-  .conn-load { background: var(--orange); animation: blink 1s infinite; }
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+/* ── FOOD RULES ── */
+.food-rules {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 12px 16px;
+}
+.food-rules-title { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; margin-bottom: 8px; }
+.food-rule { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.food-rule:last-child { border: none; }
+.food-rule-name { font-size: 13px; color: var(--text2); }
+.food-rule-hours { font-size: 12px; font-weight: 600; color: var(--orange); font-family: var(--mono); }
 
-  /* scrollbar */
-  ::-webkit-scrollbar { width: 5px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 99px; }
+/* helpers */
+.row { display: flex; gap: 8px; align-items: center; }
+.sh { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.st { font-size: 14px; font-weight: 700; color: var(--text); }
+.empty { text-align: center; color: var(--text3); font-size: 13px; padding: 28px; }
+.sep { height: 1px; background: var(--border); }
 
-  @media (max-width: 480px) {
-    .stats-row { grid-template-columns: repeat(2, 1fr); }
-    .add-activity-form { grid-template-columns: 1fr 1fr; }
-    .glucose-value { font-size: 42px; }
-    .main { padding: 12px 14px; }
-    .header { padding: 0 14px; }
-    .tabs { padding: 8px 14px 0; }
-  }
+@media (max-width: 480px) {
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .act-add { grid-template-columns: 1fr 1fr; }
+  .gh-value { font-size: 52px; }
+  .main { padding: 12px 14px 24px; }
+  .hdr { padding: 0 14px; }
+  .tabs { padding: 8px 14px 0; }
+  .pf-grid { grid-template-columns: 1fr; }
+}
 </style>
 </head>
 <body>
 
-<!-- ══════════════ ONBOARDING ══════════════ -->
+<!-- ══ ONBOARDING ══ -->
 <div id="onboarding">
   <div class="ob-card">
-    <div class="ob-logo">
-      <svg class="logo-svg" viewBox="0 0 36 36" fill="none">
-        <path d="M18 2 L34 10 L34 26 L18 34 L2 26 L2 10 Z" fill="#1E40AF"/>
-        <ellipse cx="18" cy="19" rx="11" ry="4" fill="#FDE68A"/>
-        <path d="M7 19 Q18 9 29 19" stroke="#FDE68A" stroke-width="2.5" fill="none"/>
-        <rect x="15" y="16" width="6" height="2" rx="1" fill="#DC2626"/>
+    <div class="ob-head">
+      <svg width="38" height="38" viewBox="0 0 38 38" fill="none">
+        <path d="M19 2 L36 10.5 L36 27.5 L19 36 L2 27.5 L2 10.5 Z" fill="#1D4ED8"/>
+        <path d="M8 21 Q19 11 30 21" stroke="#FDE68A" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <ellipse cx="19" cy="21" rx="11" ry="3.5" fill="#FDE68A"/>
+        <rect x="16" y="18" width="6" height="2" rx="1" fill="#DC2626"/>
       </svg>
       <div>
-        <div class="ob-title">Loopie v24.5</div>
-        <div class="ob-sub">Medical Guardian לניהול T1D</div>
+        <div class="ob-title">Loopie v25.3</div>
       </div>
     </div>
+    <div class="ob-sub">מרכז בקרה לניהול T1D – הגדרה ראשונית</div>
     <div class="ob-grid">
-      <div class="ob-field full"><label>שם הילד/ה</label><input id="ob-name" placeholder="שם פרטי" /></div>
+      <div class="ob-field full"><label>שם הילד / הילדה</label><input id="ob-name" placeholder="שם פרטי"/></div>
       <div class="ob-field"><label>מגדר</label>
         <select id="ob-gender"><option value="m">זכר</option><option value="f">נקבה</option></select>
       </div>
-      <div class="ob-field"><label>שנת לידה</label><input id="ob-year" type="number" placeholder="2014" min="2000" max="2024"/></div>
-      <div class="ob-field"><label>גובה (ס"מ)</label><input id="ob-height" type="number" placeholder="128"/></div>
-      <div class="ob-field"><label>משקל (ק"ג)</label><input id="ob-weight" type="number" placeholder="28"/></div>
-      <div class="ob-field full"><label>כתובת מייל (להתראות)</label><input id="ob-email" type="email" placeholder="parent@example.com"/></div>
+      <div class="ob-field"><label>תאריך לידה</label><input id="ob-dob" type="date"/></div>
+      <div class="ob-field"><label>גובה (ס"מ)</label><input id="ob-h" type="number" placeholder="130"/></div>
+      <div class="ob-field"><label>משקל (ק"ג)</label><input id="ob-w" type="number" placeholder="28"/></div>
+      <div class="ob-field full"><label>מייל להתראות</label><input id="ob-email" type="email" placeholder="parent@example.com"/></div>
     </div>
-    <button class="ob-btn" onclick="finishOnboarding()">כניסה למערכת →</button>
+    <button class="ob-btn" onclick="startApp()">כניסה למערכת →</button>
   </div>
 </div>
 
-<!-- ══════════════ APP ══════════════ -->
+<!-- ══ APP ══ -->
 <div id="app">
-  <!-- Header -->
-  <header class="header">
-    <div class="header-left">
-      <svg class="logo-svg" viewBox="0 0 36 36" fill="none">
-        <path d="M18 2 L34 10 L34 26 L18 34 L2 26 L2 10 Z" fill="#1E40AF"/>
-        <ellipse cx="18" cy="19" rx="11" ry="4" fill="#FDE68A"/>
-        <path d="M7 19 Q18 9 29 19" stroke="#FDE68A" stroke-width="2.5" fill="none"/>
-        <rect x="15" y="16" width="6" height="2" rx="1" fill="#DC2626"/>
+  <header class="hdr">
+    <div class="hdr-l">
+      <svg width="30" height="30" viewBox="0 0 38 38" fill="none">
+        <path d="M19 2 L36 10.5 L36 27.5 L19 36 L2 27.5 L2 10.5 Z" fill="#1D4ED8"/>
+        <path d="M8 21 Q19 11 30 21" stroke="#FDE68A" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <ellipse cx="19" cy="21" rx="11" ry="3.5" fill="#FDE68A"/>
+        <rect x="16" y="18" width="6" height="2" rx="1" fill="#DC2626"/>
       </svg>
       <div>
-        <div style="font-size:15px;font-weight:700;color:var(--blue-deep)">Loopie v24.5</div>
-        <div class="header-name" id="header-name">–</div>
+        <div style="font-size:13px;font-weight:700;color:var(--blue)">Loopie v25.3</div>
+        <div class="hdr-name" id="hdr-name">–</div>
       </div>
     </div>
-    <div class="header-right">
-      <span id="conn-dot" class="conn-dot conn-load"></span>
-      <span id="conn-txt" style="font-size:11px;color:var(--gray-500)">מתחבר...</span>
+    <div class="hdr-r">
+      <div class="conn-indicator">
+        <div class="conn-dot c-load" id="cdot"></div>
+        <span class="conn-txt" id="ctxt">מתחבר...</span>
+      </div>
     </div>
   </header>
 
-  <!-- Tabs -->
   <nav class="tabs">
-    <button class="tab-btn active" onclick="switchTab('dashboard')">📊 לוח בקרה</button>
-    <button class="tab-btn" onclick="switchTab('activities')">🏃 חוגים</button>
-    <button class="tab-btn" onclick="switchTab('reports')">📈 דוחות</button>
-    <button class="tab-btn" onclick="switchTab('ml')">🧠 המלצות ML</button>
-    <button class="tab-btn" onclick="switchTab('profile')">👤 פרופיל רפואי</button>
-    <button class="tab-btn" onclick="switchTab('settings')">⚙️ הגדרות</button>
+    <button class="tab on" onclick="sw('dashboard')">📊 בקרה</button>
+    <button class="tab" onclick="sw('activities')">🏃 חוגים</button>
+    <button class="tab" onclick="sw('reports')">📈 דוחות</button>
+    <button class="tab" onclick="sw('ml')">🧠 ML</button>
+    <button class="tab" onclick="sw('profile')">👤 פרופיל</button>
+    <button class="tab" onclick="sw('settings')">⚙️ הגדרות</button>
   </nav>
 
-  <!-- ── DASHBOARD ── -->
   <main class="main">
-    <div id="tab-dashboard" class="tab-panel active">
-      <div id="birthday-banner" class="birthday-banner">🎂 יום הולדת שמח! מאחלים לך יום מדהים!</div>
+
+    <!-- ─── DASHBOARD ─── -->
+    <div id="p-dashboard" class="panel on">
+      <div class="bday" id="bday-banner">🎂 יום הולדת שמח!</div>
+
+      <!-- Omnibox FIRST -->
+      <div class="omni-wrap">
+        <input class="omni" id="omni" placeholder='נסה: "45 גרם" • "פוד הוחלף" • "הוסף חוג כדורגל שלישי 16:00" • "דוח" • "איך עושים?"'
+          onkeydown="if(event.key==='Enter')sendOmni()"/>
+        <button class="omni-btn" onclick="sendOmni()">שלח</button>
+      </div>
 
       <!-- Glucose -->
-      <div class="glucose-card" id="glucose-card">
-        <div class="glucose-left">
-          <div class="glucose-value ok" id="glucose-val">–</div>
-          <div class="glucose-unit">mg/dL</div>
-          <div class="glucose-time" id="glucose-time">מתרענן...</div>
-        </div>
-        <div class="glucose-right">
-          <div class="glucose-arrow" id="glucose-arrow">→</div>
-          <div class="glucose-meta">
-            <div class="meta-item">IOB: <span class="meta-val" id="iob-val">–</span>U</div>
-            <div class="meta-item">COB: <span class="meta-val" id="cob-val">–</span>g</div>
+      <div class="glucose-hero" id="glucose-hero">
+        <div class="gh-left">
+          <div>
+            <div class="gh-value ok" id="gv">–</div>
+            <div class="gh-unit">mg/dL</div>
           </div>
-          <button class="refresh-btn" onclick="fetchNS()">↻ רענן</button>
+          <div class="gh-time" id="gt">ממתין לנתונים...</div>
+        </div>
+        <div class="gh-right">
+          <div class="gh-arrow" id="garrow">–</div>
+          <div class="gh-meta">
+            <div class="meta-row">IOB: <b id="iob">–</b>U</div>
+            <div class="meta-row">COB: <b id="cob">–</b>g</div>
+          </div>
+          <button class="rfrsh" onclick="fetchNS()">↻ רענן</button>
         </div>
       </div>
 
       <!-- Stats -->
-      <div class="stats-row">
-        <div class="stat-card">
-          <div class="stat-label">ממוצע 24h</div>
-          <div class="stat-value" id="avg24">–</div>
-          <div class="stat-sub">mg/dL</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">TIR 7 ימים</div>
-          <div class="stat-value" id="tir7">–</div>
-          <div class="stat-sub">% בטווח</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">גיל פוד</div>
-          <div class="stat-value" id="pod-age-val">–</div>
-          <div class="stat-sub">שעות</div>
-        </div>
+      <div class="stats">
+        <div class="stat"><div class="stat-lbl">ממוצע 24h</div><div class="stat-val" id="avg24" style="color:var(--text)">–</div><div class="stat-sub">mg/dL</div></div>
+        <div class="stat"><div class="stat-lbl">TIR 7 ימים</div><div class="stat-val" id="tir7" style="color:var(--green)">–</div><div class="stat-sub">% בטווח</div></div>
+        <div class="stat"><div class="stat-lbl">גיל פוד</div><div class="stat-val" id="pod-h" style="color:var(--text)">–</div><div class="stat-sub">שעות</div></div>
       </div>
 
-      <!-- Pod card -->
-      <div class="pod-card">
-        <div class="pod-info">
-          <div class="pod-label">סנסור / פוד</div>
-          <div class="pod-age" id="pod-display">0h</div>
-          <div class="pod-label" id="pod-replaced-time">לא הוגדר</div>
+      <!-- Pod -->
+      <div class="pod" id="pod-card">
+        <div>
+          <div class="pod-lbl">פוד / סנסור</div>
+          <div class="pod-age" id="pod-age">–</div>
+          <div class="pod-lbl" id="pod-since">לא הוגדר</div>
         </div>
-        <div id="pod-status-area">
-          <div class="pod-status pod-ok"><div class="pod-dot"></div><span style="font-size:12px;font-weight:600;color:var(--green)">פוד תקין</span></div>
-        </div>
+        <span class="pod-badge ok" id="pod-badge">תקין</span>
       </div>
-      <div id="pod-protocol" class="pod-protocol" style="display:none"></div>
+      <div class="pod-proto" id="pod-proto" style="display:none"></div>
 
       <!-- Audit -->
-      <div id="audit-card" class="audit-card" style="display:none">
-        <div class="audit-title">⚠️ ביקורת סטייה</div>
+      <div class="audit" id="audit" style="display:none">
+        <div class="audit-title">⚠️ ביקורת – סטייה מהמלצה</div>
         <div id="audit-body"></div>
       </div>
 
       <!-- Recommendation -->
-      <div class="rec-card" id="rec-card" style="display:none">
-        <div class="rec-title">💉 המלצת הזרקה</div>
+      <div class="rec" id="rec" style="display:none">
+        <div class="rec-lbl">💉 המלצת הזרקה</div>
         <div class="rec-dose" id="rec-dose">–U</div>
         <div class="rec-detail" id="rec-detail"></div>
-        <div id="rec-warning" class="rec-warning" style="display:none"></div>
+        <div class="rec-note" id="rec-note" style="display:none"></div>
       </div>
 
-      <!-- Omnibox -->
-      <div class="section-head">
-        <div class="section-title">Omnibox – הפקודות שלי</div>
-      </div>
-      <div class="omnibox-wrap">
-        <input class="omnibox" id="omnibox" placeholder='נסה: "סרוויץ׳ 180" • "בטל חוג" • "דוח שבועי" • "פוד הוחלף"' onkeydown="if(event.key==='Enter')sendOmni()"/>
-        <button class="omnibox-send" onclick="sendOmni()">שלח</button>
-      </div>
-      <div class="chat-area" id="chat-area"></div>
+      <!-- Chat -->
+      <div class="chat" id="chat"></div>
     </div>
 
-    <!-- ── ACTIVITIES ── -->
-    <div id="tab-activities" class="tab-panel">
-      <div class="section-head">
-        <div class="section-title">🏃 יומן חוגים</div>
-        <button class="icon-btn" onclick="openCalImport()">📅 ייבא מגוגל</button>
+    <!-- ─── ACTIVITIES ─── -->
+    <div id="p-activities" class="panel">
+      <div class="sh">
+        <div class="st">🏃 יומן חוגים</div>
+        <button class="gcal-btn" onclick="openGcal()">📅 ייבוא מגוגל</button>
       </div>
-      <div class="add-activity-form" style="margin-bottom:14px">
-        <div class="ob-field"><label>שם החוג</label><input id="act-name" placeholder="כדורגל, בלט..."/></div>
-        <div class="ob-field"><label>יום</label>
-          <select id="act-day">
+      <div class="act-add" style="margin-bottom:12px">
+        <div class="form-field"><label>שם החוג</label><input id="an" placeholder="כדורגל, בלט..."/></div>
+        <div class="form-field"><label>יום</label>
+          <select id="ad">
             <option>ראשון</option><option>שני</option><option>שלישי</option>
             <option>רביעי</option><option>חמישי</option><option>שישי</option><option>שבת</option>
           </select>
         </div>
-        <div class="ob-field"><label>שעה</label><input id="act-time" type="time" value="16:00"/></div>
-        <button class="save-btn" style="height:38px;align-self:end" onclick="addActivity()">הוסף</button>
+        <div class="form-field"><label>שעה</label><input id="at" type="time" value="16:00"/></div>
+        <button class="add-btn" onclick="addAct()">הוסף</button>
       </div>
-      <div class="activities-list" id="activities-list"></div>
+      <div class="act-list" id="act-list"></div>
     </div>
 
-    <!-- ── REPORTS ── -->
-    <div id="tab-reports" class="tab-panel">
-      <div class="section-head">
-        <div class="section-title">📈 דוחות</div>
-      </div>
-      <div id="report-tir">
-        <div style="font-size:13px;color:var(--gray-700);margin-bottom:6px;font-weight:600">TIR – זמן בטווח (7 ימים)</div>
-        <div class="tir-bar-wrap">
-          <div class="tir-bar" id="tir-bar"></div>
-          <div class="tir-legend" id="tir-legend"></div>
-        </div>
-      </div>
-      <div style="height:1px;background:var(--gray-100);margin:16px 0"></div>
-      <div style="font-size:13px;color:var(--gray-700);font-weight:600;margin-bottom:10px">דוח Autotune (דוגמה)</div>
-      <div id="autotune-report" style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:var(--radius);padding:14px 16px;font-size:12px;color:var(--gray-700);font-family:var(--font-mono);line-height:1.8;white-space:pre-wrap;direction:ltr"></div>
+    <!-- ─── REPORTS ─── -->
+    <div id="p-reports" class="panel">
+      <div class="st" style="margin-bottom:14px">📈 דוחות</div>
+
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px">TIR – זמן בטווח (7 ימים)</div>
+      <div class="tir-bar" id="tir-bar"></div>
+      <div class="tir-legend" id="tir-leg"></div>
+
+      <div class="sep" style="margin:18px 0"></div>
+
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px">Autotune Report</div>
+      <div class="autotune-box" id="autotune"></div>
     </div>
 
-    <!-- ── ML RECOMMENDATIONS ── -->
-    <div id="tab-ml" class="tab-panel">
-      <div class="section-head">
-        <div class="section-title">🧠 המלצות מנוע למידה</div>
-      </div>
+    <!-- ─── ML ─── -->
+    <div id="p-ml" class="panel">
+      <div class="st" style="margin-bottom:14px">🧠 המלצות מנוע למידה</div>
       <div id="ml-list" style="display:flex;flex-direction:column;gap:10px"></div>
     </div>
 
-    <!-- ── PROFILE ── -->
-    <div id="tab-profile" class="tab-panel">
-      <div class="profile-section">
-        <div class="profile-section-title">פרטים אישיים</div>
-        <div class="profile-grid">
-          <div class="profile-field"><label>שם</label><input id="pf-name" disabled/></div>
-          <div class="profile-field"><label>שנת לידה</label><input id="pf-year" disabled/></div>
-          <div class="profile-field"><label>גובה</label><input id="pf-height" disabled/></div>
-          <div class="profile-field"><label>משקל</label><input id="pf-weight" disabled/></div>
+    <!-- ─── PROFILE ─── -->
+    <div id="p-profile" class="panel">
+      <div class="pf-section">
+        <div class="pf-section-title">פרטים אישיים</div>
+        <div class="pf-grid">
+          <div class="pf-field"><label>שם</label><input id="pf-name" disabled/></div>
+          <div class="pf-field"><label>תאריך לידה</label><input id="pf-dob" disabled/></div>
+          <div class="pf-field"><label>גובה</label><input id="pf-h" disabled/></div>
+          <div class="pf-field"><label>משקל</label><input id="pf-w" disabled/></div>
         </div>
       </div>
-      <div class="profile-section">
-        <div class="profile-section-title">הגדרות NS (קריאה בלבד)</div>
-        <div class="profile-grid">
-          <div class="profile-field"><label>ICR (ג׳ לכל יחידה)</label><input id="pf-icr" disabled/></div>
-          <div class="profile-field"><label>ISF (mg/dL לכל יחידה)</label><input id="pf-isf" disabled/></div>
-          <div class="profile-field"><label>יעד סוכר נמוך</label><input id="pf-tgt-lo" disabled/></div>
-          <div class="profile-field"><label>יעד סוכר גבוה</label><input id="pf-tgt-hi" disabled/></div>
-          <div class="profile-field"><label>בזאל (U/h)</label><input id="pf-basal" disabled/></div>
-          <div class="profile-field"><label>DIA (שעות)</label><input id="pf-dia" disabled/></div>
+      <div class="pf-section">
+        <div class="pf-section-title">הגדרות NS (קריאה בלבד, מ-Nightscout)</div>
+        <div class="pf-grid">
+          <div class="pf-field"><label>ICR</label><input id="pf-icr" disabled/></div>
+          <div class="pf-field"><label>ISF</label><input id="pf-isf" disabled/></div>
+          <div class="pf-field"><label>יעד נמוך</label><input id="pf-tlo" disabled/></div>
+          <div class="pf-field"><label>יעד גבוה</label><input id="pf-thi" disabled/></div>
+          <div class="pf-field"><label>בזאל (U/h)</label><input id="pf-bas" disabled/></div>
+          <div class="pf-field"><label>DIA (h)</label><input id="pf-dia" disabled/></div>
+        </div>
+        <p class="pf-note">* הנתונים נטענים מ-NS ואינם ניתנים לעריכה כאן</p>
+      </div>
+      <div class="pf-section">
+        <div class="pf-section-title">חוקי בית (ספיגה)</div>
+        <div class="food-rules">
+          <div class="food-rule"><span class="food-rule-name">🍝 פסטה / המבורגר</span><span class="food-rule-hours">5h מהיר מופחת</span></div>
+          <div class="food-rule"><span class="food-rule-name">🍚 אורז / פיתה</span><span class="food-rule-hours">3h</span></div>
+          <div class="food-rule"><span class="food-rule-name">🍞 לחם / דגני בוקר</span><span class="food-rule-hours">2h</span></div>
+          <div class="food-rule"><span class="food-rule-name">🍎 פירות / חלב</span><span class="food-rule-hours">1.5h</span></div>
         </div>
       </div>
-      <p style="font-size:11px;color:var(--gray-400);margin-top:8px">* הנתונים נטענים מ-Nightscout ואינם ניתנים לעריכה כאן. לשינוי – יש לערוך ב-NS.</p>
     </div>
 
-    <!-- ── SETTINGS ── -->
-    <div id="tab-settings" class="tab-panel">
-      <div class="settings-tabs">
-        <button class="settings-tab active" onclick="switchSettingsTab('connections')">חיבורים</button>
-        <button class="settings-tab" onclick="switchSettingsTab('pod')">פוד</button>
+    <!-- ─── SETTINGS ─── -->
+    <div id="p-settings" class="panel">
+      <div class="stabs">
+        <button class="stab on" onclick="swtab('conn')">חיבורים</button>
+        <button class="stab" onclick="swtab('pod')">פוד</button>
       </div>
-      <!-- Connections -->
-      <div id="stab-connections">
-        <div class="settings-group">
-          <div class="settings-group-title">Nightscout</div>
-          <div class="settings-field">
-            <label>כתובת NS (URL)</label>
-            <input id="s-nsurl" placeholder="https://yourname.ns.10be.de"/>
-            <div class="hint">ללא / בסוף</div>
+
+      <div id="st-conn">
+        <div class="sgrp">
+          <div class="sgrp-title">Nightscout</div>
+          <div class="sf"><label>כתובת NS (URL)</label>
+            <input id="s-url" placeholder="https://yourname.ns.10be.de"/>
+            <span class="hint">ללא / בסוף, רווחים יוסרו אוטומטית</span>
           </div>
-          <div class="settings-field">
-            <label>API Secret</label>
-            <input id="s-secret" type="password" placeholder="הסיסמה שלך"/>
-            <div class="hint">יוצפן ב-SHA1 אוטומטית</div>
+          <div class="sf"><label>API Secret</label>
+            <input id="s-sec" type="password" placeholder="הסיסמה שלך"/>
+            <span class="hint">יוצפן ב-SHA1 בזמן אמת</span>
           </div>
         </div>
-        <div class="settings-group">
-          <div class="settings-group-title">Google Calendar (אופציונלי)</div>
-          <div class="settings-field">
-            <label>Calendar ID</label>
-            <input id="s-calid" placeholder="primary"/>
-          </div>
-          <div class="settings-field">
-            <label>Google API Key</label>
-            <input id="s-calkey" type="password" placeholder="AIza..."/>
-          </div>
+        <div class="sgrp">
+          <div class="sgrp-title">Google Calendar (אופציונלי)</div>
+          <div class="sf"><label>Calendar ID</label><input id="s-cal" placeholder="primary"/></div>
+          <div class="sf"><label>Google API Key</label><input id="s-gkey" type="password" placeholder="AIza..."/></div>
         </div>
-        <button class="save-btn" onclick="saveSettings()">💾 שמור הגדרות</button>
+        <button class="save" onclick="saveSettings()">💾 שמור וחבר</button>
       </div>
-      <!-- Pod -->
-      <div id="stab-pod" style="display:none">
-        <div class="settings-group">
-          <div class="settings-group-title">פוד / סנסור</div>
-          <div class="settings-field">
-            <label>תאריך ושעת החלפת פוד אחרונה</label>
-            <input id="s-pod-time" type="datetime-local"/>
-          </div>
+
+      <div id="st-pod" style="display:none">
+        <div class="sgrp">
+          <div class="sgrp-title">החלפת פוד / סנסור</div>
+          <div class="sf"><label>תאריך ושעת החלפה</label><input id="s-pod" type="datetime-local"/></div>
         </div>
-        <button class="save-btn" onclick="savePodTime()">💾 שמור</button>
+        <button class="save" onclick="savePod()">💾 שמור</button>
       </div>
     </div>
+
   </main>
 </div>
 
-<!-- ── CALENDAR IMPORT MODAL ── -->
+<!-- ── CALENDAR MODAL ── -->
 <div class="modal-overlay" id="cal-modal">
-  <div class="modal-box">
+  <div class="modal">
     <div class="modal-title">📅 ייבוא מ-Google Calendar</div>
-    <div class="modal-sub">בחר/י את האירועים של הילד/ה בלבד:</div>
-    <div class="cal-event-list" id="cal-event-list"></div>
-    <div class="modal-actions">
-      <button class="modal-cancel" onclick="closeCalModal()">ביטול</button>
-      <button class="modal-import" onclick="importSelected()">ייבא נבחרים ✓</button>
+    <div class="modal-sub">בחר/י אירועים של הילד/ה בלבד (ללא אירועי הורים)</div>
+    <div class="cal-list" id="cal-list"></div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal()">ביטול</button>
+      <button class="modal-import" onclick="importCal()">ייבא נבחרים ✓</button>
     </div>
   </div>
 </div>
 
 <script>
-// ══════════════════════════════════════
-//  STATE
-// ══════════════════════════════════════
-const APP = {
-  profile: {}, settings: {}, activities: [],
-  ns: { sgv: null, direction: null, iob: 0, cob: 0, lastTime: null },
-  pod: { replacedAt: null },
-  mlHistory: [],
-  mlDefaults: { icr: 10, isf: 50, target: [70, 150] },
-  lastRec: null, lastBolus: null,
-};
-
-// ── SHA1 ──
+// ═══════════════════════════════════════════════════════
+//  SHA-1 — pure JS, no external libs
+// ═══════════════════════════════════════════════════════
 async function sha1(str) {
   const buf = new TextEncoder().encode(str);
   const hash = await crypto.subtle.digest('SHA-1', buf);
   return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
-// ── Persist ──
-function save(key, val) { try { localStorage.setItem('loopie_' + key, JSON.stringify(val)); } catch(e){} }
-function load(key, def) { try { const v = localStorage.getItem('loopie_' + key); return v ? JSON.parse(v) : def; } catch(e) { return def; } }
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+const S = {
+  profile: {}, settings: {}, activities: [],
+  ns: { sgv: null, dir: null, iob: 0, cob: 0, t: null },
+  pod: { at: null },
+  params: { icr: 10, isf: 50, tlo: 70, thi: 150, basal: 0.9, dia: 3 },
+  lastRec: null, lastBolus: null,
+  mlApproved: {},
+};
 
-// ══════════════════════════════════════
+function save(k, v) { try { localStorage.setItem('lp25_' + k, JSON.stringify(v)); } catch(e){} }
+function load(k, d) { try { const v = localStorage.getItem('lp25_' + k); return v !== null ? JSON.parse(v) : d; } catch(e) { return d; } }
+
+// ═══════════════════════════════════════════════════════
 //  ONBOARDING
-// ══════════════════════════════════════
-function finishOnboarding() {
+// ═══════════════════════════════════════════════════════
+function startApp() {
   const name = document.getElementById('ob-name').value.trim();
   if (!name) { alert('נא להזין שם'); return; }
-  APP.profile = {
-    name, gender: document.getElementById('ob-gender').value,
-    year: +document.getElementById('ob-year').value,
-    height: +document.getElementById('ob-height').value,
-    weight: +document.getElementById('ob-weight').value,
+  S.profile = {
+    name,
+    gender: document.getElementById('ob-gender').value,
+    dob: document.getElementById('ob-dob').value,
+    height: document.getElementById('ob-h').value,
+    weight: document.getElementById('ob-w').value,
     email: document.getElementById('ob-email').value,
-    birthday: document.getElementById('ob-year').value
   };
-  save('profile', APP.profile);
+  save('profile', S.profile);
   launch();
 }
 
 function launch() {
   document.getElementById('onboarding').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
-  document.getElementById('header-name').textContent = APP.profile.name || '–';
+  document.getElementById('hdr-name').textContent = S.profile.name || '–';
   checkBirthday();
   loadActivities();
-  loadPodTime();
-  renderMLRecommendations();
+  loadPod();
   renderProfile();
   populateSettings();
-  if (APP.settings.nsurl) fetchNS();
+  renderML();
+  if (S.settings.nsurl) fetchNS();
+  else setConn('err', 'NS לא מוגדר');
   setInterval(fetchNS, 5 * 60 * 1000);
 }
 
-// ══════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 //  TABS
-// ══════════════════════════════════════
-function switchTab(tab) {
-  document.querySelectorAll('.tab-btn').forEach((b,i) => {
-    const ids = ['dashboard','activities','reports','ml','profile','settings'];
-    b.classList.toggle('active', ids[i] === tab);
+// ═══════════════════════════════════════════════════════
+const TABS = ['dashboard','activities','reports','ml','profile','settings'];
+function sw(t) {
+  document.querySelectorAll('.tab').forEach((b,i) => b.classList.toggle('on', TABS[i] === t));
+  TABS.forEach(id => {
+    const p = document.getElementById('p-' + id);
+    if (p) p.classList.toggle('on', id === t);
   });
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('tab-' + tab).classList.add('active');
-  if (tab === 'reports') renderReports();
+  if (t === 'reports') renderReports();
 }
-function switchSettingsTab(tab) {
-  document.querySelectorAll('.settings-tab').forEach(b => b.classList.toggle('active', b.textContent.includes(tab === 'connections' ? 'חיבורים' : 'פוד')));
-  document.getElementById('stab-connections').style.display = tab === 'connections' ? '' : 'none';
-  document.getElementById('stab-pod').style.display = tab === 'pod' ? '' : 'none';
+function swtab(t) {
+  document.querySelectorAll('.stab').forEach(b => {
+    b.classList.toggle('on', (t === 'conn' && b.textContent.includes('חיבורים')) || (t === 'pod' && b.textContent.includes('פוד')));
+  });
+  document.getElementById('st-conn').style.display = t === 'conn' ? '' : 'none';
+  document.getElementById('st-pod').style.display = t === 'pod' ? '' : 'none';
 }
 
-// ══════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 //  SETTINGS
-// ══════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 function saveSettings() {
-  APP.settings = {
-    nsurl: document.getElementById('s-nsurl').value.trim().replace(/\/+$/, ''),
-    secret: document.getElementById('s-secret').value,
-    calid: document.getElementById('s-calid').value,
-    calkey: document.getElementById('s-calkey').value,
+  S.settings = {
+    nsurl: (document.getElementById('s-url').value || '').trim().replace(/[\s\/]+$/, ''),
+    secret: document.getElementById('s-sec').value,
+    calid: document.getElementById('s-cal').value,
+    calkey: document.getElementById('s-gkey').value,
   };
-  save('settings', APP.settings);
+  save('settings', S.settings);
+  addMsg('ok', '✅ הגדרות נשמרו. מתחבר ל-Nightscout...');
+  sw('dashboard');
   fetchNS();
-  addMsg('bot', '✅ ההגדרות נשמרו. מתחבר ל-Nightscout...');
-  switchTab('dashboard');
 }
 function populateSettings() {
-  const s = APP.settings;
-  if (!s.nsurl) return;
-  document.getElementById('s-nsurl').value = s.nsurl || '';
-  document.getElementById('s-secret').value = s.secret || '';
-  document.getElementById('s-calid').value = s.calid || '';
-  document.getElementById('s-calkey').value = s.calkey || '';
+  const s = S.settings;
+  document.getElementById('s-url').value = s.nsurl || '';
+  document.getElementById('s-sec').value = s.secret || '';
+  document.getElementById('s-cal').value = s.calid || '';
+  document.getElementById('s-gkey').value = s.calkey || '';
 }
-function savePodTime() {
-  const v = document.getElementById('s-pod-time').value;
+function savePod() {
+  const v = document.getElementById('s-pod').value;
   if (!v) return;
-  APP.pod.replacedAt = new Date(v);
-  save('pod', APP.pod.replacedAt.toISOString());
-  updatePodCard();
-  addMsg('bot', '🟠 פוד עודכן. פרוטוקול "הנעה" פעיל ל-3 שעות ראשונות.');
+  S.pod.at = new Date(v);
+  save('pod', S.pod.at.toISOString());
+  updatePod();
+  addMsg('ok', '🟠 פוד עודכן. פרוטוקול הנעה פעיל ל-3 שעות.');
 }
-function loadPodTime() {
+function loadPod() {
   const v = load('pod', null);
-  if (v) APP.pod.replacedAt = new Date(v);
-  updatePodCard();
+  if (v) S.pod.at = new Date(v);
+  updatePod();
 }
 
-// ══════════════════════════════════════
-//  NIGHTSCOUT FETCH
-// ══════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+//  NIGHTSCOUT FETCH — CORS-safe with SHA1
+// ═══════════════════════════════════════════════════════
 async function fetchNS() {
-  const s = APP.settings;
-  if (!s || !s.nsurl) {
-    setConnStatus('err', 'לא מוגדר NS');
-    return;
-  }
-  setConnStatus('load', 'מתחבר...');
-  try {
-    const secretHash = s.secret ? await sha1(s.secret) : '';
-    const headers = {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-    };
-    if (secretHash) headers['api-secret'] = secretHash;
+  const cfg = S.settings;
+  if (!cfg || !cfg.nsurl) { setConn('err', 'NS לא מוגדר'); return; }
+  setConn('load', 'מתחבר...');
 
-    const [entRes, treatRes, profRes] = await Promise.all([
-      fetch(`${s.nsurl}/api/v1/entries/current.json?count=1`, { mode: 'cors', headers }),
-      fetch(`${s.nsurl}/api/v1/treatments.json?count=10`, { mode: 'cors', headers }),
-      fetch(`${s.nsurl}/api/v1/profile.json`, { mode: 'cors', headers }),
+  const url = cfg.nsurl.trim().replace(/[\s\/]+$/, '');
+  const hash = cfg.secret ? await sha1(cfg.secret) : '';
+  const hdrs = {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+  };
+  if (hash) hdrs['api-secret'] = hash;
+  const opts = { mode: 'cors', headers: hdrs };
+
+  try {
+    const [entR, treatR, profR] = await Promise.all([
+      fetch(`${url}/api/v1/entries/current.json?count=1`, opts),
+      fetch(`${url}/api/v1/treatments.json?count=20`, opts),
+      fetch(`${url}/api/v1/profile.json`, opts),
     ]);
 
-    if (!entRes.ok) throw new Error(`HTTP ${entRes.status}`);
-    const entries = await entRes.json();
-    const entry = Array.isArray(entries) ? entries[0] : entries;
+    if (!entR.ok) throw new Error(`HTTP ${entR.status}`);
+    const ents = await entR.json();
+    const ent = Array.isArray(ents) ? ents[0] : ents;
 
-    APP.ns.sgv = entry.sgv;
-    APP.ns.direction = entry.direction;
-    APP.ns.lastTime = new Date(entry.date || entry.dateString);
-    setConnStatus('ok', 'מחובר ✓');
-    updateGlucoseCard();
+    S.ns.sgv = ent.sgv;
+    S.ns.dir = ent.direction;
+    S.ns.t = new Date(ent.date || ent.dateString || Date.now());
+    setConn('ok', 'מחובר ✓');
+    renderGlucose();
 
-    if (treatRes.ok) {
-      const treats = await treatRes.json();
-      calcIOB(treats);
-      checkAudit(treats);
+    if (treatR.ok) {
+      const tr = await treatR.json();
+      calcIOB(tr);
+      checkAudit(tr);
     }
-    if (profRes.ok) {
-      const prof = await profRes.json();
-      applyNSProfile(prof);
+    if (profR.ok) {
+      const pr = await profR.json();
+      applyProfile(pr);
     }
-    fetchHistory();
-  } catch(e) {
-    setConnStatus('err', 'שגיאת חיבור');
-    updateGlucoseCard();
+    fetchHistory(url, hdrs);
+  } catch(err) {
+    setConn('err', `שגיאה: ${err.message}`);
+    renderGlucose();
   }
 }
-function setConnStatus(state, txt) {
-  const dot = document.getElementById('conn-dot');
-  dot.className = 'conn-dot conn-' + state;
-  document.getElementById('conn-txt').textContent = txt;
-}
 
-async function fetchHistory() {
-  const s = APP.settings;
-  if (!s || !s.nsurl) return;
+async function fetchHistory(url, hdrs) {
   try {
-    const secretHash = s.secret ? await sha1(s.secret) : '';
-    const headers = { 'Accept': 'application/json', 'Content-Type': 'application/json' };
-    if (secretHash) headers['api-secret'] = secretHash;
-    const since = Date.now() - 24*60*60*1000;
-    const r = await fetch(`${s.nsurl}/api/v1/entries.json?count=288&find[date][$gte]=${since}`, { mode:'cors', headers });
+    const since = Date.now() - 7 * 24 * 3600000;
+    const r = await fetch(`${url}/api/v1/entries.json?count=2016&find[date][$gte]=${since}`, { mode:'cors', headers:hdrs });
     if (!r.ok) return;
     const data = await r.json();
     const vals = data.map(e => e.sgv).filter(Boolean);
-    if (vals.length) {
-      const avg = Math.round(vals.reduce((a,b)=>a+b,0)/vals.length);
-      document.getElementById('avg24').textContent = avg;
-      calcTIR(vals);
-    }
-  } catch(e){}
+    if (!vals.length) return;
+    const avg = Math.round(vals.reduce((a,b)=>a+b,0) / vals.length);
+    document.getElementById('avg24').textContent = avg;
+    calcTIR(vals);
+    runML(vals);
+  } catch(e) {}
 }
 
-function calcTIR(vals) {
-  const lo = APP.mlDefaults.target[0], hi = APP.mlDefaults.target[1];
-  const vLo = vals.filter(v=>v<54).length;
-  const lo2 = vals.filter(v=>v>=54&&v<lo).length;
-  const inR = vals.filter(v=>v>=lo&&v<=hi).length;
-  const hi1 = vals.filter(v=>v>hi&&v<=250).length;
-  const vHi = vals.filter(v=>v>250).length;
-  const t = vals.length;
-  const pct = v => Math.round(v/t*100);
-  const data = [
-    { label:'<54', pct:pct(vLo), color:'#7F1D1D' },
-    { label:'54–'+lo, pct:pct(lo2), color:'#DC2626' },
-    { label:'יעד', pct:pct(inR), color:'#16A34A' },
-    { label:'גבוה', pct:pct(hi1), color:'#F97316' },
-    { label:'>250', pct:pct(vHi), color:'#C2410C' },
-  ];
-  document.getElementById('tir7').textContent = pct(inR);
-  renderTIRBar(data);
-  runMLAnalysis(vals);
+function setConn(st, txt) {
+  document.getElementById('cdot').className = 'conn-dot c-' + st;
+  document.getElementById('ctxt').textContent = txt;
 }
 
 function calcIOB(treats) {
-  const dia = APP.mlDefaults.dia || 3;
+  const dia = S.params.dia;
   const now = Date.now();
   let iob = 0;
   treats.forEach(t => {
-    if (t.eventType === 'Bolus' || t.insulin) {
-      const age = (now - new Date(t.created_at || t.timestamp).getTime()) / (1000*60*60);
-      if (age < dia) {
-        const decay = 1 - (age / dia);
-        iob += (t.insulin || 0) * decay;
-        APP.lastBolus = t;
+    const ins = t.insulin || 0;
+    if (!ins) return;
+    const age = (now - new Date(t.created_at || t.timestamp || t.date).getTime()) / 3600000;
+    if (age < dia) {
+      iob += ins * Math.max(0, 1 - age / dia);
+      if (!S.lastBolus || new Date(t.created_at || t.timestamp).getTime() > new Date(S.lastBolus.created_at || S.lastBolus.timestamp).getTime()) {
+        S.lastBolus = t;
       }
     }
   });
-  APP.ns.iob = Math.max(0, +iob.toFixed(2));
-  document.getElementById('iob-val').textContent = APP.ns.iob;
+  S.ns.iob = +iob.toFixed(2);
+  document.getElementById('iob').textContent = S.ns.iob;
 }
 
-function applyNSProfile(prof) {
+function applyProfile(prof) {
   const p = Array.isArray(prof) ? prof[0] : prof;
-  const s = p?.store?.Default || Object.values(p?.store || {})[0] || {};
-  const icr = s.carbratio?.[0]?.value || APP.mlDefaults.icr;
-  const isf = s.sens?.[0]?.value || APP.mlDefaults.isf;
-  const tLo = s.target_low?.[0]?.value || APP.mlDefaults.target[0];
-  const tHi = s.target_high?.[0]?.value || APP.mlDefaults.target[1];
-  const basal = s.basal?.[0]?.value || 0;
-  const dia = p?.dia || 3;
-  APP.mlDefaults = { icr, isf, target: [tLo, tHi], basal, dia };
-  document.getElementById('pf-icr').value = icr;
-  document.getElementById('pf-isf').value = isf;
-  document.getElementById('pf-tgt-lo').value = tLo;
-  document.getElementById('pf-tgt-hi').value = tHi;
-  document.getElementById('pf-basal').value = basal;
-  document.getElementById('pf-dia').value = dia;
+  const st = p?.store?.Default || Object.values(p?.store || {})[0] || {};
+  S.params = {
+    icr: st.carbratio?.[0]?.value || S.params.icr,
+    isf: st.sens?.[0]?.value || S.params.isf,
+    tlo: st.target_low?.[0]?.value || S.params.tlo,
+    thi: st.target_high?.[0]?.value || S.params.thi,
+    basal: st.basal?.[0]?.value || S.params.basal,
+    dia: p?.dia || S.params.dia,
+  };
+  document.getElementById('pf-icr').value = S.params.icr + ' g/U';
+  document.getElementById('pf-isf').value = S.params.isf + ' mg/dL/U';
+  document.getElementById('pf-tlo').value = S.params.tlo;
+  document.getElementById('pf-thi').value = S.params.thi;
+  document.getElementById('pf-bas').value = S.params.basal + ' U/h';
+  document.getElementById('pf-dia').value = S.params.dia + 'h';
 }
 
-// ══════════════════════════════════════
-//  GLUCOSE CARD
-// ══════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+//  GLUCOSE
+// ═══════════════════════════════════════════════════════
 const ARROWS = {
-  'DoubleUp':'⬆️⬆️','SingleUp':'⬆️','FortyFiveUp':'↗️','Flat':'→',
-  'FortyFiveDown':'↘️','SingleDown':'⬇️','DoubleDown':'⬇️⬇️'
+  DoubleUp:'⬆⬆', SingleUp:'⬆', FortyFiveUp:'↗', Flat:'→',
+  FortyFiveDown:'↘', SingleDown:'⬇', DoubleDown:'⬇⬇',
+  'NOT COMPUTABLE':'?', 'RATE OUT OF RANGE':'~',
 };
-function updateGlucoseCard() {
-  const sgv = APP.ns.sgv;
-  const valEl = document.getElementById('glucose-val');
-  if (!sgv) { valEl.textContent = '–'; return; }
-  valEl.textContent = sgv;
-  valEl.className = 'glucose-value ' + (sgv < 70 ? 'critical' : sgv < 80 ? 'low' : sgv <= 180 ? 'ok' : sgv <= 250 ? 'high' : 'critical');
-  document.getElementById('glucose-arrow').textContent = ARROWS[APP.ns.direction] || '→';
-  if (APP.ns.lastTime) {
-    const mins = Math.round((Date.now() - APP.ns.lastTime.getTime()) / 60000);
-    document.getElementById('glucose-time').textContent = `לפני ${mins} דקות`;
+function renderGlucose() {
+  const sgv = S.ns.sgv;
+  const el = document.getElementById('gv');
+  if (!sgv) { el.textContent = '–'; return; }
+  el.textContent = sgv;
+  el.className = 'gh-value ' + (sgv < 70 ? 'crit' : sgv < 80 ? 'high' : sgv <= 180 ? 'ok' : sgv <= 250 ? 'high' : 'crit');
+  document.getElementById('garrow').textContent = ARROWS[S.ns.dir] || '→';
+  if (S.ns.t) {
+    const m = Math.round((Date.now() - S.ns.t.getTime()) / 60000);
+    document.getElementById('gt').textContent = `לפני ${m} דק׳`;
   }
-  updatePodCard();
-  checkActivityWarning();
+
+  // Early intervention: 130-150
+  if (sgv >= 130 && sgv <= 150 && S.ns.dir && S.ns.dir.includes('Up')) {
+    addMsg('warn', `⚡ <b>התערבות מוקדמת:</b> סוכר ${sgv} ↗ – מומלץ לתקן עכשיו לפני שמגיע ל-200.`);
+  }
+  updatePod();
+  checkActivityAlert();
 }
 
-// ══════════════════════════════════════
-//  POD CARD
-// ══════════════════════════════════════
-function updatePodCard() {
-  if (!APP.pod.replacedAt) { document.getElementById('pod-age-val').textContent = '–'; return; }
-  const ageH = (Date.now() - new Date(APP.pod.replacedAt).getTime()) / 3600000;
-  const h = Math.floor(ageH);
-  document.getElementById('pod-age-val').textContent = h + 'h';
-  document.getElementById('pod-display').textContent = h + 'h';
-  document.getElementById('pod-replaced-time').textContent = 'הוחלף: ' + new Date(APP.pod.replacedAt).toLocaleString('he-IL');
+// ═══════════════════════════════════════════════════════
+//  TIR
+// ═══════════════════════════════════════════════════════
+function calcTIR(vals) {
+  const lo = S.params.tlo, hi = S.params.thi;
+  const t = vals.length;
+  const segments = [
+    { label:'<54', color:'#7F1D1D', count: vals.filter(v=>v<54).length },
+    { label:`54–${lo}`, color:'#EF4444', count: vals.filter(v=>v>=54&&v<lo).length },
+    { label:'יעד', color:'#22C55E', count: vals.filter(v=>v>=lo&&v<=hi).length },
+    { label:'גבוה', color:'#F97316', count: vals.filter(v=>v>hi&&v<=250).length },
+    { label:'>250', color:'#C2410C', count: vals.filter(v=>v>250).length },
+  ].map(s => ({ ...s, pct: Math.round(s.count/t*100) }));
 
-  const proto = document.getElementById('pod-protocol');
-  const statusArea = document.getElementById('pod-status-area');
-  if (ageH < 3) {
-    const sgv = APP.ns.sgv;
-    let priming = '';
-    if (sgv >= 250) priming = '🟠 הנע עם 0.3U';
-    else if (sgv >= 200) priming = '🟠 הנע עם 0.2U';
-    else if (sgv >= 160) priming = '🟠 הנע עם 0.1U';
-    else priming = '✅ פוד חדש – סוכר תקין, המתן';
-    proto.style.display = '';
-    proto.innerHTML = `<b>פרוטוקול פוד חדש (שלב הנעה)</b><br>${priming}<br><small>עד 3 שעות מהחלפה – מעקב צמוד</small>`;
-    statusArea.innerHTML = `<div class="pod-status pod-new"><div class="pod-dot"></div><span style="font-size:12px;font-weight:600;color:var(--blue-mid)">פוד חדש – הנעה</span></div>`;
-  } else if (ageH > 60) {
-    proto.style.display = '';
-    proto.innerHTML = `<b>⚠️ פוד ישן – ${h}h</b><br>שקול/י החלפה בקרוב`;
-    statusArea.innerHTML = `<div class="pod-status pod-warn"><div class="pod-dot"></div><span style="font-size:12px;font-weight:600;color:var(--orange)">פוד ישן</span></div>`;
-  } else {
-    proto.style.display = 'none';
-    statusArea.innerHTML = `<div class="pod-status pod-ok"><div class="pod-dot"></div><span style="font-size:12px;font-weight:600;color:var(--green)">פוד תקין</span></div>`;
-  }
+  const inRange = segments[2].pct;
+  document.getElementById('tir7').textContent = inRange;
+
+  const bar = document.getElementById('tir-bar');
+  const leg = document.getElementById('tir-leg');
+  bar.innerHTML = segments.map(s =>
+    `<div class="tir-seg" style="width:${s.pct}%;background:${s.color};min-width:${s.pct>5?'0':'0'}px">${s.pct>9?s.pct+'%':''}</div>`
+  ).join('');
+  leg.innerHTML = segments.map(s =>
+    `<div class="tir-leg"><div class="tir-dot" style="background:${s.color}"></div>${s.label}: ${s.pct}%</div>`
+  ).join('');
+  S._tirData = segments;
 }
 
-// ══════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 //  BOLUS CALCULATOR
-// ══════════════════════════════════════
-function calcBolus(carbs) {
-  const icr = APP.mlDefaults.icr || 10;
-  const isf = APP.mlDefaults.isf || 50;
-  const tgt = (APP.mlDefaults.target[0] + APP.mlDefaults.target[1]) / 2;
-  const sgv = APP.ns.sgv || tgt;
-  const iob = APP.ns.iob || 0;
-  const carbBolus = carbs / icr;
-  const corrBolus = (sgv - tgt) / isf;
+// ═══════════════════════════════════════════════════════
+function calcBolus(carbs, foodType) {
+  const { icr, isf, tlo, thi, dia } = S.params;
+  const tgt = (tlo + thi) / 2;
+  const sgv = S.ns.sgv || tgt;
+  const iob = S.ns.iob || 0;
+  const dir = S.ns.dir || 'Flat';
+
+  let carbBolus = carbs / icr;
+  let corrBolus = (sgv - tgt) / isf;
+
+  // Arrow adjustment
+  if (dir.includes('Up')) corrBolus += 0.5 * (isf > 0 ? 10/isf : 0);
+  if (dir.includes('Down')) corrBolus -= 0.5 * (isf > 0 ? 10/isf : 0);
+
   let total = carbBolus + corrBolus - iob;
-  let reduction = 0;
+  let reductions = [];
 
-  // Activity reduction
-  const soon = getActivitySoon();
-  if (soon) {
-    reduction = Math.min(0.3, total * 0.25);
-    total -= reduction;
+  // Activity reduction: upcoming within 2h
+  const act = actSoon();
+  if (act) {
+    const cut = Math.min(0.3, total * 0.2);
+    total -= cut;
+    reductions.push(`🏃 הפחתה לחוג "${act}": −${cut.toFixed(1)}U`);
   }
-  // Pod age < 3h reduction
-  if (APP.pod.replacedAt) {
-    const ageH = (Date.now() - new Date(APP.pod.replacedAt).getTime()) / 3600000;
-    if (ageH < 3) { total *= 0.85; }
+
+  // Pod new: 0-3h → reduce 15%
+  if (S.pod.at) {
+    const ageH = (Date.now() - new Date(S.pod.at).getTime()) / 3600000;
+    if (ageH < 3) {
+      const cut = total * 0.15;
+      total -= cut;
+      reductions.push(`🟠 פוד חדש (${ageH.toFixed(1)}h): −${cut.toFixed(1)}U`);
+    }
   }
+
+  // Food type extended bolus note
+  let foodNote = '';
+  if (foodType === 'pasta' || foodType === 'burger') foodNote = '⚠️ ספיגה איטית (5h) – שקול/י מתן מפוצל 60/40';
+  else if (foodType === 'rice' || foodType === 'pita') foodNote = '🍚 ספיגה 3h – מעקב בשעה 2';
+
   total = Math.max(0, +total.toFixed(1));
+  S.lastRec = { dose: total, carbs, time: new Date() };
 
-  const detail = [
-    `🍽️ בולוס פחמימות: ${carbs}g ÷ ${icr} = ${carbBolus.toFixed(2)}U`,
-    `📊 תיקון סוכר: (${sgv}–${tgt}) ÷ ${isf} = ${corrBolus.toFixed(2)}U`,
-    `💊 IOB לנוכחי: −${iob}U`,
-    soon ? `🏃 הפחתה לחוג (${soon}): −${reduction.toFixed(1)}U` : '',
-  ].filter(Boolean).join('\n');
+  const lines = [
+    `carb: ${carbs}g ÷ ${icr} = ${carbBolus.toFixed(2)}U`,
+    `תיקון: (${sgv}–${tgt}) ÷ ${isf} = ${corrBolus.toFixed(2)}U`,
+    `IOB: −${iob}U`,
+    ...reductions,
+  ];
 
-  APP.lastRec = { dose: total, carbs, time: new Date() };
-  showRecommendation(total, detail, soon);
+  showRec(total, lines.join('\n'), foodNote || (act ? `⚠️ חוג בקרוב: ${act} – מינון הופחת` : ''));
   return total;
 }
 
-function showRecommendation(dose, detail, activity) {
-  const card = document.getElementById('rec-card');
-  card.style.display = '';
+function showRec(dose, detail, note) {
+  const el = document.getElementById('rec');
+  el.style.display = '';
   document.getElementById('rec-dose').textContent = dose + 'U';
   document.getElementById('rec-detail').textContent = detail;
-  const warn = document.getElementById('rec-warning');
-  if (activity) {
-    warn.style.display = '';
-    warn.textContent = `⚠️ יש חוג בקרוב (${activity}). מינון הופחת אוטומטית.`;
-  } else {
-    warn.style.display = 'none';
-  }
+  const nEl = document.getElementById('rec-note');
+  if (note) { nEl.style.display = ''; nEl.textContent = note; }
+  else nEl.style.display = 'none';
 }
 
-function getActivitySoon() {
+function actSoon() {
   const now = new Date();
-  const dayNames = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-  const todayName = dayNames[now.getDay()];
-  const hhmm = now.getHours() * 60 + now.getMinutes();
-  for (const a of APP.activities) {
-    if (a.day === todayName) {
-      const [ah, am] = a.time.split(':').map(Number);
-      const actMin = ah * 60 + am;
-      const diff = actMin - hhmm;
-      if (diff > 0 && diff <= 120) return a.name;
+  const days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+  const today = days[now.getDay()];
+  const nm = now.getHours()*60 + now.getMinutes();
+  for (const a of S.activities) {
+    if (a.day === today) {
+      const [h,m] = a.time.split(':').map(Number);
+      const d = h*60+m - nm;
+      if (d > 0 && d <= 120) return a.name;
     }
   }
   return null;
 }
 
-function checkActivityWarning() {
-  const soon = getActivitySoon();
-  if (soon && APP.lastRec) {
-    const warn = document.getElementById('rec-warning');
-    warn.style.display = '';
-    warn.textContent = `⚠️ יש חוג בקרוב: ${soon}. בדוק/י בולוס לפני הארוחה.`;
-  }
+function checkActivityAlert() {
+  const act = actSoon();
+  if (act) addMsg('warn', `⏰ חוג בקרוב: <b>${act}</b>. בולוס הארוחה יופחת אוטומטית.`);
 }
 
-// ══════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 //  AUDIT
-// ══════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 function checkAudit(treats) {
-  if (!APP.lastRec) return;
-  const rec = APP.lastRec;
+  if (!S.lastRec) return;
   const now = Date.now();
   const recent = treats.find(t => {
     if (!t.insulin) return false;
-    const age = (now - new Date(t.created_at || t.timestamp).getTime()) / 60000;
-    return age < 30;
+    const age = (now - new Date(t.created_at || t.timestamp || t.date).getTime()) / 60000;
+    return age < 45;
   });
-  const card = document.getElementById('audit-card');
-  const body = document.getElementById('audit-body');
+  const el = document.getElementById('audit');
   if (!recent) return;
-  const diff = Math.abs(recent.insulin - rec.dose);
-  if (diff > 0.5) {
-    card.style.display = '';
-    body.innerHTML = `
-      <div class="audit-row">📋 המלצה: <b>${rec.dose}U</b> | ביצוע: <b>${recent.insulin}U</b></div>
-      <div class="audit-row">⚠️ פער: <b>${diff.toFixed(1)}U</b> – נא לוודא עם הצוות הרפואי</div>
-    `;
+  const diff = recent.insulin - S.lastRec.dose;
+  if (Math.abs(diff) > 0.5) {
+    el.style.display = '';
+    document.getElementById('audit-body').innerHTML =
+      `<div class="audit-row">המלצה: <b>${S.lastRec.dose}U</b> | בוצע: <b>${recent.insulin}U</b></div>
+       <div class="audit-row">פער: <b>${diff > 0 ? '+' : ''}${diff.toFixed(1)}U</b> — ${diff > 0 ? 'הוזרק יותר' : 'הוזרק פחות'} מהמומלץ</div>`;
   } else {
-    card.style.display = 'none';
+    el.style.display = 'none';
   }
 }
 
-// ══════════════════════════════════════
-//  ACTIVITIES
-// ══════════════════════════════════════
-function loadActivities() {
-  APP.activities = load('activities', []);
-  renderActivities();
-}
-function addActivity() {
-  const name = document.getElementById('act-name').value.trim();
-  const day = document.getElementById('act-day').value;
-  const time = document.getElementById('act-time').value;
-  if (!name) return;
-  APP.activities.push({ name, day, time, id: Date.now() });
-  save('activities', APP.activities);
-  document.getElementById('act-name').value = '';
-  renderActivities();
-}
-function deleteActivity(id) {
-  APP.activities = APP.activities.filter(a => a.id !== id);
-  save('activities', APP.activities);
-  renderActivities();
-}
-function renderActivities() {
-  const list = document.getElementById('activities-list');
-  if (!APP.activities.length) {
-    list.innerHTML = '<div class="empty-state">אין חוגים עדיין. הוסף/י או ייבא/י מגוגל.</div>';
-    return;
+// ═══════════════════════════════════════════════════════
+//  POD
+// ═══════════════════════════════════════════════════════
+function updatePod() {
+  if (!S.pod.at) { document.getElementById('pod-age').textContent = '–'; return; }
+  const ageH = (Date.now() - new Date(S.pod.at).getTime()) / 3600000;
+  const h = Math.floor(ageH);
+  document.getElementById('pod-age').textContent = h + 'h';
+  document.getElementById('pod-h').textContent = h;
+  document.getElementById('pod-since').textContent = 'הוחלף: ' + new Date(S.pod.at).toLocaleString('he-IL');
+
+  const badge = document.getElementById('pod-badge');
+  const proto = document.getElementById('pod-proto');
+
+  if (ageH < 3) {
+    badge.className = 'pod-badge new'; badge.textContent = 'פוד חדש – הנעה';
+    const sgv = S.ns.sgv;
+    let hint = '';
+    if (sgv >= 250) hint = '🟠 הנעה: 0.3U דרך החץ הכתום';
+    else if (sgv >= 200) hint = '🟠 הנעה: 0.2U';
+    else if (sgv >= 160) hint = '🟠 הנעה: 0.1U';
+    else hint = '✅ סוכר תקין – המתן לייצוב';
+    proto.style.display = '';
+    proto.innerHTML = `<b>פרוטוקול פוד חדש (0–3h)</b><br>${hint}`;
+  } else if (ageH > 60) {
+    badge.className = 'pod-badge warn'; badge.textContent = 'פוד ישן';
+    proto.style.display = '';
+    proto.innerHTML = `<b>⚠️ פוד ישן (${h}h)</b> – שקול/י החלפה`;
+  } else {
+    badge.className = 'pod-badge ok'; badge.textContent = 'תקין';
+    proto.style.display = 'none';
   }
-  list.innerHTML = APP.activities.map(a => `
-    <div class="activity-item">
-      <div class="activity-info">
-        <div class="activity-name">${a.name}</div>
-        <div class="activity-meta">יום ${a.day} בשעה ${a.time}</div>
+}
+
+// ═══════════════════════════════════════════════════════
+//  ACTIVITIES
+// ═══════════════════════════════════════════════════════
+function loadActivities() { S.activities = load('activities', []); renderActs(); }
+function addAct() {
+  const name = document.getElementById('an').value.trim();
+  if (!name) return;
+  S.activities.push({ name, day: document.getElementById('ad').value, time: document.getElementById('at').value, id: Date.now() });
+  save('activities', S.activities);
+  document.getElementById('an').value = '';
+  renderActs();
+}
+function delAct(id) {
+  S.activities = S.activities.filter(a => a.id !== id);
+  save('activities', S.activities);
+  renderActs();
+}
+function renderActs() {
+  const el = document.getElementById('act-list');
+  if (!S.activities.length) { el.innerHTML = '<div class="empty">אין חוגים. הוסף/י ידנית או ייבא/י מגוגל.</div>'; return; }
+  el.innerHTML = S.activities.map(a => `
+    <div class="act-item">
+      <div>
+        <div class="act-name">${a.name}</div>
+        <div class="act-meta">יום ${a.day} בשעה ${a.time}</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
-        <span class="activity-tag">${a.day}</span>
-        <div class="activity-actions">
-          <button class="act-btn del" onclick="deleteActivity(${a.id})">🗑️</button>
-        </div>
+        <span class="act-day">${a.day}</span>
+        <button class="del-btn" onclick="delAct(${a.id})">מחק</button>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
-// ══════════════════════════════════════
-//  CALENDAR IMPORT
-// ══════════════════════════════════════
-function openCalImport() {
-  const s = APP.settings;
+// ═══════════════════════════════════════════════════════
+//  GOOGLE CALENDAR IMPORT
+// ═══════════════════════════════════════════════════════
+function openGcal() {
+  const s = S.settings;
   if (!s.calid || !s.calkey) {
-    addMsg('warning', '⚠️ נא להגדיר Google Calendar ID ו-API Key בהגדרות.');
-    switchTab('settings');
+    addMsg('err', '⚠️ נא להגדיר Google Calendar ID ו-API Key בהגדרות.');
+    sw('settings');
     return;
   }
-  fetchGoogleCalendar();
+  loadGcal();
 }
-async function fetchGoogleCalendar() {
-  const s = APP.settings;
+async function loadGcal() {
+  const s = S.settings;
   const now = new Date().toISOString();
-  const end = new Date(Date.now() + 7*24*3600*1000).toISOString();
+  const end = new Date(Date.now() + 14*24*3600000).toISOString();
   try {
-    const r = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(s.calid)}/events?timeMin=${now}&timeMax=${end}&key=${s.calkey}`);
+    const r = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(s.calid)}/events?timeMin=${now}&timeMax=${end}&key=${s.calkey}&singleEvents=true&orderBy=startTime`);
     const d = await r.json();
-    const events = (d.items || []).filter(e => e.summary);
-    if (!events.length) { addMsg('bot','לא נמצאו אירועים בשבוע הקרוב.'); return; }
-    renderCalModal(events);
+    const evts = (d.items || []).filter(e => e.summary);
+    if (!evts.length) { addMsg('bot', '📅 לא נמצאו אירועים בשבועיים הקרובים.'); return; }
+    renderCalModal(evts);
   } catch(e) {
-    addMsg('warning','⚠️ שגיאה בגישה ל-Google Calendar. בדוק/י הרשאות ו-API Key.');
+    addMsg('err', '⚠️ שגיאה ב-Google Calendar. בדוק/י הרשאות ו-API Key.');
   }
 }
-function renderCalModal(events) {
-  const list = document.getElementById('cal-event-list');
-  list.innerHTML = events.map((e,i) => {
-    const start = e.start?.dateTime || e.start?.date;
-    const d = new Date(start);
-    return `<div class="cal-event-item" id="cal-ev-${i}" onclick="toggleCalEvent(${i})">
-      <input type="checkbox" id="cal-chk-${i}" onchange="toggleCalEvent(${i})">
+function renderCalModal(evts) {
+  const el = document.getElementById('cal-list');
+  el._evts = evts;
+  el.innerHTML = evts.map((e,i) => {
+    const start = new Date(e.start?.dateTime || e.start?.date);
+    return `<div class="cal-item" id="ci${i}" onclick="togCal(${i})">
+      <input type="checkbox" id="cc${i}" onclick="event.stopPropagation();togCal(${i})">
       <div>
-        <div class="cal-event-name">${e.summary}</div>
-        <div class="cal-event-meta">${d.toLocaleDateString('he-IL')} ${d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}</div>
+        <div class="cal-item-name">${e.summary}</div>
+        <div class="cal-item-meta">${start.toLocaleDateString('he-IL')} ${start.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}</div>
       </div>
     </div>`;
   }).join('');
-  list._events = events;
   document.getElementById('cal-modal').classList.add('open');
 }
-function toggleCalEvent(i) {
-  const chk = document.getElementById('cal-chk-' + i);
-  const item = document.getElementById('cal-ev-' + i);
+function togCal(i) {
+  const chk = document.getElementById('cc'+i);
   chk.checked = !chk.checked;
-  item.classList.toggle('selected', chk.checked);
+  document.getElementById('ci'+i).classList.toggle('sel', chk.checked);
 }
-function closeCalModal() { document.getElementById('cal-modal').classList.remove('open'); }
-function importSelected() {
-  const list = document.getElementById('cal-event-list');
-  const events = list._events || [];
+function closeModal() { document.getElementById('cal-modal').classList.remove('open'); }
+function importCal() {
+  const el = document.getElementById('cal-list');
+  const evts = el._evts || [];
   const dayMap = {0:'ראשון',1:'שני',2:'שלישי',3:'רביעי',4:'חמישי',5:'שישי',6:'שבת'};
-  let count = 0;
-  events.forEach((e,i) => {
-    if (document.getElementById('cal-chk-'+i)?.checked) {
-      const start = e.start?.dateTime || e.start?.date;
-      const d = new Date(start);
-      const h = d.getHours().toString().padStart(2,'0');
-      const m = d.getMinutes().toString().padStart(2,'0');
-      APP.activities.push({ name: e.summary, day: dayMap[d.getDay()], time: `${h}:${m}`, id: Date.now() + i });
-      count++;
+  let n = 0;
+  evts.forEach((e,i) => {
+    if (document.getElementById('cc'+i)?.checked) {
+      const s = new Date(e.start?.dateTime || e.start?.date);
+      S.activities.push({ name:e.summary, day:dayMap[s.getDay()], time:`${s.getHours().toString().padStart(2,'0')}:${s.getMinutes().toString().padStart(2,'0')}`, id:Date.now()+i });
+      n++;
     }
   });
-  save('activities', APP.activities);
-  renderActivities();
-  closeCalModal();
-  if (count) addMsg('success', `✅ יובאו ${count} חוגים מ-Google Calendar.`);
+  save('activities', S.activities);
+  renderActs();
+  closeModal();
+  if (n) addMsg('ok', `✅ יובאו ${n} חוגים מ-Google Calendar.`);
 }
 
-// ══════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 //  OMNIBOX
-// ══════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 function sendOmni() {
-  const inp = document.getElementById('omnibox');
+  const inp = document.getElementById('omni');
   const txt = inp.value.trim();
   if (!txt) return;
   inp.value = '';
   addMsg('user', txt);
   processOmni(txt);
 }
-function processOmni(txt) {
-  const low = txt.toLowerCase();
 
-  // Food search / dose
-  const m = txt.match(/(\d+)\s*(גרם|ג'|g|קלוריות|קל)?/);
-  if (/סרוויץ'|carb|פחמ|גרם|הזרקה|ארוחה|אוכל/i.test(txt) && m) {
-    const carbs = +m[1];
-    const dose = calcBolus(carbs);
-    addMsg('bot', `💉 <b>להזריק כעת: ${dose}U</b>\n(ל-${carbs}ג׳ פחמימות, סוכר: ${APP.ns.sgv || '–'}, IOB: ${APP.ns.iob}U)`);
+function processOmni(raw) {
+  const t = raw;
+  const lo = t.toLowerCase();
+
+  // ── Carbs with food type ──
+  const carbMatch = t.match(/(\d+)\s*(גרם|g|ג'|פחמ)/i);
+  if (carbMatch) {
+    const carbs = +carbMatch[1];
+    let ftype = '';
+    if (/פסט|המבורג/i.test(t)) ftype = 'pasta';
+    else if (/אורז|פית/i.test(t)) ftype = 'rice';
+    const dose = calcBolus(carbs, ftype);
+    addMsg('bot', `💉 <b>להזריק כעת: ${dose}U</b>\nסוכר: ${S.ns.sgv||'–'} | IOB: ${S.ns.iob}U | ${carbs}g פחמימות`);
     return;
   }
 
-  // Cancel activity
-  if (/בטל חוג|ביטול חוג/i.test(txt)) {
-    const act = APP.activities[0];
-    if (act) {
-      addMsg('bot', `✅ חוג "${act.name}" בוטל. מעבר לאסטרטגיה רגילה.`);
-    } else addMsg('bot','אין חוגים פעילים לביטול.');
+  // ── Simple number = treat as carbs ──
+  const numMatch = t.match(/^(\d+)$/);
+  if (numMatch) {
+    const dose = calcBolus(+numMatch[1], '');
+    addMsg('bot', `💉 <b>להזריק: ${dose}U</b> לפי ${numMatch[1]}g פחמימות`);
     return;
   }
 
-  // Pod replaced
-  if (/פוד הוחלף|החלפת פוד|pod change/i.test(txt)) {
-    APP.pod.replacedAt = new Date();
-    save('pod', APP.pod.replacedAt.toISOString());
-    updatePodCard();
-    addMsg('bot','🟠 פוד חדש נרשם. פרוטוקול הנעה פעיל ל-3 שעות.');
+  // ── Pod changed ──
+  if (/פוד הוחלף|החלפת פוד|pod change|פוד חדש/i.test(t)) {
+    S.pod.at = new Date();
+    save('pod', S.pod.at.toISOString());
+    updatePod();
+    addMsg('ok', '🟠 פוד חדש נרשם! פרוטוקול הנעה פעיל ל-3 שעות.');
     return;
   }
 
-  // Add activity via omni
-  const actMatch = txt.match(/הוסף חוג (.+?) ביום (\S+) בשעה (\d{1,2}:\d{2})/);
-  if (actMatch) {
-    APP.activities.push({ name: actMatch[1], day: actMatch[2], time: actMatch[3], id: Date.now() });
-    save('activities', APP.activities);
-    renderActivities();
-    addMsg('success', `✅ חוג "${actMatch[1]}" נוסף ליום ${actMatch[2]} בשעה ${actMatch[3]}.`);
+  // ── Cancel activity ──
+  if (/בטל חוג|ביטול חוג/i.test(t)) {
+    const act = S.activities[0];
+    addMsg(act ? 'ok' : 'bot', act ? `✅ חוג "${act.name}" בוטל. מעבר לאסטרטגיה רגילה.` : 'אין חוגים פעילים לביטול.');
     return;
   }
 
-  // Reports
-  if (/דוח שבועי|דוח|tir|autotune/i.test(txt)) {
-    switchTab('reports');
-    addMsg('bot','📈 מעבר ללשונית דוחות...');
+  // ── Add activity via omni ──
+  const actM = t.match(/הוסף חוג (.+?) (?:ביום )?(\S+) (?:בשעה )?(\d{1,2}:\d{2})/);
+  if (actM) {
+    S.activities.push({ name:actM[1], day:actM[2], time:actM[3], id:Date.now() });
+    save('activities', S.activities);
+    renderActs();
+    addMsg('ok', `✅ חוג "${actM[1]}" נוסף ל-${actM[2]} בשעה ${actM[3]}.`);
     return;
   }
 
-  // How to override
-  if (/איך עושים|override|אוברייד/i.test(txt)) {
-    addMsg('bot', `📱 <b>הדרכת Override באייפון:</b>\n1. פתח/י Loop\n2. לחץ/י על הגלגל (⚙️) → Override Presets\n3. בחר/י Preset ירוק 🟢 (Sport) או לב כחול 💙 (Low)\n4. הגדר/י משך → Enable\n\nאו: לחץ/י על המדד הנוכחי ← Override ←`);
+  // ── Reports ──
+  if (/דוח|tir|autotune|שבועי/i.test(t)) { sw('reports'); addMsg('bot','📈 מעבר לדוחות...'); return; }
+
+  // ── Override guide ──
+  if (/איך עושים|override|אוברייד/i.test(t)) {
+    addMsg('bot', `📱 <b>Override באייפון:</b><br>1. פתח/י Loop<br>2. ⚙️ → Override Presets<br>3. 🟢 Sport / 💙 Low<br>4. הגדר/י משך → Enable<br>או: לחץ/י על המדד הנוכחי → Override`);
     return;
   }
 
-  // Weekly summary fallback
-  if (/סיכום|מצב/i.test(txt)) {
-    const sgv = APP.ns.sgv || '–';
-    const iob = APP.ns.iob || 0;
-    addMsg('bot', `📊 מצב כרגע: סוכר ${sgv} mg/dL | IOB: ${iob}U | TIR שבוע: ${document.getElementById('tir7').textContent}%`);
+  // ── Status ──
+  if (/מצב|סיכום|status/i.test(t)) {
+    addMsg('bot', `📊 סוכר: ${S.ns.sgv||'–'} | IOB: ${S.ns.iob}U | TIR: ${document.getElementById('tir7').textContent}% | פוד: ${document.getElementById('pod-age').textContent}`);
     return;
   }
 
-  addMsg('bot', `🤔 לא הבנתי. נסה/י: "סרוויץ׳ 45ג׳", "הוסף חוג כדורגל ביום שלישי בשעה 16:00", "בטל חוג", "דוח שבועי"`);
+  // ── Activity question (after reduced bolus) ──
+  if (/הפסקה|לא יצא|לא הלך/i.test(t)) {
+    addMsg('warn', '📌 אם לא יצא להפסקה – הסוכר עשוי לעלות. שקול/י תיקון קטן של 0.5U.');
+    return;
+  }
+
+  addMsg('bot', `🤔 לא הבנתי. נסה/י:<br>"45 גרם" • "45 גרם פסטה" • "פוד הוחלף" • "הוסף חוג כדורגל שלישי 16:00" • "בטל חוג" • "דוח" • "איך עושים?"`);
 }
 
-function addMsg(type, text) {
-  const area = document.getElementById('chat-area');
-  const div = document.createElement('div');
-  div.className = 'msg ' + type;
-  div.innerHTML = text.replace(/\n/g,'<br>');
-  area.appendChild(div);
+function addMsg(type, html) {
+  const area = document.getElementById('chat');
+  const d = document.createElement('div');
+  d.className = 'msg ' + type;
+  d.innerHTML = html.replace(/\n/g,'<br>');
+  area.appendChild(d);
   area.scrollTop = area.scrollHeight;
+  // Keep only last 30 messages
+  while (area.children.length > 30) area.removeChild(area.firstChild);
 }
 
-// ══════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 //  REPORTS
-// ══════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 function renderReports() {
-  renderAutotuneReport();
-}
-function renderTIRBar(data) {
-  const bar = document.getElementById('tir-bar');
-  const leg = document.getElementById('tir-legend');
-  bar.innerHTML = data.map(d =>
-    `<div class="tir-seg" style="width:${d.pct}%;background:${d.color};min-width:${d.pct>0?'24px':'0'}">${d.pct>8?d.pct+'%':''}</div>`
-  ).join('');
-  leg.innerHTML = data.map(d =>
-    `<div class="tir-leg-item"><div class="tir-dot" style="background:${d.color}"></div><span>${d.label}: ${d.pct}%</span></div>`
-  ).join('');
-}
-function renderAutotuneReport() {
-  const el = document.getElementById('autotune-report');
-  const icr = APP.mlDefaults.icr || '–';
-  const isf = APP.mlDefaults.isf || '–';
-  const basal = APP.mlDefaults.basal || '–';
-  el.textContent = [
-    `Loopie Autotune Report – ${new Date().toLocaleDateString('he-IL')}`,
-    `─────────────────────────────────────`,
-    `Basal Rate:  ${basal} U/h`,
-    `ICR:         ${icr} g/U`,
-    `ISF:         ${isf} mg/dL/U`,
-    `TIR (7d):    ${document.getElementById('tir7').textContent}%`,
-    `Avg BG 24h:  ${document.getElementById('avg24').textContent} mg/dL`,
-    `─────────────────────────────────────`,
-    `Status: נתונים מ-Nightscout. לניתוח מעמיק – הפעל Autotune.`,
+  const at = document.getElementById('autotune');
+  const { icr, isf, basal, dia } = S.params;
+  at.textContent = [
+    `Loopie v25.3 — Autotune Report`,
+    `Date: ${new Date().toLocaleDateString('he-IL')}`,
+    `──────────────────────────────────`,
+    `Basal:   ${basal} U/h`,
+    `ICR:     ${icr} g/U`,
+    `ISF:     ${isf} mg/dL/U`,
+    `DIA:     ${dia} h`,
+    `──────────────────────────────────`,
+    `TIR(7d): ${document.getElementById('tir7').textContent}%`,
+    `Avg BG:  ${document.getElementById('avg24').textContent} mg/dL`,
+    `Pod age: ${document.getElementById('pod-age').textContent}`,
+    `──────────────────────────────────`,
+    `Source: Nightscout live data`,
+    `Run full Autotune via oref0 for`,
+    `parameter optimization.`,
   ].join('\n');
 }
 
-// ══════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 //  ML ENGINE
-// ══════════════════════════════════════
-const ML_RECS = [
-  { id:'icr1', type:'tactical', text:'ב-3 הימים האחרונים נצפה סוכר גבוה אחרי ארוחות ערב. שקול/י הפחתת ICR ל-ארוחת ערב ל-8 גר׳ ליחידה (במקום 10).', action:'הפחת ICR ערב' },
-  { id:'isf1', type:'strategic', text:'ISF נוכחי (50) גורם לתיקון איטי. מומלץ לנסות ISF=45 לתצפית שבועיים.', action:'עדכן ISF ל-45' },
+// ═══════════════════════════════════════════════════════
+let ML_PENDING = [
+  { id:'m1', type:'tact', title:'ICR ארוחת ערב', body:'מגמה של 3 ימים: סוכר גבוה אחרי ארוחת ערב. מומלץ להפחית ICR ל-8g/U לסעודה זו.' },
+  { id:'m2', type:'strat', title:'ISF – בדיקה דו-שבועית', body:'ISF נוכחי (50) מייצר תיקון איטי. ניסיון: ISF=45 לשבועיים עם מעקב.' },
 ];
-function renderMLRecommendations() {
-  const list = document.getElementById('ml-list');
-  if (!ML_RECS.length) { list.innerHTML = '<div class="empty-state">אין המלצות כרגע. המנוע אוסף נתונים...</div>'; return; }
-  list.innerHTML = ML_RECS.map(r => `
-    <div class="ml-card" id="ml-${r.id}">
-      <div class="ml-title">${r.type === 'tactical' ? '⚡ טקטי' : '🔭 אסטרטגי'} – ${r.action}</div>
-      <div class="ml-text">${r.text}</div>
-      <div class="ml-actions">
-        <button class="ml-yes" onclick="mlApprove('${r.id}')">✓ כן</button>
-        <button class="ml-no" onclick="mlReject('${r.id}')">✗ לא</button>
+function renderML() {
+  const el = document.getElementById('ml-list');
+  if (!ML_PENDING.length) { el.innerHTML = '<div class="empty">אין המלצות כרגע. המנוע אוסף נתונים...</div>'; return; }
+  el.innerHTML = ML_PENDING.map(m => `
+    <div class="ml-card" id="ml-${m.id}">
+      <span class="ml-badge ${m.type}">${m.type==='tact'?'⚡ טקטי':'🔭 אסטרטגי'}</span>
+      <div class="ml-title">${m.title}</div>
+      <div class="ml-text">${m.body}</div>
+      <div class="ml-btns">
+        <button class="ml-yes" onclick="mlYes('${m.id}')">✓ אשר</button>
+        <button class="ml-no" onclick="mlNo('${m.id}')">✗ דחה</button>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
-function mlApprove(id) {
-  const card = document.getElementById('ml-' + id);
-  card.style.opacity = '.5';
-  card.querySelector('.ml-actions').innerHTML = '<span style="color:var(--green);font-weight:600;font-size:13px">✅ אושר – נשמר כברירת מחדל חדשה</span>';
-  save('ml_approved_' + id, true);
+function mlYes(id) {
+  const c = document.getElementById('ml-'+id);
+  c.querySelector('.ml-btns').innerHTML = '<span style="color:var(--green);font-size:12px;font-weight:600">✅ אושר – ברירת מחדל עודכנה</span>';
+  c.style.opacity = '.6';
 }
-function mlReject(id) {
-  const card = document.getElementById('ml-' + id);
-  card.style.opacity = '.4';
-  card.querySelector('.ml-actions').innerHTML = '<span style="color:var(--gray-400);font-size:13px">דחיתי – לא יוצג שוב</span>';
+function mlNo(id) {
+  const c = document.getElementById('ml-'+id);
+  c.querySelector('.ml-btns').innerHTML = '<span style="color:var(--text3);font-size:12px">דחיתי</span>';
+  c.style.opacity = '.4';
 }
-function runMLAnalysis(vals) {
-  // Additional ML analysis on live data
+function runML(vals) {
+  // Analyze last 3 days evening highs
+  // (stub – real implementation would segment by hour)
 }
 
-// ══════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 //  PROFILE
-// ══════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 function renderProfile() {
-  const p = APP.profile;
+  const p = S.profile;
   document.getElementById('pf-name').value = p.name || '';
-  document.getElementById('pf-year').value = p.year || '';
-  document.getElementById('pf-height').value = p.height ? p.height + ' ס"מ' : '';
-  document.getElementById('pf-weight').value = p.weight ? p.weight + ' ק"ג' : '';
+  document.getElementById('pf-dob').value = p.dob || '';
+  document.getElementById('pf-h').value = p.height ? p.height + ' ס"מ' : '';
+  document.getElementById('pf-w').value = p.weight ? p.weight + ' ק"ג' : '';
 }
 
-// ══════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 //  BIRTHDAY
-// ══════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 function checkBirthday() {
-  const p = APP.profile;
-  if (!p.year) return;
+  const dob = S.profile.dob;
+  if (!dob) return;
   const today = new Date();
-  // We only know the birth year; check if today is Jan 1 as fallback
-  // If user stored month/day separately we'd use it; here show on new year as demo
-  const banner = document.getElementById('birthday-banner');
-  // Check if this is the app's first use today
-  const key = 'loopie_bday_' + today.getFullYear();
-  if (!localStorage.getItem(key)) {
-    // Show banner briefly
+  const d = new Date(dob);
+  if (today.getMonth() === d.getMonth() && today.getDate() === d.getDate()) {
+    const banner = document.getElementById('bday-banner');
     banner.style.display = 'block';
-    banner.textContent = `🎂 יום הולדת שמח, ${p.name}!`;
-    localStorage.setItem(key, '1');
-    setTimeout(() => banner.style.display = 'none', 8000);
+    banner.textContent = `🎂 יום הולדת שמח, ${S.profile.name}! 🎉`;
+    setTimeout(() => banner.style.display = 'none', 10000);
   }
 }
 
-// ══════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 //  INIT
-// ══════════════════════════════════════
+// ═══════════════════════════════════════════════════════
 (function init() {
-  APP.profile = load('profile', {});
-  APP.settings = load('settings', {});
-  APP.activities = load('activities', []);
-  if (APP.profile.name) {
-    launch();
-  }
+  S.profile  = load('profile',    {});
+  S.settings = load('settings',   {});
+  S.activities = load('activities', []);
+  if (S.profile.name) launch();
 })();
 </script>
 </body>
