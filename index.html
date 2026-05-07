@@ -498,6 +498,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
       </div>
     </div>
     <div class="hdr-r">
+      <button onclick="sw('settings')" style="background:none;border:1px solid var(--border2);color:var(--text3);border-radius:var(--r);padding:5px 10px;font-size:12px;cursor:pointer;font-family:var(--font);transition:all .15s" onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--blue)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">⚙️ NS</button>
       <div class="conn-indicator">
         <div class="conn-dot c-load" id="cdot"></div>
         <span class="conn-txt" id="ctxt">מתחבר...</span>
@@ -540,6 +541,7 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
           <div class="gh-arrow" id="garrow">–</div>
           <div class="gh-meta">
             <div class="meta-row">IOB: <b id="iob">–</b>U</div>
+            <div class="meta-row">δ: <b id="gdelta">–</b></div>
             <div class="meta-row">COB: <b id="cob">–</b>g</div>
           </div>
           <button class="rfrsh" onclick="fetchNS()">↻ רענן</button>
@@ -667,12 +669,12 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
         <div class="sgrp">
           <div class="sgrp-title">Nightscout</div>
           <div class="sf"><label>כתובת NS (URL)</label>
-            <input id="s-url" placeholder="https://yourname.ns.10be.de"/>
-            <span class="hint">ללא / בסוף, רווחים יוסרו אוטומטית</span>
+            <input id="s-url" placeholder="https://yourname.mooo.com"/>
+            <span class="hint">דוגמה: https://myname.mooo.com — ללא / בסוף, רווחים יוסרו אוטומטית</span>
           </div>
-          <div class="sf"><label>API Secret</label>
+          <div class="sf"><label>API Secret (סיסמה)</label>
             <input id="s-sec" type="password" placeholder="הסיסמה שלך"/>
-            <span class="hint">יוצפן ב-SHA1 בזמן אמת</span>
+            <span class="hint">נשלח כ-query param (api_secret) — השיטה שעובדת מול mooo.com</span>
           </div>
         </div>
         <div class="sgrp">
@@ -680,7 +682,11 @@ body { font-family: var(--font); background: var(--bg); color: var(--text); font
           <div class="sf"><label>Calendar ID</label><input id="s-cal" placeholder="primary"/></div>
           <div class="sf"><label>Google API Key</label><input id="s-gkey" type="password" placeholder="AIza..."/></div>
         </div>
-        <button class="save" onclick="saveSettings()">💾 שמור וחבר</button>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <button class="save" onclick="saveSettings()">💾 שמור וחבר</button>
+          <button style="padding:10px 18px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);border-radius:var(--r);font-family:var(--font);font-size:13px;cursor:pointer;transition:all .15s" onclick="testConn()">🔌 בדוק חיבור</button>
+        </div>
+        <div id="conn-test-result" style="margin-top:10px;font-size:12px;color:var(--text2);display:none"></div>
       </div>
 
       <div id="st-pod" style="display:none">
@@ -723,7 +729,7 @@ async function sha1(str) {
 // ═══════════════════════════════════════════════════════
 const S = {
   profile: {}, settings: {}, activities: [],
-  ns: { sgv: null, dir: null, iob: 0, cob: 0, t: null },
+  ns: { sgv: null, dir: null, iob: 0, cob: 0, delta: 0, t: null },
   pod: { at: null },
   params: { icr: 10, isf: 50, tlo: 70, thi: 150, basal: 0.9, dia: 3 },
   lastRec: null, lastBolus: null,
@@ -808,6 +814,30 @@ function populateSettings() {
   document.getElementById('s-cal').value = s.calid || '';
   document.getElementById('s-gkey').value = s.calkey || '';
 }
+
+async function testConn() {
+  const url = (document.getElementById('s-url').value || '').trim().replace(/[\s\/]+$/, '');
+  const secret = document.getElementById('s-sec').value;
+  const res = document.getElementById('conn-test-result');
+  res.style.display = '';
+  res.style.color = 'var(--text2)';
+  res.textContent = '⏳ בודק חיבור...';
+  if (!url) { res.textContent = '❌ הזן כתובת NS קודם'; res.style.color = 'var(--red)'; return; }
+  const sep = '/api/v1/entries/current.json'.includes('?') ? '&' : '?';
+  const testUrl = `${url}/api/v1/entries/current.json${sep}api_secret=${encodeURIComponent(secret)}`;
+  try {
+    const r = await fetch(testUrl, { method: 'GET', mode: 'cors', headers: { 'Accept': 'application/json' } });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    const ent = Array.isArray(data) ? data[0] : data;
+    const sgv = ent?.sgv;
+    res.style.color = 'var(--green)';
+    res.textContent = sgv ? `✅ מחובר! סוכר נוכחי: ${sgv} mg/dL` : '✅ מחובר! (אין נתוני סוכר)';
+  } catch(e) {
+    res.style.color = 'var(--red)';
+    res.textContent = `❌ שגיאה: ${e.message} — בדוק URL וסיסמה`;
+  }
+}
 function savePod() {
   const v = document.getElementById('s-pod').value;
   if (!v) return;
@@ -823,68 +853,99 @@ function loadPod() {
 }
 
 // ═══════════════════════════════════════════════════════
-//  NIGHTSCOUT FETCH — CORS-safe with SHA1
+//  NIGHTSCOUT FETCH
+//  שיטה: api_secret כ-query param בURL (עובד מול mooo.com / Google Cloud)
+//  זוהי השיטה שהוכחה כעובדת בגרסה הקודמת
 // ═══════════════════════════════════════════════════════
+
+// בנה URL עם api_secret כ-param (הפתרון האמיתי)
+function nsUrl(endpoint) {
+  const cfg = S.settings;
+  const base = (cfg.nsurl || '').trim().replace(/[\s\/]+$/, '');
+  const sep = endpoint.includes('?') ? '&' : '?';
+  const secret = encodeURIComponent(cfg.secret || '');
+  return `${base}${endpoint}${sep}api_secret=${secret}`;
+}
+
+// קריאת API בסיסית — זהה לפונקציה שעבדה
+async function fetchFromNS(endpoint) {
+  const cfg = S.settings;
+  if (!cfg || !cfg.nsurl) { setConn('err', 'NS לא מוגדר'); return null; }
+  try {
+    const r = await fetch(nsUrl(endpoint), {
+      method: 'GET',
+      mode: 'cors',
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+  } catch(err) {
+    console.error('NS fetch error:', err);
+    return null;
+  }
+}
+
 async function fetchNS() {
   const cfg = S.settings;
   if (!cfg || !cfg.nsurl) { setConn('err', 'NS לא מוגדר'); return; }
   setConn('load', 'מתחבר...');
 
-  const url = cfg.nsurl.trim().replace(/[\s\/]+$/, '');
-  const hash = cfg.secret ? await sha1(cfg.secret) : '';
-  const hdrs = {
-    'Accept': 'application/json',
-    'Content-Type': 'application/json',
-  };
-  if (hash) hdrs['api-secret'] = hash;
-  const opts = { mode: 'cors', headers: hdrs };
-
-  try {
-    const [entR, treatR, profR] = await Promise.all([
-      fetch(`${url}/api/v1/entries/current.json?count=1`, opts),
-      fetch(`${url}/api/v1/treatments.json?count=20`, opts),
-      fetch(`${url}/api/v1/profile.json`, opts),
-    ]);
-
-    if (!entR.ok) throw new Error(`HTTP ${entR.status}`);
-    const ents = await entR.json();
-    const ent = Array.isArray(ents) ? ents[0] : ents;
-
+  // שלב 1: סוכר נוכחי
+  const sgvData = await fetchFromNS('/api/v1/entries/current.json');
+  if (sgvData) {
+    const ent = Array.isArray(sgvData) ? sgvData[0] : sgvData;
     S.ns.sgv = ent.sgv;
     S.ns.dir = ent.direction;
+    S.ns.delta = ent.delta || 0;
     S.ns.t = new Date(ent.date || ent.dateString || Date.now());
     setConn('ok', 'מחובר ✓');
     renderGlucose();
-
-    if (treatR.ok) {
-      const tr = await treatR.json();
-      calcIOB(tr);
-      checkAudit(tr);
-    }
-    if (profR.ok) {
-      const pr = await profR.json();
-      applyProfile(pr);
-    }
-    fetchHistory(url, hdrs);
-  } catch(err) {
-    setConn('err', `שגיאה: ${err.message}`);
+  } else {
+    setConn('err', 'שגיאת חיבור');
     renderGlucose();
+    return;
   }
+
+  // שלב 2: IOB מ-devicestatus (כמו בקובץ העובד)
+  const devData = await fetchFromNS('/api/v1/devicestatus.json?count=1');
+  if (devData && devData.length > 0) {
+    const iobVal = devData[0]?.openaps?.iob?.iob
+                ?? devData[0]?.loop?.iob?.iob
+                ?? devData[0]?.iob?.iob;
+    if (iobVal !== undefined) {
+      S.ns.iob = +parseFloat(iobVal).toFixed(2);
+      document.getElementById('iob').textContent = S.ns.iob;
+    }
+  }
+
+  // שלב 3: טיפולים (לחישוב IOB מגיבוי + audit)
+  const treats = await fetchFromNS('/api/v1/treatments.json?count=20');
+  if (treats) {
+    if (S.ns.iob === 0) calcIOB(treats); // fallback אם devicestatus לא החזיר IOB
+    checkAudit(treats);
+  }
+
+  // שלב 4: פרופיל NS
+  const prof = await fetchFromNS('/api/v1/profile.json');
+  if (prof) applyProfile(prof);
+
+  // שלב 5: היסטוריה ל-TIR
+  fetchHistory();
 }
 
-async function fetchHistory(url, hdrs) {
-  try {
-    const since = Date.now() - 7 * 24 * 3600000;
-    const r = await fetch(`${url}/api/v1/entries.json?count=2016&find[date][$gte]=${since}`, { mode:'cors', headers:hdrs });
-    if (!r.ok) return;
-    const data = await r.json();
-    const vals = data.map(e => e.sgv).filter(Boolean);
-    if (!vals.length) return;
-    const avg = Math.round(vals.reduce((a,b)=>a+b,0) / vals.length);
-    document.getElementById('avg24').textContent = avg;
-    calcTIR(vals);
-    runML(vals);
-  } catch(e) {}
+async function fetchHistory() {
+  const since = Date.now() - 7 * 24 * 3600000;
+  const data = await fetchFromNS(`/api/v1/entries.json?count=2016&find[date][$gte]=${since}`);
+  if (!data) return;
+  const vals = data.map(e => e.sgv).filter(Boolean);
+  if (!vals.length) return;
+  const avg24data = await fetchFromNS('/api/v1/entries.json?count=288');
+  if (avg24data) {
+    const v24 = avg24data.map(e => e.sgv).filter(Boolean);
+    if (v24.length) document.getElementById('avg24').textContent = Math.round(v24.reduce((a,b)=>a+b,0)/v24.length);
+  }
+  calcTIR(vals);
+  runML(vals);
 }
 
 function setConn(st, txt) {
@@ -945,6 +1006,9 @@ function renderGlucose() {
   el.textContent = sgv;
   el.className = 'gh-value ' + (sgv < 70 ? 'crit' : sgv < 80 ? 'high' : sgv <= 180 ? 'ok' : sgv <= 250 ? 'high' : 'crit');
   document.getElementById('garrow').textContent = ARROWS[S.ns.dir] || '→';
+  const delta = S.ns.delta || 0;
+  const deltaEl = document.getElementById('gdelta');
+  if (deltaEl) deltaEl.textContent = (delta > 0 ? '+' : '') + delta + ' mg/dL';
   if (S.ns.t) {
     const m = Math.round((Date.now() - S.ns.t.getTime()) / 60000);
     document.getElementById('gt').textContent = `לפני ${m} דק׳`;
