@@ -3,1490 +3,1668 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Loopie v25.3</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Hebrew:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<title>Loopie v28.3</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 <style>
-:root {
-  --bg: #121212;
-  --bg2: #1A1A1A;
-  --bg3: #222222;
-  --bg4: #2A2A2A;
-  --border: rgba(255,255,255,0.08);
-  --border2: rgba(255,255,255,0.14);
-  --text: #F0F0F0;
-  --text2: #A0A0A0;
-  --text3: #606060;
-  --blue: #3B82F6;
-  --blue2: #1D4ED8;
-  --blue-pale: rgba(59,130,246,0.12);
-  --blue-border: rgba(59,130,246,0.35);
-  --green: #22C55E;
-  --green-pale: rgba(34,197,94,0.12);
-  --red: #EF4444;
-  --red-pale: rgba(239,68,68,0.12);
-  --orange: #F97316;
-  --orange-pale: rgba(249,115,22,0.12);
-  --yellow: #EAB308;
-  --yellow-pale: rgba(234,179,8,0.12);
-  --r: 8px;
-  --r2: 12px;
-  --font: 'IBM Plex Sans Hebrew', sans-serif;
-  --mono: 'IBM Plex Mono', monospace;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; }
-body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; overflow-x: hidden; }
+  :root {
+    --bg: #121212;
+    --bg2: #1a1a1a;
+    --bg3: #222;
+    --bg4: #2a2a2a;
+    --surface: #1e1e1e;
+    --border: #333;
+    --border2: #3a3a3a;
+    --text: #e8e8e8;
+    --text2: #aaa;
+    --text3: #666;
+    --blue: #3b82f6;
+    --blue2: #2563eb;
+    --blue-light: #60a5fa;
+    --green: #22c55e;
+    --yellow: #f59e0b;
+    --orange: #f97316;
+    --red: #ef4444;
+    --purple: #a855f7;
+    --low: #ef4444;
+    --in-range: #22c55e;
+    --high: #f59e0b;
+    --very-high: #ef4444;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.5);
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.4);
+    --font: 'Segoe UI', 'Arial Hebrew', Arial, sans-serif;
+    --mono: 'Courier New', monospace;
+  }
 
-/* ── ONBOARDING ── */
-#onboarding {
-  min-height: 100vh; display: flex; align-items: center;
-  justify-content: center; padding: 24px;
-  background: radial-gradient(ellipse at 30% 40%, rgba(59,130,246,0.08) 0%, transparent 60%),
-              radial-gradient(ellipse at 80% 80%, rgba(59,130,246,0.05) 0%, transparent 50%), var(--bg);
-}
-.ob-card {
-  background: var(--bg2); border: 1px solid var(--border2);
-  border-radius: 16px; padding: 40px 36px;
-  width: 100%; max-width: 460px;
-}
-.ob-head { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
-.ob-title { font-size: 22px; font-weight: 700; color: var(--text); }
-.ob-sub { font-size: 13px; color: var(--text2); margin-bottom: 28px; }
-.ob-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.ob-field { display: flex; flex-direction: column; gap: 5px; }
-.ob-field.full { grid-column: 1/-1; }
-.ob-field label { font-size: 12px; font-weight: 600; color: var(--text2); letter-spacing: 0.3px; }
-.ob-field input, .ob-field select {
-  background: var(--bg3); border: 1px solid var(--border2);
-  border-radius: var(--r); padding: 10px 12px;
-  font-family: var(--font); font-size: 14px; color: var(--text);
-  outline: none; transition: border-color .15s;
-}
-.ob-field input:focus, .ob-field select:focus { border-color: var(--blue); }
-.ob-field select option { background: var(--bg3); }
-.ob-btn {
-  margin-top: 22px; width: 100%; padding: 13px;
-  background: var(--blue); color: #fff; border: none;
-  border-radius: var(--r); font-family: var(--font);
-  font-size: 15px; font-weight: 600; cursor: pointer; transition: background .15s;
-}
-.ob-btn:hover { background: var(--blue2); }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
 
-/* ── APP ── */
-#app { display: none; height: 100vh; flex-direction: column; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
 
-/* Header */
-.hdr {
-  background: var(--bg2); border-bottom: 1px solid var(--border);
-  padding: 0 20px; height: 52px; display: flex; align-items: center;
-  justify-content: space-between; flex-shrink: 0; z-index: 50;
-}
-.hdr-l { display: flex; align-items: center; gap: 10px; }
-.hdr-name { font-size: 13px; font-weight: 500; color: var(--text2); }
-.hdr-r { display: flex; align-items: center; gap: 8px; }
-.conn-indicator { display: flex; align-items: center; gap: 6px; }
-.conn-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.c-ok { background: var(--green); }
-.c-err { background: var(--red); }
-.c-load { background: var(--orange); animation: pulse 1.2s ease-in-out infinite; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-.conn-txt { font-size: 11px; color: var(--text3); }
+  /* ── OVERLAY SCREENS ── */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.9);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(8px);
+  }
+  .overlay.hidden { display: none; }
 
-/* Tabs */
-.tabs {
-  display: flex; gap: 2px; padding: 10px 20px 0;
-  background: var(--bg2); border-bottom: 1px solid var(--border);
-  overflow-x: auto; flex-shrink: 0;
-}
-.tabs::-webkit-scrollbar { display: none; }
-.tab {
-  padding: 8px 14px; border: none; background: none;
-  font-family: var(--font); font-size: 12px; font-weight: 500;
-  color: var(--text3); cursor: pointer; white-space: nowrap;
-  border-bottom: 2px solid transparent; transition: all .15s;
-  border-radius: var(--r) var(--r) 0 0;
-}
-.tab.on { color: var(--blue); border-bottom-color: var(--blue); font-weight: 600; }
-.tab:hover:not(.on) { color: var(--text2); background: var(--bg3); }
+  .overlay-card {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    padding: 40px 36px;
+    max-width: 420px;
+    width: 92%;
+    text-align: center;
+    box-shadow: var(--shadow);
+    animation: slideUp .4s cubic-bezier(.16,1,.3,1);
+  }
 
-/* Main scroll area */
-.main { flex: 1; overflow-y: auto; padding: 16px 20px 32px; display: flex; flex-direction: column; gap: 14px; }
-.main::-webkit-scrollbar { width: 4px; }
-.main::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 4px; }
-.panel { display: none; }
-.panel.on { display: contents; }
+  @keyframes slideUp {
+    from { opacity:0; transform: translateY(32px); }
+    to   { opacity:1; transform: translateY(0); }
+  }
 
-/* ── GLUCOSE HERO ── */
-.glucose-hero {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--r2); padding: 20px 24px;
-  display: flex; align-items: stretch; gap: 20px;
-}
-.gh-left { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
-.gh-value {
-  font-size: 64px; font-weight: 700; line-height: 1;
-  letter-spacing: -3px; font-family: var(--mono);
-}
-.gh-value.ok { color: var(--green); }
-.gh-value.warn { color: var(--yellow); }
-.gh-value.high { color: var(--orange); }
-.gh-value.crit { color: var(--red); }
-.gh-unit { font-size: 12px; color: var(--text3); margin-top: 2px; }
-.gh-time { font-size: 11px; color: var(--text3); margin-top: 8px; }
-.gh-right { display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; }
-.gh-arrow { font-size: 40px; line-height: 1; }
-.gh-meta { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
-.meta-row { font-size: 12px; color: var(--text2); }
-.meta-row b { color: var(--text); font-weight: 600; font-family: var(--mono); }
-.rfrsh {
-  background: var(--bg3); border: 1px solid var(--border2);
-  border-radius: var(--r); padding: 6px 12px;
-  font-family: var(--font); font-size: 12px; font-weight: 500;
-  color: var(--text2); cursor: pointer; transition: all .15s;
-}
-.rfrsh:hover { border-color: var(--blue); color: var(--blue); }
+  /* Shield logo */
+  .shield-logo {
+    width: 72px; height: 80px;
+    margin: 0 auto 20px;
+    position: relative;
+  }
+  .shield-logo svg { width: 100%; height: 100%; }
 
-/* Stats grid */
-.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.stat {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 14px 16px;
-}
-.stat-lbl { font-size: 11px; color: var(--text3); margin-bottom: 5px; font-weight: 500; }
-.stat-val { font-size: 22px; font-weight: 700; font-family: var(--mono); }
-.stat-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .overlay-card h1 {
+    font-size: 1.8rem; font-weight: 700;
+    color: var(--text); margin-bottom: 6px;
+  }
+  .overlay-card .subtitle {
+    color: var(--text2); font-size: .9rem; margin-bottom: 28px;
+  }
 
-/* ── OMNIBOX ── */
-.omni-wrap {
-  display: flex; gap: 8px; background: var(--bg2);
-  border: 1px solid var(--border2); border-radius: var(--r2);
-  padding: 6px 8px 6px 16px; transition: border-color .15s;
-}
-.omni-wrap:focus-within { border-color: var(--blue); }
-.omni {
-  flex: 1; border: none; outline: none; background: none;
-  font-family: var(--font); font-size: 14px; color: var(--text);
-  padding: 7px 0; direction: rtl; caret-color: var(--blue);
-}
-.omni::placeholder { color: var(--text3); }
-.omni-btn {
-  background: var(--blue); color: #fff; border: none;
-  border-radius: var(--r); padding: 8px 16px;
-  font-family: var(--font); font-size: 13px; font-weight: 600;
-  cursor: pointer; white-space: nowrap; transition: background .15s;
-}
-.omni-btn:hover { background: var(--blue2); }
+  /* Role selector */
+  .role-btns {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+    margin-bottom: 10px;
+  }
+  .role-btn {
+    background: var(--bg3);
+    border: 2px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 20px 14px;
+    cursor: pointer;
+    transition: all .2s;
+    color: var(--text);
+    font-size: .95rem; font-family: var(--font);
+  }
+  .role-btn:hover, .role-btn.active {
+    border-color: var(--blue);
+    background: rgba(59,130,246,.12);
+    color: var(--blue-light);
+  }
+  .role-btn .role-icon { font-size: 2rem; display: block; margin-bottom: 8px; }
 
-/* Chat */
-.chat { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
-.chat::-webkit-scrollbar { width: 3px; }
-.chat::-webkit-scrollbar-thumb { background: var(--bg4); }
-.msg {
-  padding: 11px 14px; border-radius: var(--r);
-  font-size: 13px; line-height: 1.65; max-width: 92%;
-}
-.msg.user { background: var(--blue-pale); border: 1px solid var(--blue-border); color: #90BBFA; align-self: flex-end; border-bottom-right-radius: 2px; }
-.msg.bot { background: var(--bg3); border: 1px solid var(--border); color: var(--text); align-self: flex-start; border-bottom-left-radius: 2px; }
-.msg.warn { background: var(--orange-pale); border: 1px solid rgba(249,115,22,.3); color: #FBA97A; }
-.msg.ok { background: var(--green-pale); border: 1px solid rgba(34,197,94,.3); color: #7EE4A4; }
-.msg.err { background: var(--red-pale); border: 1px solid rgba(239,68,68,.3); color: #F98080; }
-.msg b { color: inherit; font-weight: 700; }
+  /* Form inputs */
+  .form-group { margin-bottom: 16px; text-align: right; }
+  .form-group label { display: block; font-size: .82rem; color: var(--text2); margin-bottom: 6px; }
+  .form-group input, .form-group select {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 11px 14px;
+    color: var(--text);
+    font-size: .95rem; font-family: var(--font);
+    outline: none; transition: border-color .2s;
+  }
+  .form-group input:focus, .form-group select:focus { border-color: var(--blue); }
+  .form-group input::placeholder { color: var(--text3); }
 
-/* ── RECOMMENDATION ── */
-.rec {
-  background: var(--bg2); border: 1.5px solid var(--blue-border);
-  border-radius: var(--r2); padding: 20px 24px;
-  background-image: radial-gradient(ellipse at top right, rgba(59,130,246,0.06) 0%, transparent 60%);
-}
-.rec-lbl { font-size: 11px; font-weight: 600; color: var(--blue); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 6px; }
-.rec-dose { font-size: 44px; font-weight: 700; font-family: var(--mono); color: var(--blue); letter-spacing: -2px; margin-bottom: 10px; }
-.rec-detail { font-size: 12px; color: var(--text2); line-height: 1.8; font-family: var(--mono); }
-.rec-note {
-  margin-top: 12px; background: var(--yellow-pale);
-  border: 1px solid rgba(234,179,8,.3); border-radius: var(--r);
-  padding: 9px 12px; font-size: 12px; color: #D4A600;
-}
+  .dob-row { display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 8px; }
 
-/* ── POD ── */
-.pod {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 14px 18px;
-  display: flex; align-items: center; justify-content: space-between;
-}
-.pod-age { font-size: 26px; font-weight: 700; font-family: var(--mono); }
-.pod-lbl { font-size: 11px; color: var(--text3); margin-top: 2px; }
-.pod-badge {
-  font-size: 11px; font-weight: 600; padding: 4px 10px;
-  border-radius: 99px;
-}
-.pod-badge.ok { background: var(--green-pale); color: var(--green); }
-.pod-badge.warn { background: var(--orange-pale); color: var(--orange); }
-.pod-badge.new { background: var(--blue-pale); color: var(--blue); }
-.pod-proto {
-  margin-top: 8px; background: var(--orange-pale);
-  border: 1px solid rgba(249,115,22,.25); border-radius: var(--r);
-  padding: 10px 14px; font-size: 12px; color: #FBA97A;
-}
+  .btn-primary {
+    width: 100%;
+    background: var(--blue);
+    border: none; border-radius: var(--radius-sm);
+    padding: 13px;
+    color: #fff;
+    font-size: 1rem; font-weight: 600; font-family: var(--font);
+    cursor: pointer;
+    transition: background .2s;
+    margin-top: 8px;
+  }
+  .btn-primary:hover { background: var(--blue2); }
 
-/* ── AUDIT ── */
-.audit {
-  background: var(--red-pale); border: 1px solid rgba(239,68,68,.3);
-  border-radius: var(--r); padding: 12px 16px;
-}
-.audit-title { font-size: 12px; font-weight: 700; color: #F87171; margin-bottom: 6px; }
-.audit-row { font-size: 12px; color: #FCA5A5; margin-bottom: 3px; }
+  /* Birthday celebration */
+  #birthday-overlay .overlay-card {
+    background: linear-gradient(135deg, #1e1b4b, #1a1a2e);
+    border-color: #6366f1;
+  }
+  .birthday-emojis { font-size: 2.5rem; margin-bottom: 12px; letter-spacing: 4px; }
+  .birthday-name { font-size: 1.6rem; font-weight: 700; color: #a5b4fc; margin-bottom: 8px; }
+  .birthday-msg { color: var(--text2); line-height: 1.6; margin-bottom: 24px; }
 
-/* ── ACTIVITIES ── */
-.act-add {
-  display: grid; grid-template-columns: 2fr 1fr 1fr auto;
-  gap: 8px; align-items: end;
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 14px 16px;
-}
-.form-field { display: flex; flex-direction: column; gap: 4px; }
-.form-field label { font-size: 11px; font-weight: 600; color: var(--text3); }
-.form-field input, .form-field select {
-  background: var(--bg3); border: 1px solid var(--border2);
-  border-radius: var(--r); padding: 8px 10px;
-  font-family: var(--font); font-size: 13px; color: var(--text);
-  outline: none; transition: border-color .15s;
-}
-.form-field input:focus, .form-field select:focus { border-color: var(--blue); }
-.form-field select option { background: var(--bg3); }
-.add-btn {
-  background: var(--blue); color: #fff; border: none;
-  border-radius: var(--r); padding: 0 16px; height: 36px;
-  font-family: var(--font); font-size: 13px; font-weight: 600;
-  cursor: pointer; align-self: end; transition: background .15s;
-}
-.add-btn:hover { background: var(--blue2); }
+  /* ── MAIN APP ── */
+  #app { display: none; flex-direction: column; min-height: 100vh; }
+  #app.visible { display: flex; }
 
-.act-list { display: flex; flex-direction: column; gap: 8px; }
-.act-item {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 12px 16px;
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-}
-.act-name { font-weight: 600; font-size: 14px; }
-.act-meta { font-size: 12px; color: var(--text3); margin-top: 2px; }
-.act-day { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 99px; background: var(--blue-pale); color: var(--blue); }
-.del-btn {
-  background: none; border: 1px solid var(--border);
-  border-radius: var(--r); padding: 5px 10px; font-size: 12px;
-  cursor: pointer; color: var(--text3); transition: all .15s; font-family: var(--font);
-}
-.del-btn:hover { border-color: var(--red); color: var(--red); background: var(--red-pale); }
-.gcal-btn {
-  background: var(--bg3); border: 1px solid var(--border2);
-  border-radius: var(--r); padding: 7px 14px;
-  font-family: var(--font); font-size: 12px; font-weight: 500;
-  color: var(--text2); cursor: pointer; transition: all .15s;
-}
-.gcal-btn:hover { border-color: var(--blue); color: var(--blue); }
+  /* Header */
+  header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 56px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-logo { display: flex; align-items: center; gap: 10px; }
+  .header-logo svg { width: 28px; height: 32px; }
+  .header-logo span { font-size: 1.15rem; font-weight: 700; color: var(--text); }
+  .header-logo .version { font-size: .7rem; color: var(--blue); font-weight: 500; }
 
-/* ── REPORTS ── */
-.tir-bar { height: 26px; border-radius: 6px; display: flex; overflow: hidden; margin: 10px 0; }
-.tir-seg { display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.9); }
-.tir-legend { display: flex; gap: 14px; flex-wrap: wrap; }
-.tir-leg { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text2); }
-.tir-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .header-user { font-size: .82rem; color: var(--text2); }
+  .header-role-badge {
+    background: rgba(59,130,246,.2);
+    color: var(--blue-light);
+    border-radius: 20px; padding: 3px 10px;
+    font-size: .75rem; font-weight: 600;
+  }
+  .icon-btn {
+    background: none; border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--text2);
+    transition: all .2s;
+    font-size: 1rem;
+  }
+  .icon-btn:hover { border-color: var(--blue); color: var(--blue-light); }
+  .conn-indicator {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--text3);
+    transition: background .3s;
+  }
+  .conn-indicator.connected { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .conn-indicator.error { background: var(--red); }
 
-.autotune-box {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 16px; font-family: var(--mono);
-  font-size: 12px; color: var(--text2); line-height: 1.9;
-  white-space: pre; overflow-x: auto; direction: ltr;
-}
-.autotune-box::-webkit-scrollbar { height: 3px; }
-.autotune-box::-webkit-scrollbar-thumb { background: var(--bg4); }
+  /* Main layout */
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    max-width: 960px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 14px 12px;
+  }
 
-/* ── ML ── */
-.ml-card {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 16px 20px;
-}
-.ml-badge {
-  display: inline-block; font-size: 10px; font-weight: 700;
-  padding: 2px 8px; border-radius: 99px; margin-bottom: 8px;
-}
-.ml-badge.tact { background: var(--blue-pale); color: var(--blue); }
-.ml-badge.strat { background: rgba(139,92,246,0.15); color: #A78BFA; }
-.ml-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
-.ml-text { font-size: 13px; color: var(--text2); line-height: 1.65; margin-bottom: 12px; }
-.ml-btns { display: flex; gap: 8px; }
-.ml-yes {
-  padding: 6px 18px; background: var(--green-pale);
-  border: 1px solid rgba(34,197,94,.3); color: var(--green);
-  border-radius: var(--r); font-family: var(--font); font-size: 12px;
-  font-weight: 600; cursor: pointer; transition: all .15s;
-}
-.ml-yes:hover { background: rgba(34,197,94,.2); }
-.ml-no {
-  padding: 6px 18px; background: var(--bg3);
-  border: 1px solid var(--border); color: var(--text3);
-  border-radius: var(--r); font-family: var(--font); font-size: 12px;
-  cursor: pointer; transition: all .15s;
-}
-.ml-no:hover { border-color: var(--border2); color: var(--text2); }
+  /* ── OMNIBOX ── */
+  .omnibox-wrapper {
+    margin-bottom: 14px;
+    position: relative;
+  }
+  .omnibox {
+    width: 100%;
+    background: var(--bg2);
+    border: 1.5px solid var(--border2);
+    border-radius: 14px;
+    padding: 14px 18px 14px 48px;
+    font-size: 1rem; color: var(--text); font-family: var(--font);
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .omnibox:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(59,130,246,.15); }
+  .omnibox::placeholder { color: var(--text3); }
+  .omnibox-icon {
+    position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+    color: var(--text3); font-size: 1.1rem; pointer-events: none;
+  }
+  .omnibox-results {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    z-index: 200;
+    max-height: 340px; overflow-y: auto;
+    display: none;
+  }
+  .omnibox-results.open { display: block; }
+  .omni-result {
+    padding: 12px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background .15s;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .omni-result:last-child { border-bottom: none; }
+  .omni-result:hover { background: var(--bg3); }
+  .omni-result .food-name { font-weight: 500; }
+  .omni-result .food-carbs { color: var(--blue-light); font-size: .85rem; }
 
-/* ── PROFILE ── */
-.pf-section { margin-bottom: 22px; }
-.pf-section-title {
-  font-size: 11px; font-weight: 700; color: var(--text3);
-  text-transform: uppercase; letter-spacing: 0.5px;
-  padding-bottom: 10px; border-bottom: 1px solid var(--border);
-  margin-bottom: 14px;
-}
-.pf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.pf-field { display: flex; flex-direction: column; gap: 4px; }
-.pf-field label { font-size: 11px; font-weight: 600; color: var(--text3); }
-.pf-field input {
-  background: var(--bg3); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 8px 10px;
-  font-family: var(--font); font-size: 13px; color: var(--text2);
-  opacity: .7; cursor: not-allowed;
-}
-.pf-note { font-size: 11px; color: var(--text3); margin-top: 6px; }
+  /* ── GLUCOSE CARD ── */
+  .glucose-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 18px;
+    margin-bottom: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .glucose-card::before {
+    content: '';
+    position: absolute; top: 0; right: 0;
+    width: 120px; height: 120px;
+    background: radial-gradient(circle at top right, rgba(59,130,246,.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
 
-/* ── SETTINGS ── */
-.stabs { display: flex; gap: 6px; margin-bottom: 18px; }
-.stab {
-  padding: 7px 16px; border: 1px solid var(--border2);
-  border-radius: var(--r); font-family: var(--font);
-  font-size: 12px; font-weight: 500; cursor: pointer;
-  background: var(--bg2); color: var(--text2); transition: all .15s;
-}
-.stab.on { background: var(--blue); color: #fff; border-color: var(--blue); }
-.sgrp { margin-bottom: 22px; }
-.sgrp-title { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
-.sf { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
-.sf label { font-size: 12px; font-weight: 500; color: var(--text2); }
-.sf input, .sf select {
-  background: var(--bg3); border: 1px solid var(--border2);
-  border-radius: var(--r); padding: 9px 12px;
-  font-family: var(--font); font-size: 14px; color: var(--text);
-  outline: none; transition: border-color .15s;
-}
-.sf input:focus, .sf select:focus { border-color: var(--blue); }
-.sf select option { background: var(--bg3); }
-.sf .hint { font-size: 11px; color: var(--text3); margin-top: 3px; }
-.save {
-  padding: 10px 24px; background: var(--blue); color: #fff;
-  border: none; border-radius: var(--r); font-family: var(--font);
-  font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s;
-}
-.save:hover { background: var(--blue2); }
+  .glucose-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
 
-/* ── MODAL ── */
-.modal-overlay {
-  display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,.7); z-index: 200;
-  align-items: center; justify-content: center; padding: 24px;
-}
-.modal-overlay.open { display: flex; }
-.modal {
-  background: var(--bg2); border: 1px solid var(--border2);
-  border-radius: var(--r2); padding: 28px;
-  width: 100%; max-width: 480px; direction: rtl;
-}
-.modal-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
-.modal-sub { font-size: 12px; color: var(--text3); margin-bottom: 16px; }
-.cal-list { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
-.cal-item {
-  display: flex; align-items: center; gap: 10px;
-  border: 1px solid var(--border); border-radius: var(--r);
-  padding: 10px 12px; cursor: pointer; transition: all .1s;
-}
-.cal-item.sel { background: var(--blue-pale); border-color: var(--blue-border); }
-.cal-item input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--blue); flex-shrink: 0; }
-.cal-item-name { font-weight: 600; font-size: 13px; }
-.cal-item-meta { font-size: 11px; color: var(--text3); }
-.modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
-.modal-cancel {
-  padding: 8px 18px; background: var(--bg3); color: var(--text2);
-  border: 1px solid var(--border2); border-radius: var(--r);
-  font-family: var(--font); font-size: 13px; cursor: pointer; transition: all .15s;
-}
-.modal-cancel:hover { border-color: var(--border); }
-.modal-import {
-  padding: 8px 18px; background: var(--blue); color: #fff;
-  border: none; border-radius: var(--r); font-family: var(--font);
-  font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s;
-}
-.modal-import:hover { background: var(--blue2); }
+  .glucose-main { display: flex; align-items: baseline; gap: 8px; }
+  .glucose-val {
+    font-size: 3.2rem; font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    transition: color .3s;
+  }
+  .glucose-val.low { color: var(--red); }
+  .glucose-val.in-range { color: var(--green); }
+  .glucose-val.high { color: var(--yellow); }
+  .glucose-val.very-high { color: var(--red); }
 
-/* ── BIRTHDAY ── */
-.bday {
-  background: linear-gradient(135deg, #1D4ED8, #3B82F6);
-  border-radius: var(--r2); padding: 16px 24px;
-  text-align: center; font-size: 15px; font-weight: 600; display: none;
-}
+  .glucose-unit { color: var(--text2); font-size: .85rem; margin-top: 6px; }
+  .glucose-trend { font-size: 1.8rem; }
 
-/* ── FOOD RULES ── */
-.food-rules {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 12px 16px;
-}
-.food-rules-title { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; margin-bottom: 8px; }
-.food-rule { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--border); }
-.food-rule:last-child { border: none; }
-.food-rule-name { font-size: 13px; color: var(--text2); }
-.food-rule-hours { font-size: 12px; font-weight: 600; color: var(--orange); font-family: var(--mono); }
+  .glucose-meta { display: flex; gap: 6px; flex-wrap: wrap; }
+  .meta-badge {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: .78rem;
+    color: var(--text2);
+    display: flex; align-items: center; gap: 5px;
+  }
+  .meta-badge .icon { font-size: .9rem; }
+  .meta-badge.warn { border-color: var(--orange); color: var(--orange); }
+  .meta-badge.ok { border-color: var(--green); color: var(--green); }
 
-/* helpers */
-.row { display: flex; gap: 8px; align-items: center; }
-.sh { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.st { font-size: 14px; font-weight: 700; color: var(--text); }
-.empty { text-align: center; color: var(--text3); font-size: 13px; padding: 28px; }
-.sep { height: 1px; background: var(--border); }
+  .glucose-stats {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 10px; margin-top: 14px;
+    padding-top: 14px; border-top: 1px solid var(--border);
+  }
+  .stat-item { text-align: center; }
+  .stat-val { font-size: 1.1rem; font-weight: 700; }
+  .stat-label { font-size: .72rem; color: var(--text3); margin-top: 2px; }
 
-@media (max-width: 480px) {
-  .stats { grid-template-columns: repeat(2, 1fr); }
-  .act-add { grid-template-columns: 1fr 1fr; }
-  .gh-value { font-size: 52px; }
-  .main { padding: 12px 14px 24px; }
-  .hdr { padding: 0 14px; }
-  .tabs { padding: 8px 14px 0; }
-  .pf-grid { grid-template-columns: 1fr; }
-}
+  /* ── MINI GRAPH ── */
+  .graph-container {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 14px;
+    margin-bottom: 14px;
+    overflow: hidden;
+  }
+  .graph-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .graph-header h3 { font-size: .9rem; color: var(--text2); font-weight: 500; }
+  .time-tabs { display: flex; gap: 4px; }
+  .time-tab {
+    background: none; border: 1px solid var(--border);
+    border-radius: 6px; padding: 3px 9px;
+    font-size: .72rem; color: var(--text2);
+    cursor: pointer; font-family: var(--font);
+    transition: all .15s;
+  }
+  .time-tab.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+  #glucoseChart { width: 100%; height: 120px; }
+
+  /* ── PANELS ROW ── */
+  .panels-row {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 12px; margin-bottom: 14px;
+  }
+
+  .panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+  }
+  .panel h3 {
+    font-size: .82rem; color: var(--text3);
+    font-weight: 500; margin-bottom: 10px;
+    text-transform: uppercase; letter-spacing: .5px;
+  }
+
+  /* IOB panel */
+  .iob-value { font-size: 1.8rem; font-weight: 700; color: var(--blue-light); }
+  .iob-sub { font-size: .78rem; color: var(--text2); margin-top: 4px; }
+  .iob-bar-bg {
+    height: 5px; background: var(--bg3);
+    border-radius: 3px; margin-top: 10px;
+    overflow: hidden;
+  }
+  .iob-bar { height: 100%; background: var(--blue); border-radius: 3px; transition: width .5s; }
+
+  /* COB panel */
+  .cob-value { font-size: 1.8rem; font-weight: 700; color: var(--orange); }
+
+  /* ── RULE OF 3 ALERT ── */
+  .rule3-card {
+    background: linear-gradient(135deg, #1c1400, #1a1200);
+    border: 1.5px solid var(--yellow);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 14px;
+    display: none;
+    animation: slideUp .3s ease;
+  }
+  .rule3-card.visible { display: block; }
+  .rule3-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px;
+  }
+  .rule3-header h3 { color: var(--yellow); font-size: .95rem; }
+  .rule3-close {
+    background: none; border: none; color: var(--text3);
+    cursor: pointer; font-size: 1.1rem;
+  }
+  .rule3-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .rule3-item { text-align: center; }
+  .rule3-item .r3-val { font-size: 1.4rem; font-weight: 700; }
+  .rule3-item .r3-label { font-size: .72rem; color: var(--text2); margin-top: 3px; }
+  .rule3-note { font-size: .8rem; color: var(--text2); margin-top: 10px; border-top: 1px solid rgba(245,158,11,.2); padding-top: 10px; }
+
+  /* ── RESISTANCE INDICATOR ── */
+  .resistance-card {
+    background: linear-gradient(135deg, #1a0f00, #150b00);
+    border: 1px solid var(--orange);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin-bottom: 14px;
+    display: none;
+    align-items: center; gap: 12px;
+  }
+  .resistance-card.visible { display: flex; }
+  .resistance-icon { font-size: 1.5rem; }
+  .resistance-text h4 { color: var(--orange); font-size: .9rem; margin-bottom: 3px; }
+  .resistance-text p { color: var(--text2); font-size: .78rem; }
+  .resistance-btn {
+    margin-right: auto;
+    background: var(--orange);
+    border: none; border-radius: 8px;
+    padding: 7px 14px;
+    color: #fff; font-size: .82rem; font-weight: 600;
+    cursor: pointer; font-family: var(--font);
+    white-space: nowrap;
+  }
+
+  /* ── FOOD SPLIT CARD ── */
+  .food-split-card {
+    background: var(--bg2);
+    border: 1px solid var(--blue);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 14px;
+    display: none;
+    animation: slideUp .3s ease;
+  }
+  .food-split-card.visible { display: block; }
+  .split-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .split-header h3 { color: var(--blue-light); font-size: .95rem; }
+  .split-close { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 1.1rem; }
+  .split-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+  .split-part {
+    background: var(--bg3);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    text-align: center;
+  }
+  .split-part .sp-label { font-size: .75rem; color: var(--text2); margin-bottom: 6px; }
+  .split-part .sp-val { font-size: 1.5rem; font-weight: 700; color: var(--blue-light); }
+  .split-part .sp-sub { font-size: .72rem; color: var(--text3); margin-top: 3px; }
+  .wait-notice {
+    background: rgba(59,130,246,.1);
+    border: 1px solid rgba(59,130,246,.3);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: .82rem; color: var(--blue-light);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .wait-notice .timer-display { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  /* ── LOGS / HISTORY ── */
+  .log-section { margin-bottom: 14px; }
+  .log-section h3 { font-size: .82rem; color: var(--text3); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .5px; }
+  .log-entry {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    margin-bottom: 6px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .log-time { font-size: .75rem; color: var(--text3); font-variant-numeric: tabular-nums; }
+  .log-desc { font-size: .88rem; }
+  .log-val { font-size: .88rem; font-weight: 600; }
+
+  /* ── SETTINGS PANEL ── */
+  #settings-panel {
+    position: fixed; inset: 0; background: rgba(0,0,0,.7);
+    z-index: 500; display: none; align-items: flex-start; justify-content: flex-end;
+    backdrop-filter: blur(4px);
+  }
+  #settings-panel.open { display: flex; }
+  .settings-drawer {
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    width: 360px; height: 100%;
+    overflow-y: auto;
+    animation: slideInRight .3s cubic-bezier(.16,1,.3,1);
+    padding: 20px;
+  }
+  @keyframes slideInRight {
+    from { transform: translateX(100%); }
+    to   { transform: translateX(0); }
+  }
+  .settings-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 24px;
+  }
+  .settings-header h2 { font-size: 1.1rem; }
+  .settings-close { background: none; border: none; color: var(--text2); cursor: pointer; font-size: 1.3rem; }
+  .settings-tabs { display: flex; gap: 0; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+  .s-tab {
+    background: none; border: none;
+    padding: 8px 14px;
+    font-size: .85rem; color: var(--text2);
+    cursor: pointer; font-family: var(--font);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px; transition: color .2s;
+  }
+  .s-tab.active { color: var(--blue-light); border-bottom-color: var(--blue); }
+  .s-section { display: none; }
+  .s-section.active { display: block; }
+  .s-section h4 { font-size: .78rem; color: var(--text3); margin-bottom: 12px; text-transform: uppercase; }
+  .settings-row {
+    margin-bottom: 14px;
+  }
+  .settings-row label { display: block; font-size: .82rem; color: var(--text2); margin-bottom: 5px; }
+  .settings-row input {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 9px 12px;
+    color: var(--text); font-size: .9rem; font-family: var(--font);
+    outline: none;
+  }
+  .settings-row input:focus { border-color: var(--blue); }
+  .btn-save {
+    width: 100%;
+    background: var(--blue); border: none;
+    border-radius: var(--radius-sm); padding: 11px;
+    color: #fff; font-weight: 600; font-size: .9rem; font-family: var(--font);
+    cursor: pointer; margin-top: 6px; transition: background .2s;
+  }
+  .btn-save:hover { background: var(--blue2); }
+  .conn-status-row {
+    display: flex; align-items: center; gap: 8px;
+    font-size: .82rem; color: var(--text2);
+    margin-top: 10px; padding: 8px 12px;
+    background: var(--bg3); border-radius: var(--radius-sm);
+  }
+  .conn-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text3); }
+  .conn-dot.ok { background: var(--green); }
+  .conn-dot.err { background: var(--red); }
+
+  /* ── PREDICTION CARD ── */
+  .prediction-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .prediction-card h3 { font-size: .82rem; color: var(--text3); margin-bottom: 10px; text-transform: uppercase; letter-spacing: .5px; }
+  .pred-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .pred-time { font-size: .82rem; color: var(--text2); }
+  .pred-val { font-size: .88rem; font-weight: 600; }
+  .pred-val.rising { color: var(--yellow); }
+  .pred-val.falling { color: var(--green); }
+  .pred-val.stable { color: var(--blue-light); }
+
+  /* ── SENSOR/POD BADGES ── */
+  .device-row {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px; margin-bottom: 14px;
+  }
+  .device-badge {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+    text-align: center;
+  }
+  .device-badge .db-icon { font-size: 1.4rem; margin-bottom: 4px; }
+  .device-badge .db-label { font-size: .7rem; color: var(--text3); }
+  .device-badge .db-val { font-size: .82rem; font-weight: 600; margin-top: 2px; }
+  .device-badge .db-val.warn { color: var(--orange); }
+  .device-badge .db-val.ok { color: var(--green); }
+  .device-badge .db-val.crit { color: var(--red); }
+
+  /* Toast */
+  #toast-container {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    z-index: 900;
+  }
+  .toast {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-size: .88rem;
+    box-shadow: var(--shadow);
+    animation: toastIn .3s ease;
+    max-width: 320px; text-align: center;
+  }
+  .toast.success { border-color: var(--green); color: var(--green); }
+  .toast.error { border-color: var(--red); color: var(--red); }
+  .toast.info { border-color: var(--blue); color: var(--blue-light); }
+  @keyframes toastIn { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .panels-row { grid-template-columns: 1fr; }
+    .glucose-stats { grid-template-columns: repeat(2, 1fr); }
+    .device-row { grid-template-columns: 1fr 1fr; }
+    .settings-drawer { width: 100%; }
+    .role-btns { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
 
-<!-- ══ ONBOARDING ══ -->
-<div id="onboarding">
-  <div class="ob-card">
-    <div class="ob-head">
-      <svg width="38" height="38" viewBox="0 0 38 38" fill="none">
-        <path d="M19 2 L36 10.5 L36 27.5 L19 36 L2 27.5 L2 10.5 Z" fill="#1D4ED8"/>
-        <path d="M8 21 Q19 11 30 21" stroke="#FDE68A" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-        <ellipse cx="19" cy="21" rx="11" ry="3.5" fill="#FDE68A"/>
-        <rect x="16" y="18" width="6" height="2" rx="1" fill="#DC2626"/>
+<!-- ══════════════ IDENTITY OVERLAY ══════════════ -->
+<div id="identity-overlay" class="overlay">
+  <div class="overlay-card">
+    <div class="shield-logo">
+      <svg viewBox="0 0 72 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M36 2L6 14v22c0 18 13 34 30 38 17-4 30-20 30-38V14L36 2z" fill="#1d4ed8" opacity=".9"/>
+        <path d="M36 8L10 18v18c0 15 11 28 26 32 15-4 26-17 26-32V18L36 8z" fill="#2563eb"/>
+        <!-- straw hat -->
+        <ellipse cx="36" cy="38" rx="18" ry="5" fill="#92400e" opacity=".9"/>
+        <path d="M24 38 Q36 25 48 38" stroke="#92400e" stroke-width="2" fill="none"/>
+        <ellipse cx="36" cy="36" rx="10" ry="7" fill="#b45309" opacity=".8"/>
       </svg>
-      <div>
-        <div class="ob-title">Loopie v25.3</div>
+    </div>
+    <h1>Loopie</h1>
+    <p class="subtitle">v28.3 · מערכת ניהול סוכרת חכמה</p>
+
+    <div id="step-role" style="display:block">
+      <p style="font-size:.9rem;color:var(--text2);margin-bottom:16px;">מי אתה?</p>
+      <div class="role-btns">
+        <button class="role-btn" onclick="selectRole('patient')" id="role-patient">
+          <span class="role-icon">🧒</span>
+          אני המטופל
+        </button>
+        <button class="role-btn" onclick="selectRole('parent')" id="role-parent">
+          <span class="role-icon">👨‍👩‍👧</span>
+          אני ההורה
+        </button>
+      </div>
+      <div id="role-continue" style="display:none; margin-top:12px;">
+        <div class="form-group">
+          <label>שם פרטי</label>
+          <input type="text" id="inp-name" placeholder="הזן שם" />
+        </div>
+        <div class="form-group">
+          <label>תאריך לידה של המטופל</label>
+          <div class="dob-row">
+            <input type="number" id="dob-day" placeholder="יום" min="1" max="31"/>
+            <input type="number" id="dob-month" placeholder="חודש" min="1" max="12"/>
+            <input type="number" id="dob-year" placeholder="שנה" min="1990" max="2024"/>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="finishOnboarding()">כניסה ל-Loopie →</button>
       </div>
     </div>
-    <div class="ob-sub">מרכז בקרה לניהול T1D – הגדרה ראשונית</div>
-    <div class="ob-grid">
-      <div class="ob-field full"><label>שם הילד / הילדה</label><input id="ob-name" placeholder="שם פרטי"/></div>
-      <div class="ob-field"><label>מגדר</label>
-        <select id="ob-gender"><option value="m">זכר</option><option value="f">נקבה</option></select>
-      </div>
-      <div class="ob-field"><label>תאריך לידה</label><input id="ob-dob" type="date"/></div>
-      <div class="ob-field"><label>גובה (ס"מ)</label><input id="ob-h" type="number" placeholder="130"/></div>
-      <div class="ob-field"><label>משקל (ק"ג)</label><input id="ob-w" type="number" placeholder="28"/></div>
-      <div class="ob-field full"><label>מייל להתראות</label><input id="ob-email" type="email" placeholder="parent@example.com"/></div>
-    </div>
-    <button class="ob-btn" onclick="startApp()">כניסה למערכת →</button>
   </div>
 </div>
 
-<!-- ══ APP ══ -->
+<!-- ══════════════ BIRTHDAY OVERLAY ══════════════ -->
+<div id="birthday-overlay" class="overlay hidden">
+  <div class="overlay-card">
+    <div class="birthday-emojis">🎉🎂🎊</div>
+    <div class="birthday-name" id="bday-name">יום הולדת שמח!</div>
+    <p class="birthday-msg" id="bday-msg">היום הוא יום מיוחד עבורך.<br>הלופ שומר עליך היום ותמיד 💙</p>
+    <button class="btn-primary" onclick="closeBirthday()">תודה! 🎈</button>
+  </div>
+</div>
+
+<!-- ══════════════ MAIN APP ══════════════ -->
 <div id="app">
-  <header class="hdr">
-    <div class="hdr-l">
-      <svg width="30" height="30" viewBox="0 0 38 38" fill="none">
-        <path d="M19 2 L36 10.5 L36 27.5 L19 36 L2 27.5 L2 10.5 Z" fill="#1D4ED8"/>
-        <path d="M8 21 Q19 11 30 21" stroke="#FDE68A" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-        <ellipse cx="19" cy="21" rx="11" ry="3.5" fill="#FDE68A"/>
-        <rect x="16" y="18" width="6" height="2" rx="1" fill="#DC2626"/>
+  <header>
+    <div class="header-logo">
+      <svg viewBox="0 0 72 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M36 2L6 14v22c0 18 13 34 30 38 17-4 30-20 30-38V14L36 2z" fill="#1d4ed8" opacity=".9"/>
+        <path d="M36 8L10 18v18c0 15 11 28 26 32 15-4 26-17 26-32V18L36 8z" fill="#2563eb"/>
+        <ellipse cx="36" cy="38" rx="18" ry="5" fill="#92400e" opacity=".9"/>
+        <path d="M24 38 Q36 25 48 38" stroke="#92400e" stroke-width="2" fill="none"/>
+        <ellipse cx="36" cy="36" rx="10" ry="7" fill="#b45309" opacity=".8"/>
       </svg>
       <div>
-        <div style="font-size:13px;font-weight:700;color:var(--blue)">Loopie v25.3</div>
-        <div class="hdr-name" id="hdr-name">–</div>
+        <span>Loopie</span>
+        <span class="version">v28.3</span>
       </div>
     </div>
-    <div class="hdr-r">
-      <button onclick="sw('settings')" style="background:none;border:1px solid var(--border2);color:var(--text3);border-radius:var(--r);padding:5px 10px;font-size:12px;cursor:pointer;font-family:var(--font);transition:all .15s" onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--blue)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">⚙️ NS</button>
-      <div class="conn-indicator">
-        <div class="conn-dot c-load" id="cdot"></div>
-        <span class="conn-txt" id="ctxt">מתחבר...</span>
-      </div>
+    <div class="header-right">
+      <span class="header-user" id="header-name">—</span>
+      <span class="header-role-badge" id="header-role">מטופל</span>
+      <div class="conn-indicator" id="conn-dot" title="סטטוס חיבור"></div>
+      <button class="icon-btn" onclick="openSettings()" title="הגדרות">⚙️</button>
     </div>
   </header>
 
-  <nav class="tabs">
-    <button class="tab on" onclick="sw('dashboard')">📊 בקרה</button>
-    <button class="tab" onclick="sw('activities')">🏃 חוגים</button>
-    <button class="tab" onclick="sw('reports')">📈 דוחות</button>
-    <button class="tab" onclick="sw('ml')">🧠 ML</button>
-    <button class="tab" onclick="sw('profile')">👤 פרופיל</button>
-    <button class="tab" onclick="sw('settings')">⚙️ הגדרות</button>
-  </nav>
+  <main>
+    <!-- Omnibox ABOVE graph -->
+    <div class="omnibox-wrapper">
+      <span class="omnibox-icon">🔍</span>
+      <input class="omnibox" id="omnibox" type="text"
+        placeholder="חפש אוכל, פעולה... (למשל: פיתה 50, תיקון, COB)"
+        oninput="omniSearch(this.value)" onkeydown="omniKey(event)"/>
+      <div class="omnibox-results" id="omni-results"></div>
+    </div>
 
-  <main class="main">
-
-    <!-- ─── DASHBOARD ─── -->
-    <div id="p-dashboard" class="panel on">
-      <div class="bday" id="bday-banner">🎂 יום הולדת שמח!</div>
-
-      <!-- Omnibox FIRST -->
-      <div class="omni-wrap">
-        <input class="omni" id="omni" placeholder='נסה: "45 גרם" • "פוד הוחלף" • "הוסף חוג כדורגל שלישי 16:00" • "דוח" • "איך עושים?"'
-          onkeydown="if(event.key==='Enter')sendOmni()"/>
-        <button class="omni-btn" onclick="sendOmni()">שלח</button>
+    <!-- Food Split Card (חוק ה-3 phase 1) -->
+    <div class="food-split-card" id="food-split">
+      <div class="split-header">
+        <h3>🍽️ פיצול ארוחה – חוק ה-3</h3>
+        <button class="split-close" onclick="closeFoodSplit()">✕</button>
       </div>
-
-      <!-- Glucose -->
-      <div class="glucose-hero" id="glucose-hero">
-        <div class="gh-left">
-          <div>
-            <div class="gh-value ok" id="gv">–</div>
-            <div class="gh-unit">mg/dL</div>
-          </div>
-          <div class="gh-time" id="gt">ממתין לנתונים...</div>
+      <div class="split-grid">
+        <div class="split-part">
+          <div class="sp-label">💉 הזרקה עכשיו</div>
+          <div class="sp-val" id="split-now-insulin">0.0U</div>
+          <div class="sp-sub" id="split-now-carbs">על 35ג' (70%)</div>
         </div>
-        <div class="gh-right">
-          <div class="gh-arrow" id="garrow">–</div>
-          <div class="gh-meta">
-            <div class="meta-row">IOB: <b id="iob">–</b>U</div>
-            <div class="meta-row">δ: <b id="gdelta">–</b></div>
-            <div class="meta-row">COB: <b id="cob">–</b>g</div>
-          </div>
-          <button class="rfrsh" onclick="fetchNS()">↻ רענן</button>
+        <div class="split-part">
+          <div class="sp-label">⏳ להשלמה בעוד 20 דק'</div>
+          <div class="sp-val" id="split-later-insulin">0.0U</div>
+          <div class="sp-sub" id="split-later-carbs">15ג' (30%)</div>
         </div>
       </div>
-
-      <!-- Stats -->
-      <div class="stats">
-        <div class="stat"><div class="stat-lbl">ממוצע 24h</div><div class="stat-val" id="avg24" style="color:var(--text)">–</div><div class="stat-sub">mg/dL</div></div>
-        <div class="stat"><div class="stat-lbl">TIR 7 ימים</div><div class="stat-val" id="tir7" style="color:var(--green)">–</div><div class="stat-sub">% בטווח</div></div>
-        <div class="stat"><div class="stat-lbl">גיל פוד</div><div class="stat-val" id="pod-h" style="color:var(--text)">–</div><div class="stat-sub">שעות</div></div>
+      <div class="wait-notice">
+        ⏱️ המתן <strong>20 דקות</strong> לפני אכילת ה-30% הנותרים
+        <span class="timer-display" id="wait-timer">—</span>
       </div>
+    </div>
 
-      <!-- Pod -->
-      <div class="pod" id="pod-card">
+    <!-- Rule of 3 Alert (phase 2 - completion) -->
+    <div class="rule3-card" id="rule3-card">
+      <div class="rule3-header">
+        <h3>⚠️ חוק ה-3 – השלמת ארוחה</h3>
+        <button class="rule3-close" onclick="closeRule3()">✕</button>
+      </div>
+      <div class="rule3-grid">
+        <div class="rule3-item">
+          <div class="r3-val" style="color:var(--orange)" id="r3-carbs">15ג'</div>
+          <div class="r3-label">פחמימות להשלמה</div>
+        </div>
+        <div class="rule3-item">
+          <div class="r3-val" style="color:var(--blue-light)" id="r3-insulin">0.5U</div>
+          <div class="r3-label">אינסולין נוסף</div>
+        </div>
+        <div class="rule3-item">
+          <div class="r3-val" style="color:var(--purple)" id="r3-absorb">90 דק'</div>
+          <div class="r3-label">זמן ספיגה</div>
+        </div>
+      </div>
+      <div class="rule3-note" id="r3-note">
+        🤖 המלצת הלופ: 0.4U · IOB נוכחי: 1.2U · מיקרו-בולוסים: 0.3U בשעה האחרונה
+      </div>
+    </div>
+
+    <!-- Resistance Card -->
+    <div class="resistance-card" id="resistance-card">
+      <div class="resistance-icon">🟠</div>
+      <div class="resistance-text">
+        <h4>עמידות לאינסולין זוהתה</h4>
+        <p>סוכר >180 מ"ג ל-45+ דק' למרות IOB. שקול תיקון ידני.</p>
+      </div>
+      <button class="resistance-btn" onclick="manualCorrection()">תיקון ידני</button>
+    </div>
+
+    <!-- Glucose Card -->
+    <div class="glucose-card">
+      <div class="glucose-top">
         <div>
-          <div class="pod-lbl">פוד / סנסור</div>
-          <div class="pod-age" id="pod-age">–</div>
-          <div class="pod-lbl" id="pod-since">לא הוגדר</div>
-        </div>
-        <span class="pod-badge ok" id="pod-badge">תקין</span>
-      </div>
-      <div class="pod-proto" id="pod-proto" style="display:none"></div>
-
-      <!-- Audit -->
-      <div class="audit" id="audit" style="display:none">
-        <div class="audit-title">⚠️ ביקורת – סטייה מהמלצה</div>
-        <div id="audit-body"></div>
-      </div>
-
-      <!-- Recommendation -->
-      <div class="rec" id="rec" style="display:none">
-        <div class="rec-lbl">💉 המלצת הזרקה</div>
-        <div class="rec-dose" id="rec-dose">–U</div>
-        <div class="rec-detail" id="rec-detail"></div>
-        <div class="rec-note" id="rec-note" style="display:none"></div>
-      </div>
-
-      <!-- Chat -->
-      <div class="chat" id="chat"></div>
-    </div>
-
-    <!-- ─── ACTIVITIES ─── -->
-    <div id="p-activities" class="panel">
-      <div class="sh">
-        <div class="st">🏃 יומן חוגים</div>
-        <button class="gcal-btn" onclick="openGcal()">📅 ייבוא מגוגל</button>
-      </div>
-      <div class="act-add" style="margin-bottom:12px">
-        <div class="form-field"><label>שם החוג</label><input id="an" placeholder="כדורגל, בלט..."/></div>
-        <div class="form-field"><label>יום</label>
-          <select id="ad">
-            <option>ראשון</option><option>שני</option><option>שלישי</option>
-            <option>רביעי</option><option>חמישי</option><option>שישי</option><option>שבת</option>
-          </select>
-        </div>
-        <div class="form-field"><label>שעה</label><input id="at" type="time" value="16:00"/></div>
-        <button class="add-btn" onclick="addAct()">הוסף</button>
-      </div>
-      <div class="act-list" id="act-list"></div>
-    </div>
-
-    <!-- ─── REPORTS ─── -->
-    <div id="p-reports" class="panel">
-      <div class="st" style="margin-bottom:14px">📈 דוחות</div>
-
-      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px">TIR – זמן בטווח (7 ימים)</div>
-      <div class="tir-bar" id="tir-bar"></div>
-      <div class="tir-legend" id="tir-leg"></div>
-
-      <div class="sep" style="margin:18px 0"></div>
-
-      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px">Autotune Report</div>
-      <div class="autotune-box" id="autotune"></div>
-    </div>
-
-    <!-- ─── ML ─── -->
-    <div id="p-ml" class="panel">
-      <div class="st" style="margin-bottom:14px">🧠 המלצות מנוע למידה</div>
-      <div id="ml-list" style="display:flex;flex-direction:column;gap:10px"></div>
-    </div>
-
-    <!-- ─── PROFILE ─── -->
-    <div id="p-profile" class="panel">
-      <div class="pf-section">
-        <div class="pf-section-title">פרטים אישיים</div>
-        <div class="pf-grid">
-          <div class="pf-field"><label>שם</label><input id="pf-name" disabled/></div>
-          <div class="pf-field"><label>תאריך לידה</label><input id="pf-dob" disabled/></div>
-          <div class="pf-field"><label>גובה</label><input id="pf-h" disabled/></div>
-          <div class="pf-field"><label>משקל</label><input id="pf-w" disabled/></div>
-        </div>
-      </div>
-      <div class="pf-section">
-        <div class="pf-section-title">הגדרות NS (קריאה בלבד, מ-Nightscout)</div>
-        <div class="pf-grid">
-          <div class="pf-field"><label>ICR</label><input id="pf-icr" disabled/></div>
-          <div class="pf-field"><label>ISF</label><input id="pf-isf" disabled/></div>
-          <div class="pf-field"><label>יעד נמוך</label><input id="pf-tlo" disabled/></div>
-          <div class="pf-field"><label>יעד גבוה</label><input id="pf-thi" disabled/></div>
-          <div class="pf-field"><label>בזאל (U/h)</label><input id="pf-bas" disabled/></div>
-          <div class="pf-field"><label>DIA (h)</label><input id="pf-dia" disabled/></div>
-        </div>
-        <p class="pf-note">* הנתונים נטענים מ-NS ואינם ניתנים לעריכה כאן</p>
-      </div>
-      <div class="pf-section">
-        <div class="pf-section-title">חוקי בית (ספיגה)</div>
-        <div class="food-rules">
-          <div class="food-rule"><span class="food-rule-name">🍝 פסטה / המבורגר</span><span class="food-rule-hours">5h מהיר מופחת</span></div>
-          <div class="food-rule"><span class="food-rule-name">🍚 אורז / פיתה</span><span class="food-rule-hours">3h</span></div>
-          <div class="food-rule"><span class="food-rule-name">🍞 לחם / דגני בוקר</span><span class="food-rule-hours">2h</span></div>
-          <div class="food-rule"><span class="food-rule-name">🍎 פירות / חלב</span><span class="food-rule-hours">1.5h</span></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ─── SETTINGS ─── -->
-    <div id="p-settings" class="panel">
-      <div class="stabs">
-        <button class="stab on" onclick="swtab('conn')">חיבורים</button>
-        <button class="stab" onclick="swtab('pod')">פוד</button>
-      </div>
-
-      <div id="st-conn">
-        <div class="sgrp">
-          <div class="sgrp-title">Nightscout</div>
-          <div class="sf"><label>כתובת NS (URL)</label>
-            <input id="s-url" placeholder="https://yourname.mooo.com"/>
-            <span class="hint">דוגמה: https://myname.mooo.com — ללא / בסוף, רווחים יוסרו אוטומטית</span>
+          <div class="glucose-main">
+            <div class="glucose-val in-range" id="glucose-val">--</div>
+            <div class="glucose-trend" id="glucose-trend">→</div>
           </div>
-          <div class="sf"><label>API Secret (סיסמה)</label>
-            <input id="s-sec" type="password" placeholder="הסיסמה שלך"/>
-            <span class="hint">נשלח כ-query param (api_secret) — השיטה שעובדת מול mooo.com</span>
-          </div>
+          <div class="glucose-unit">mg/dL · <span id="glucose-time">לא מחובר</span></div>
         </div>
-        <div class="sgrp">
-          <div class="sgrp-title">Google Calendar (אופציונלי)</div>
-          <div class="sf"><label>Calendar ID</label><input id="s-cal" placeholder="primary"/></div>
-          <div class="sf"><label>Google API Key</label><input id="s-gkey" type="password" placeholder="AIza..."/></div>
+        <div class="glucose-meta" id="glucose-meta">
+          <span class="meta-badge"><span class="icon">💉</span> IOB: <strong id="badge-iob">—</strong>U</span>
+          <span class="meta-badge"><span class="icon">🍽️</span> COB: <strong id="badge-cob">—</strong>ג'</span>
+          <span class="meta-badge ok" id="badge-loop"><span class="icon">🔄</span> לופ פעיל</span>
         </div>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-          <button class="save" onclick="saveSettings()">💾 שמור וחבר</button>
-          <button style="padding:10px 18px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);border-radius:var(--r);font-family:var(--font);font-size:13px;cursor:pointer;transition:all .15s" onclick="testConn()">🔌 בדוק חיבור</button>
-        </div>
-        <div id="conn-test-result" style="margin-top:10px;font-size:12px;color:var(--text2);display:none"></div>
       </div>
-
-      <div id="st-pod" style="display:none">
-        <div class="sgrp">
-          <div class="sgrp-title">החלפת פוד / סנסור</div>
-          <div class="sf"><label>תאריך ושעת החלפה</label><input id="s-pod" type="datetime-local"/></div>
+      <div class="glucose-stats">
+        <div class="stat-item">
+          <div class="stat-val" id="stat-tir" style="color:var(--green)">--%</div>
+          <div class="stat-label">TIR 24h</div>
         </div>
-        <button class="save" onclick="savePod()">💾 שמור</button>
+        <div class="stat-item">
+          <div class="stat-val" id="stat-avg">--</div>
+          <div class="stat-label">ממוצע 24h</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val" id="stat-basal" style="color:var(--blue-light)">--</div>
+          <div class="stat-label">בזאלי עכשיו</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-val" id="stat-reservoir" style="color:var(--purple)">--U</div>
+          <div class="stat-label">מאגר</div>
+        </div>
       </div>
     </div>
 
+    <!-- Graph -->
+    <div class="graph-container">
+      <div class="graph-header">
+        <h3>גרף סוכר</h3>
+        <div class="time-tabs">
+          <button class="time-tab active" onclick="setTimeRange(1,this)">1h</button>
+          <button class="time-tab" onclick="setTimeRange(3,this)">3h</button>
+          <button class="time-tab" onclick="setTimeRange(6,this)">6h</button>
+          <button class="time-tab" onclick="setTimeRange(12,this)">12h</button>
+        </div>
+      </div>
+      <canvas id="glucoseChart"></canvas>
+    </div>
+
+    <!-- Device badges -->
+    <div class="device-row" id="device-row">
+      <div class="device-badge">
+        <div class="db-icon">💊</div>
+        <div class="db-label">Pod</div>
+        <div class="db-val ok" id="dev-pod">--</div>
+      </div>
+      <div class="device-badge">
+        <div class="db-icon">📡</div>
+        <div class="db-label">Sensor</div>
+        <div class="db-val ok" id="dev-sensor">--</div>
+      </div>
+      <div class="device-badge">
+        <div class="db-icon">🧪</div>
+        <div class="db-label">מאגר</div>
+        <div class="db-val" id="dev-reservoir">--</div>
+      </div>
+    </div>
+
+    <!-- Panels row -->
+    <div class="panels-row">
+      <div class="panel">
+        <h3>אינסולין פעיל (IOB)</h3>
+        <div class="iob-value" id="iob-val">--U</div>
+        <div class="iob-sub" id="iob-sub">ממתין לנתוני NS</div>
+        <div class="iob-bar-bg"><div class="iob-bar" id="iob-bar" style="width:0%"></div></div>
+      </div>
+      <div class="panel">
+        <h3>פחמימות פעילות (COB)</h3>
+        <div class="cob-value" id="cob-val">--ג'</div>
+        <div class="iob-sub" id="cob-sub">ממתין לנתוני NS</div>
+        <div class="iob-bar-bg"><div class="iob-bar" id="cob-bar" style="width:0%;background:var(--orange)"></div></div>
+      </div>
+    </div>
+
+    <!-- Prediction -->
+    <div class="prediction-card" id="prediction-card">
+      <h3>תחזית סוכר</h3>
+      <div id="predictions-content">
+        <div class="pred-row">
+          <span class="pred-time">⏱ כרגע</span>
+          <span class="pred-val stable">ממתין...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Event Log -->
+    <div class="log-section">
+      <h3>פעילות אחרונה</h3>
+      <div id="event-log"></div>
+    </div>
   </main>
 </div>
 
-<!-- ── CALENDAR MODAL ── -->
-<div class="modal-overlay" id="cal-modal">
-  <div class="modal">
-    <div class="modal-title">📅 ייבוא מ-Google Calendar</div>
-    <div class="modal-sub">בחר/י אירועים של הילד/ה בלבד (ללא אירועי הורים)</div>
-    <div class="cal-list" id="cal-list"></div>
-    <div class="modal-btns">
-      <button class="modal-cancel" onclick="closeModal()">ביטול</button>
-      <button class="modal-import" onclick="importCal()">ייבא נבחרים ✓</button>
+<!-- ══════════════ SETTINGS DRAWER ══════════════ -->
+<div id="settings-panel">
+  <div class="settings-drawer">
+    <div class="settings-header">
+      <h2>⚙️ הגדרות Loopie</h2>
+      <button class="settings-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="settings-tabs">
+      <button class="s-tab active" onclick="switchSettingsTab('ns',this)">Nightscout</button>
+      <button class="s-tab" onclick="switchSettingsTab('conn',this)">חיבורים</button>
+      <button class="s-tab" onclick="switchSettingsTab('therapy',this)">פרמטרים</button>
+    </div>
+
+    <!-- NS Settings -->
+    <div class="s-section active" id="s-ns">
+      <h4>Nightscout</h4>
+      <div class="settings-row">
+        <label>NS URL</label>
+        <input type="text" id="cfg-ns-url" placeholder="https://your-site.herokuapp.com"/>
+      </div>
+      <div class="settings-row">
+        <label>API Secret</label>
+        <input type="password" id="cfg-ns-secret" placeholder="••••••••"/>
+      </div>
+      <button class="btn-save" onclick="saveNS()">שמור וחבר</button>
+      <div class="conn-status-row">
+        <div class="conn-dot" id="ns-conn-dot"></div>
+        <span id="ns-conn-text">לא מחובר</span>
+      </div>
+    </div>
+
+    <!-- Connectivity (Pusher) -->
+    <div class="s-section" id="s-conn">
+      <h4>הגדרות Pusher (Real-time)</h4>
+      <div class="settings-row">
+        <label>Pusher App Key</label>
+        <input type="text" id="cfg-pusher-key" placeholder="abc123..."/>
+      </div>
+      <div class="settings-row">
+        <label>Pusher Cluster</label>
+        <input type="text" id="cfg-pusher-cluster" placeholder="eu / us2 / ap1..."/>
+      </div>
+      <button class="btn-save" onclick="savePusher()">שמור Pusher</button>
+      <div class="conn-status-row">
+        <div class="conn-dot" id="pusher-conn-dot"></div>
+        <span id="pusher-conn-text">לא מוגדר</span>
+      </div>
+      <br>
+      <h4>Google Cloud (SHA1 Fix)</h4>
+      <div class="settings-row">
+        <label>API Secret (יוצפן SHA1 אוטומטית)</label>
+        <input type="password" id="cfg-gcloud-secret" placeholder="GCloud API Secret"/>
+      </div>
+      <button class="btn-save" onclick="saveGCloud()">שמור GCloud</button>
+    </div>
+
+    <!-- Therapy params -->
+    <div class="s-section" id="s-therapy">
+      <h4>יחסי אינסולין</h4>
+      <div class="settings-row">
+        <label>ISF – יחס רגישות (mg/dL לכל 1U)</label>
+        <input type="number" id="cfg-isf" placeholder="50" value="50"/>
+      </div>
+      <div class="settings-row">
+        <label>CR – יחס פחמימות (ג' לכל 1U)</label>
+        <input type="number" id="cfg-cr" placeholder="10" value="10"/>
+      </div>
+      <div class="settings-row">
+        <label>סף נמוך (mg/dL)</label>
+        <input type="number" id="cfg-low" placeholder="70" value="70"/>
+      </div>
+      <div class="settings-row">
+        <label>סף גבוה (mg/dL)</label>
+        <input type="number" id="cfg-high" placeholder="180" value="180"/>
+      </div>
+      <div class="settings-row">
+        <label>יעד סוכר (mg/dL)</label>
+        <input type="number" id="cfg-target" placeholder="110" value="110"/>
+      </div>
+      <button class="btn-save" onclick="saveTherapy()">שמור פרמטרים</button>
     </div>
   </div>
+  <div style="flex:1" onclick="closeSettings()"></div>
 </div>
 
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<!-- ══════════════ SCRIPTS ══════════════ -->
 <script>
-// ═══════════════════════════════════════════════════════
-//  SHA-1 — pure JS, no external libs
-// ═══════════════════════════════════════════════════════
-async function sha1(str) {
-  const buf = new TextEncoder().encode(str);
-  const hash = await crypto.subtle.digest('SHA-1', buf);
-  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
-}
-
-// ═══════════════════════════════════════════════════════
-//  STATE
-// ═══════════════════════════════════════════════════════
+// ── State ──
 const S = {
-  profile: {}, settings: {}, activities: [],
-  ns: { sgv: null, dir: null, iob: 0, cob: 0, delta: 0, t: null },
-  pod: { at: null },
-  params: { icr: 10, isf: 50, tlo: 70, thi: 150, basal: 0.9, dia: 3 },
-  lastRec: null, lastBolus: null,
-  mlApproved: {},
+  role: null, name: '', dob: null,
+  ns_url: '', ns_secret: '', ns_secret_sha1: '',
+  pusher_key: '', pusher_cluster: '',
+  isf: 50, cr: 10, low: 70, high: 180, target: 110,
+  glucose: [], currentSgv: null, trend: '→',
+  iob: 0, cob: 0, basal: 0, reservoir: 0,
+  pod_age: '—', sensor_age: '—',
+  connected: false, timer: null,
+  graphHours: 1,
+  foodWaitTimer: null, waitSeconds: 0,
+  resistanceMinutes: 0,
+  isf_runtime: 50, cr_runtime: 10
 };
 
-function save(k, v) { try { localStorage.setItem('lp25_' + k, JSON.stringify(v)); } catch(e){} }
-function load(k, d) { try { const v = localStorage.getItem('lp25_' + k); return v !== null ? JSON.parse(v) : d; } catch(e) { return d; } }
+// ── Food DB ──
+const FOODS = [
+  {name:'פיתה (לבנה)', per100:53, unit:'גרם'},
+  {name:'אורז לבן מבושל', per100:28, unit:'גרם'},
+  {name:'לחם לבן', per100:49, unit:'גרם'},
+  {name:'לחם שיפון', per100:41, unit:'גרם'},
+  {name:'בנאנה', per100:21, unit:'גרם'},
+  {name:'תפוח', per100:14, unit:'גרם'},
+  {name:'פיצה (1 פרוסה ~100ג)', per100:30, unit:'גרם'},
+  {name:'ספגטי מבושל', per100:25, unit:'גרם'},
+  {name:'קורנפלקס', per100:83, unit:'גרם'},
+  {name:'שוקולד מריר 70%', per100:46, unit:'גרם'},
+  {name:'שוקולד חלב', per100:56, unit:'גרם'},
+  {name:'יוגורט 3%', per100:4, unit:'גרם'},
+  {name:'חלב 3%', per100:5, unit:'גרם'},
+  {name:'ביסלי', per100:60, unit:'גרם'},
+  {name:'תפוח אדמה מבושל', per100:17, unit:'גרם'},
+  {name:'דייסה (שיבולת שועל)', per100:12, unit:'גרם'},
+  {name:'מיץ תפוזים', per100:10, unit:'מ"ל'},
+  {name:'קולה', per100:11, unit:'מ"ל'},
+  {name:'ענבים', per100:18, unit:'גרם'},
+  {name:'אבטיח', per100:8, unit:'גרם'},
+];
 
-// ═══════════════════════════════════════════════════════
-//  ONBOARDING
-// ═══════════════════════════════════════════════════════
-function startApp() {
-  const name = document.getElementById('ob-name').value.trim();
-  if (!name) { alert('נא להזין שם'); return; }
-  S.profile = {
-    name,
-    gender: document.getElementById('ob-gender').value,
-    dob: document.getElementById('ob-dob').value,
-    height: document.getElementById('ob-h').value,
-    weight: document.getElementById('ob-w').value,
-    email: document.getElementById('ob-email').value,
-  };
-  save('profile', S.profile);
-  launch();
+// ── Load config ──
+function loadConfig() {
+  const d = JSON.parse(localStorage.getItem('loopie_config')||'{}');
+  if(d.role) S.role = d.role;
+  if(d.name) S.name = d.name;
+  if(d.dob) S.dob = d.dob;
+  if(d.ns_url) S.ns_url = d.ns_url;
+  if(d.ns_secret) S.ns_secret = d.ns_secret;
+  if(d.ns_secret_sha1) S.ns_secret_sha1 = d.ns_secret_sha1;
+  if(d.pusher_key) S.pusher_key = d.pusher_key;
+  if(d.pusher_cluster) S.pusher_cluster = d.pusher_cluster;
+  if(d.isf) S.isf = d.isf;
+  if(d.cr) S.cr = d.cr;
+  if(d.low) S.low = d.low;
+  if(d.high) S.high = d.high;
+  if(d.target) S.target = d.target;
+  S.isf_runtime = S.isf; S.cr_runtime = S.cr;
 }
 
-function launch() {
-  document.getElementById('onboarding').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
-  document.getElementById('hdr-name').textContent = S.profile.name || '–';
+function saveConfig() {
+  localStorage.setItem('loopie_config', JSON.stringify({
+    role:S.role, name:S.name, dob:S.dob,
+    ns_url:S.ns_url, ns_secret:S.ns_secret, ns_secret_sha1:S.ns_secret_sha1,
+    pusher_key:S.pusher_key, pusher_cluster:S.pusher_cluster,
+    isf:S.isf, cr:S.cr, low:S.low, high:S.high, target:S.target
+  }));
+}
+
+// ── SHA1 (Google Cloud fix) ──
+function sha1(str) {
+  return CryptoJS.SHA1(str).toString();
+}
+
+// ── Role selection ──
+function selectRole(role) {
+  S.role = role;
+  document.getElementById('role-patient').classList.toggle('active', role==='patient');
+  document.getElementById('role-parent').classList.toggle('active', role==='parent');
+  document.getElementById('role-continue').style.display = 'block';
+}
+
+function finishOnboarding() {
+  const name = document.getElementById('inp-name').value.trim();
+  const day = parseInt(document.getElementById('dob-day').value);
+  const month = parseInt(document.getElementById('dob-month').value);
+  const year = parseInt(document.getElementById('dob-year').value);
+  if(!S.role) return showToast('בחר תפקיד תחילה','error');
+  if(!name) return showToast('הזן שם','error');
+  if(!day||!month||!year||year<1990||year>2024) return showToast('תאריך לידה לא תקין','error');
+  S.name = name;
+  S.dob = {day, month, year};
+  saveConfig();
+  document.getElementById('identity-overlay').classList.add('hidden');
+  launchApp();
+}
+
+// ── Birthday check ──
+function checkBirthday() {
+  if(!S.dob) return;
+  const today = new Date();
+  if(S.dob.day === today.getDate() && S.dob.month === (today.getMonth()+1)) {
+    const key = `loopie_bday_${today.getFullYear()}`;
+    if(!localStorage.getItem(key)) {
+      localStorage.setItem(key,'1');
+      document.getElementById('bday-name').textContent = `🎂 יום הולדת שמח, ${S.name}!`;
+      const age = today.getFullYear() - S.dob.year;
+      document.getElementById('bday-msg').innerHTML = 
+        `ברכות על ${age} שנים מלאות!<br>הלופ שומר עליך היום ותמיד 💙<br><small style="color:var(--text3)">תהיה ברמות טובות 🍀</small>`;
+      document.getElementById('birthday-overlay').classList.remove('hidden');
+    }
+  }
+}
+
+function closeBirthday() {
+  document.getElementById('birthday-overlay').classList.add('hidden');
+}
+
+// ── Launch App ──
+function launchApp() {
   checkBirthday();
-  loadActivities();
-  loadPod();
-  renderProfile();
-  populateSettings();
-  renderML();
-  if (S.settings.nsurl) fetchNS();
-  else setConn('err', 'NS לא מוגדר');
-  setInterval(fetchNS, 5 * 60 * 1000);
+  document.getElementById('app').classList.add('visible');
+  document.getElementById('header-name').textContent = S.name;
+  document.getElementById('header-role').textContent = S.role==='patient'?'מטופל':'הורה';
+
+  // Fill settings
+  document.getElementById('cfg-ns-url').value = S.ns_url;
+  document.getElementById('cfg-ns-secret').value = S.ns_secret;
+  document.getElementById('cfg-pusher-key').value = S.pusher_key;
+  document.getElementById('cfg-pusher-cluster').value = S.pusher_cluster;
+  document.getElementById('cfg-isf').value = S.isf;
+  document.getElementById('cfg-cr').value = S.cr;
+  document.getElementById('cfg-low').value = S.low;
+  document.getElementById('cfg-high').value = S.high;
+  document.getElementById('cfg-target').value = S.target;
+
+  initGraph();
+  if(S.ns_url) fetchNSData();
+  if(S.pusher_key && S.pusher_cluster) initPusher();
+  startSimulation();
+  addLog('Loopie v28.3 הופעל', 'info', '🚀');
 }
 
-// ═══════════════════════════════════════════════════════
-//  TABS
-// ═══════════════════════════════════════════════════════
-const TABS = ['dashboard','activities','reports','ml','profile','settings'];
-function sw(t) {
-  document.querySelectorAll('.tab').forEach((b,i) => b.classList.toggle('on', TABS[i] === t));
-  TABS.forEach(id => {
-    const p = document.getElementById('p-' + id);
-    if (p) p.classList.toggle('on', id === t);
+// ── GRAPH ──
+let graphCanvas, graphCtx, graphData = [];
+
+function initGraph() {
+  graphCanvas = document.getElementById('glucoseChart');
+  graphCtx = graphCanvas.getContext('2d');
+  graphCanvas.width = graphCanvas.offsetWidth * (window.devicePixelRatio||1);
+  graphCanvas.height = graphCanvas.offsetHeight * (window.devicePixelRatio||1);
+  graphCtx.scale(window.devicePixelRatio||1, window.devicePixelRatio||1);
+  drawGraph();
+}
+
+function drawGraph() {
+  if(!graphCtx) return;
+  const w = graphCanvas.offsetWidth, h = graphCanvas.offsetHeight;
+  graphCtx.clearRect(0,0,w,h);
+
+  // Background zones
+  const minVal = 40, maxVal = 350;
+  const yOf = v => h - ((v - minVal)/(maxVal - minVal)) * h;
+
+  // Danger zones
+  graphCtx.fillStyle='rgba(239,68,68,.08)';
+  graphCtx.fillRect(0, 0, w, yOf(S.high));
+  graphCtx.fillStyle='rgba(34,197,94,.06)';
+  graphCtx.fillRect(0, yOf(S.high), w, yOf(S.low)-yOf(S.high));
+  graphCtx.fillStyle='rgba(239,68,68,.08)';
+  graphCtx.fillRect(0, yOf(S.low), w, h-yOf(S.low));
+
+  // Zone lines
+  [S.low, S.high, S.target].forEach(v => {
+    graphCtx.strokeStyle = v===S.target ? 'rgba(59,130,246,.4)' : 'rgba(255,255,255,.1)';
+    graphCtx.setLineDash(v===S.target ? [4,4] : []);
+    graphCtx.lineWidth = 1;
+    graphCtx.beginPath();
+    graphCtx.moveTo(0, yOf(v)); graphCtx.lineTo(w, yOf(v));
+    graphCtx.stroke();
   });
-  if (t === 'reports') renderReports();
-}
-function swtab(t) {
-  document.querySelectorAll('.stab').forEach(b => {
-    b.classList.toggle('on', (t === 'conn' && b.textContent.includes('חיבורים')) || (t === 'pod' && b.textContent.includes('פוד')));
-  });
-  document.getElementById('st-conn').style.display = t === 'conn' ? '' : 'none';
-  document.getElementById('st-pod').style.display = t === 'pod' ? '' : 'none';
-}
+  graphCtx.setLineDash([]);
 
-// ═══════════════════════════════════════════════════════
-//  SETTINGS
-// ═══════════════════════════════════════════════════════
-function saveSettings() {
-  S.settings = {
-    nsurl: (document.getElementById('s-url').value || '').trim().replace(/[\s\/]+$/, ''),
-    secret: document.getElementById('s-sec').value,
-    calid: document.getElementById('s-cal').value,
-    calkey: document.getElementById('s-gkey').value,
-  };
-  save('settings', S.settings);
-  addMsg('ok', '✅ הגדרות נשמרו. מתחבר ל-Nightscout...');
-  sw('dashboard');
-  fetchNS();
-}
-function populateSettings() {
-  const s = S.settings;
-  document.getElementById('s-url').value = s.nsurl || '';
-  document.getElementById('s-sec').value = s.secret || '';
-  document.getElementById('s-cal').value = s.calid || '';
-  document.getElementById('s-gkey').value = s.calkey || '';
-}
+  if(graphData.length < 2) return;
 
-async function testConn() {
-  const url = (document.getElementById('s-url').value || '').trim().replace(/[\s\/]+$/, '');
-  const secret = document.getElementById('s-sec').value;
-  const res = document.getElementById('conn-test-result');
-  res.style.display = '';
-  res.style.color = 'var(--text2)';
-  res.textContent = '⏳ בודק חיבור...';
-  if (!url) { res.textContent = '❌ הזן כתובת NS קודם'; res.style.color = 'var(--red)'; return; }
-  const sep = '/api/v1/entries/current.json'.includes('?') ? '&' : '?';
-  const testUrl = `${url}/api/v1/entries/current.json${sep}api_secret=${encodeURIComponent(secret)}`;
-  try {
-    const r = await fetch(testUrl, { method: 'GET', mode: 'cors', headers: { 'Accept': 'application/json' } });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const data = await r.json();
-    const ent = Array.isArray(data) ? data[0] : data;
-    const sgv = ent?.sgv;
-    res.style.color = 'var(--green)';
-    res.textContent = sgv ? `✅ מחובר! סוכר נוכחי: ${sgv} mg/dL` : '✅ מחובר! (אין נתוני סוכר)';
-  } catch(e) {
-    res.style.color = 'var(--red)';
-    res.textContent = `❌ שגיאה: ${e.message} — בדוק URL וסיסמה`;
-  }
-}
-function savePod() {
-  const v = document.getElementById('s-pod').value;
-  if (!v) return;
-  S.pod.at = new Date(v);
-  save('pod', S.pod.at.toISOString());
-  updatePod();
-  addMsg('ok', '🟠 פוד עודכן. פרוטוקול הנעה פעיל ל-3 שעות.');
-}
-function loadPod() {
-  const v = load('pod', null);
-  if (v) S.pod.at = new Date(v);
-  updatePod();
-}
-
-// ═══════════════════════════════════════════════════════
-//  NIGHTSCOUT FETCH
-//  שיטה: api_secret כ-query param בURL (עובד מול mooo.com / Google Cloud)
-//  זוהי השיטה שהוכחה כעובדת בגרסה הקודמת
-// ═══════════════════════════════════════════════════════
-
-// בנה URL עם api_secret כ-param (הפתרון האמיתי)
-function nsUrl(endpoint) {
-  const cfg = S.settings;
-  const base = (cfg.nsurl || '').trim().replace(/[\s\/]+$/, '');
-  const sep = endpoint.includes('?') ? '&' : '?';
-  const secret = encodeURIComponent(cfg.secret || '');
-  return `${base}${endpoint}${sep}api_secret=${secret}`;
-}
-
-// קריאת API בסיסית — זהה לפונקציה שעבדה
-async function fetchFromNS(endpoint) {
-  const cfg = S.settings;
-  if (!cfg || !cfg.nsurl) { setConn('err', 'NS לא מוגדר'); return null; }
-  try {
-    const r = await fetch(nsUrl(endpoint), {
-      method: 'GET',
-      mode: 'cors',
-      headers: { 'Accept': 'application/json' }
-    });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    return await r.json();
-  } catch(err) {
-    console.error('NS fetch error:', err);
-    return null;
-  }
-}
-
-async function fetchNS() {
-  const cfg = S.settings;
-  if (!cfg || !cfg.nsurl) { setConn('err', 'NS לא מוגדר'); return; }
-  setConn('load', 'מתחבר...');
-
-  // שלב 1: סוכר נוכחי
-  const sgvData = await fetchFromNS('/api/v1/entries/current.json');
-  if (sgvData) {
-    const ent = Array.isArray(sgvData) ? sgvData[0] : sgvData;
-    S.ns.sgv = ent.sgv;
-    S.ns.dir = ent.direction;
-    S.ns.delta = ent.delta || 0;
-    S.ns.t = new Date(ent.date || ent.dateString || Date.now());
-    setConn('ok', 'מחובר ✓');
-    renderGlucose();
-  } else {
-    setConn('err', 'שגיאת חיבור');
-    renderGlucose();
-    return;
-  }
-
-  // שלב 2: IOB מ-devicestatus (כמו בקובץ העובד)
-  const devData = await fetchFromNS('/api/v1/devicestatus.json?count=1');
-  if (devData && devData.length > 0) {
-    const iobVal = devData[0]?.openaps?.iob?.iob
-                ?? devData[0]?.loop?.iob?.iob
-                ?? devData[0]?.iob?.iob;
-    if (iobVal !== undefined) {
-      S.ns.iob = +parseFloat(iobVal).toFixed(2);
-      document.getElementById('iob').textContent = S.ns.iob;
-    }
-  }
-
-  // שלב 3: טיפולים (לחישוב IOB מגיבוי + audit)
-  const treats = await fetchFromNS('/api/v1/treatments.json?count=20');
-  if (treats) {
-    if (S.ns.iob === 0) calcIOB(treats); // fallback אם devicestatus לא החזיר IOB
-    checkAudit(treats);
-  }
-
-  // שלב 4: פרופיל NS
-  const prof = await fetchFromNS('/api/v1/profile.json');
-  if (prof) applyProfile(prof);
-
-  // שלב 5: היסטוריה ל-TIR
-  fetchHistory();
-}
-
-async function fetchHistory() {
-  const since = Date.now() - 7 * 24 * 3600000;
-  const data = await fetchFromNS(`/api/v1/entries.json?count=2016&find[date][$gte]=${since}`);
-  if (!data) return;
-  const vals = data.map(e => e.sgv).filter(Boolean);
-  if (!vals.length) return;
-  const avg24data = await fetchFromNS('/api/v1/entries.json?count=288');
-  if (avg24data) {
-    const v24 = avg24data.map(e => e.sgv).filter(Boolean);
-    if (v24.length) document.getElementById('avg24').textContent = Math.round(v24.reduce((a,b)=>a+b,0)/v24.length);
-  }
-  calcTIR(vals);
-  runML(vals);
-}
-
-function setConn(st, txt) {
-  document.getElementById('cdot').className = 'conn-dot c-' + st;
-  document.getElementById('ctxt').textContent = txt;
-}
-
-function calcIOB(treats) {
-  const dia = S.params.dia;
   const now = Date.now();
-  let iob = 0;
-  treats.forEach(t => {
-    const ins = t.insulin || 0;
-    if (!ins) return;
-    const age = (now - new Date(t.created_at || t.timestamp || t.date).getTime()) / 3600000;
-    if (age < dia) {
-      iob += ins * Math.max(0, 1 - age / dia);
-      if (!S.lastBolus || new Date(t.created_at || t.timestamp).getTime() > new Date(S.lastBolus.created_at || S.lastBolus.timestamp).getTime()) {
-        S.lastBolus = t;
-      }
+  const hoursMs = S.graphHours * 3600000;
+  const filtered = graphData.filter(d => (now - d.t) <= hoursMs);
+  if(filtered.length < 2) return;
+
+  const xOf = t => ((t - (now - hoursMs)) / hoursMs) * w;
+
+  // Gradient fill
+  const grad = graphCtx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, 'rgba(59,130,246,.3)');
+  grad.addColorStop(1, 'rgba(59,130,246,.02)');
+
+  graphCtx.beginPath();
+  graphCtx.moveTo(xOf(filtered[0].t), yOf(filtered[0].v));
+  for(let i=1;i<filtered.length;i++) {
+    graphCtx.lineTo(xOf(filtered[i].t), yOf(filtered[i].v));
+  }
+  graphCtx.lineTo(xOf(filtered[filtered.length-1].t), h);
+  graphCtx.lineTo(xOf(filtered[0].t), h);
+  graphCtx.closePath();
+  graphCtx.fillStyle = grad;
+  graphCtx.fill();
+
+  // Line
+  graphCtx.beginPath();
+  graphCtx.strokeStyle = '#60a5fa';
+  graphCtx.lineWidth = 2.5;
+  graphCtx.lineJoin = 'round';
+  graphCtx.moveTo(xOf(filtered[0].t), yOf(filtered[0].v));
+  for(let i=1;i<filtered.length;i++) {
+    graphCtx.lineTo(xOf(filtered[i].t), yOf(filtered[i].v));
+  }
+  graphCtx.stroke();
+
+  // Dots for out-of-range
+  filtered.forEach(d => {
+    if(d.v < S.low || d.v > S.high) {
+      graphCtx.beginPath();
+      graphCtx.arc(xOf(d.t), yOf(d.v), 4, 0, Math.PI*2);
+      graphCtx.fillStyle = d.v < S.low ? '#ef4444' : '#f59e0b';
+      graphCtx.fill();
     }
   });
-  S.ns.iob = +iob.toFixed(2);
-  document.getElementById('iob').textContent = S.ns.iob;
+
+  // Current dot
+  const last = filtered[filtered.length-1];
+  graphCtx.beginPath();
+  graphCtx.arc(xOf(last.t), yOf(last.v), 6, 0, Math.PI*2);
+  graphCtx.fillStyle = sgvColor(last.v);
+  graphCtx.fill();
+  graphCtx.strokeStyle = '#fff';
+  graphCtx.lineWidth = 2;
+  graphCtx.stroke();
 }
 
-function applyProfile(prof) {
-  const p = Array.isArray(prof) ? prof[0] : prof;
-  const st = p?.store?.Default || Object.values(p?.store || {})[0] || {};
-  S.params = {
-    icr: st.carbratio?.[0]?.value || S.params.icr,
-    isf: st.sens?.[0]?.value || S.params.isf,
-    tlo: st.target_low?.[0]?.value || S.params.tlo,
-    thi: st.target_high?.[0]?.value || S.params.thi,
-    basal: st.basal?.[0]?.value || S.params.basal,
-    dia: p?.dia || S.params.dia,
-  };
-  document.getElementById('pf-icr').value = S.params.icr + ' g/U';
-  document.getElementById('pf-isf').value = S.params.isf + ' mg/dL/U';
-  document.getElementById('pf-tlo').value = S.params.tlo;
-  document.getElementById('pf-thi').value = S.params.thi;
-  document.getElementById('pf-bas').value = S.params.basal + ' U/h';
-  document.getElementById('pf-dia').value = S.params.dia + 'h';
+function setTimeRange(h, btn) {
+  S.graphHours = h;
+  document.querySelectorAll('.time-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  drawGraph();
 }
 
-// ═══════════════════════════════════════════════════════
-//  GLUCOSE
-// ═══════════════════════════════════════════════════════
-const ARROWS = {
-  DoubleUp:'⬆⬆', SingleUp:'⬆', FortyFiveUp:'↗', Flat:'→',
-  FortyFiveDown:'↘', SingleDown:'⬇', DoubleDown:'⬇⬇',
-  'NOT COMPUTABLE':'?', 'RATE OUT OF RANGE':'~',
-};
-function renderGlucose() {
-  const sgv = S.ns.sgv;
-  const el = document.getElementById('gv');
-  if (!sgv) { el.textContent = '–'; return; }
+function sgvColor(v) {
+  if(v < S.low) return '#ef4444';
+  if(v <= S.high) return '#22c55e';
+  if(v <= 250) return '#f59e0b';
+  return '#ef4444';
+}
+
+function sgvClass(v) {
+  if(v < S.low) return 'low';
+  if(v <= S.high) return 'in-range';
+  if(v <= 250) return 'high';
+  return 'very-high';
+}
+
+// ── UPDATE UI ──
+function updateGlucoseUI(sgv, trend, time) {
+  const el = document.getElementById('glucose-val');
   el.textContent = sgv;
-  el.className = 'gh-value ' + (sgv < 70 ? 'crit' : sgv < 80 ? 'high' : sgv <= 180 ? 'ok' : sgv <= 250 ? 'high' : 'crit');
-  document.getElementById('garrow').textContent = ARROWS[S.ns.dir] || '→';
-  const delta = S.ns.delta || 0;
-  const deltaEl = document.getElementById('gdelta');
-  if (deltaEl) deltaEl.textContent = (delta > 0 ? '+' : '') + delta + ' mg/dL';
-  if (S.ns.t) {
-    const m = Math.round((Date.now() - S.ns.t.getTime()) / 60000);
-    document.getElementById('gt').textContent = `לפני ${m} דק׳`;
-  }
-
-  // Early intervention: 130-150
-  if (sgv >= 130 && sgv <= 150 && S.ns.dir && S.ns.dir.includes('Up')) {
-    addMsg('warn', `⚡ <b>התערבות מוקדמת:</b> סוכר ${sgv} ↗ – מומלץ לתקן עכשיו לפני שמגיע ל-200.`);
-  }
-  updatePod();
-  checkActivityAlert();
+  el.className = 'glucose-val ' + sgvClass(sgv);
+  document.getElementById('glucose-trend').textContent = trendArrow(trend);
+  const mins = Math.round((Date.now() - time)/60000);
+  document.getElementById('glucose-time').textContent = 
+    mins < 1 ? 'עכשיו' : `לפני ${mins} דק'`;
+  document.getElementById('badge-iob').textContent = S.iob.toFixed(1);
+  document.getElementById('badge-cob').textContent = S.cob;
+  checkResistance(sgv);
+  checkRule3Trigger(sgv);
+  updatePredictions(sgv, trend);
 }
 
-// ═══════════════════════════════════════════════════════
-//  TIR
-// ═══════════════════════════════════════════════════════
-function calcTIR(vals) {
-  const lo = S.params.tlo, hi = S.params.thi;
-  const t = vals.length;
-  const segments = [
-    { label:'<54', color:'#7F1D1D', count: vals.filter(v=>v<54).length },
-    { label:`54–${lo}`, color:'#EF4444', count: vals.filter(v=>v>=54&&v<lo).length },
-    { label:'יעד', color:'#22C55E', count: vals.filter(v=>v>=lo&&v<=hi).length },
-    { label:'גבוה', color:'#F97316', count: vals.filter(v=>v>hi&&v<=250).length },
-    { label:'>250', color:'#C2410C', count: vals.filter(v=>v>250).length },
-  ].map(s => ({ ...s, pct: Math.round(s.count/t*100) }));
-
-  const inRange = segments[2].pct;
-  document.getElementById('tir7').textContent = inRange;
-
-  const bar = document.getElementById('tir-bar');
-  const leg = document.getElementById('tir-leg');
-  bar.innerHTML = segments.map(s =>
-    `<div class="tir-seg" style="width:${s.pct}%;background:${s.color};min-width:${s.pct>5?'0':'0'}px">${s.pct>9?s.pct+'%':''}</div>`
-  ).join('');
-  leg.innerHTML = segments.map(s =>
-    `<div class="tir-leg"><div class="tir-dot" style="background:${s.color}"></div>${s.label}: ${s.pct}%</div>`
-  ).join('');
-  S._tirData = segments;
+function trendArrow(trend) {
+  const map = {
+    'DoubleUp':'↑↑', 'SingleUp':'↑', 'FortyFiveUp':'↗',
+    'Flat':'→', 'FortyFiveDown':'↘', 'SingleDown':'↓', 'DoubleDown':'↓↓',
+    'NOT COMPUTABLE':'?', 'RATE OUT OF RANGE':'⚡'
+  };
+  return map[trend] || trend || '→';
 }
 
-// ═══════════════════════════════════════════════════════
-//  BOLUS CALCULATOR
-// ═══════════════════════════════════════════════════════
-function calcBolus(carbs, foodType) {
-  const { icr, isf, tlo, thi, dia } = S.params;
-  const tgt = (tlo + thi) / 2;
-  const sgv = S.ns.sgv || tgt;
-  const iob = S.ns.iob || 0;
-  const dir = S.ns.dir || 'Flat';
+function updateIOB(iob) {
+  S.iob = iob;
+  document.getElementById('iob-val').textContent = iob.toFixed(2)+'U';
+  document.getElementById('iob-sub').textContent = `${(iob*60).toFixed(0)} דק' ספיגה נותרו`;
+  document.getElementById('iob-bar').style.width = Math.min(100, iob/5*100)+'%';
+  document.getElementById('badge-iob').textContent = iob.toFixed(1);
+}
 
-  let carbBolus = carbs / icr;
-  let corrBolus = (sgv - tgt) / isf;
+function updateCOB(cob) {
+  S.cob = cob;
+  document.getElementById('cob-val').textContent = cob+'ג\'';
+  document.getElementById('cob-sub').textContent = cob > 0 ? `~${Math.round(cob/0.5)} דק' ספיגה` : 'אין פחמימות פעילות';
+  document.getElementById('cob-bar').style.width = Math.min(100, cob/80*100)+'%';
+  document.getElementById('badge-cob').textContent = cob;
+}
 
-  // Arrow adjustment
-  if (dir.includes('Up')) corrBolus += 0.5 * (isf > 0 ? 10/isf : 0);
-  if (dir.includes('Down')) corrBolus -= 0.5 * (isf > 0 ? 10/isf : 0);
+function updateStats(avg, tir, basal, reservoir) {
+  document.getElementById('stat-tir').textContent = tir+'%';
+  document.getElementById('stat-avg').textContent = avg;
+  document.getElementById('stat-basal').textContent = basal+'U/h';
+  document.getElementById('stat-reservoir').textContent = reservoir+'U';
+  document.getElementById('dev-reservoir').textContent = reservoir+'U';
+  document.getElementById('dev-reservoir').className = 'db-val ' + (reservoir<30?'warn':reservoir<10?'crit':'ok');
+}
 
-  let total = carbBolus + corrBolus - iob;
-  let reductions = [];
+// ── PREDICTIONS ──
+function updatePredictions(sgv, trend) {
+  const trendRate = {
+    'DoubleUp':4,'SingleUp':2.5,'FortyFiveUp':1.5,
+    'Flat':0,'FortyFiveDown':-1.5,'SingleDown':-2.5,'DoubleDown':-4
+  }[trend] || 0;
 
-  // Activity reduction: upcoming within 2h
-  const act = actSoon();
-  if (act) {
-    const cut = Math.min(0.3, total * 0.2);
-    total -= cut;
-    reductions.push(`🏃 הפחתה לחוג "${act}": −${cut.toFixed(1)}U`);
-  }
-
-  // Pod new: 0-3h → reduce 15%
-  if (S.pod.at) {
-    const ageH = (Date.now() - new Date(S.pod.at).getTime()) / 3600000;
-    if (ageH < 3) {
-      const cut = total * 0.15;
-      total -= cut;
-      reductions.push(`🟠 פוד חדש (${ageH.toFixed(1)}h): −${cut.toFixed(1)}U`);
-    }
-  }
-
-  // Food type extended bolus note
-  let foodNote = '';
-  if (foodType === 'pasta' || foodType === 'burger') foodNote = '⚠️ ספיגה איטית (5h) – שקול/י מתן מפוצל 60/40';
-  else if (foodType === 'rice' || foodType === 'pita') foodNote = '🍚 ספיגה 3h – מעקב בשעה 2';
-
-  total = Math.max(0, +total.toFixed(1));
-  S.lastRec = { dose: total, carbs, time: new Date() };
-
-  const lines = [
-    `carb: ${carbs}g ÷ ${icr} = ${carbBolus.toFixed(2)}U`,
-    `תיקון: (${sgv}–${tgt}) ÷ ${isf} = ${corrBolus.toFixed(2)}U`,
-    `IOB: −${iob}U`,
-    ...reductions,
+  const preds = [
+    {min:15, val: Math.round(sgv + trendRate*15 - S.iob*S.isf_runtime*0.1)},
+    {min:30, val: Math.round(sgv + trendRate*30 - S.iob*S.isf_runtime*0.25)},
+    {min:60, val: Math.round(sgv + trendRate*60 - S.iob*S.isf_runtime*0.5)},
   ];
 
-  showRec(total, lines.join('\n'), foodNote || (act ? `⚠️ חוג בקרוב: ${act} – מינון הופחת` : ''));
-  return total;
-}
-
-function showRec(dose, detail, note) {
-  const el = document.getElementById('rec');
-  el.style.display = '';
-  document.getElementById('rec-dose').textContent = dose + 'U';
-  document.getElementById('rec-detail').textContent = detail;
-  const nEl = document.getElementById('rec-note');
-  if (note) { nEl.style.display = ''; nEl.textContent = note; }
-  else nEl.style.display = 'none';
-}
-
-function actSoon() {
-  const now = new Date();
-  const days = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-  const today = days[now.getDay()];
-  const nm = now.getHours()*60 + now.getMinutes();
-  for (const a of S.activities) {
-    if (a.day === today) {
-      const [h,m] = a.time.split(':').map(Number);
-      const d = h*60+m - nm;
-      if (d > 0 && d <= 120) return a.name;
-    }
-  }
-  return null;
-}
-
-function checkActivityAlert() {
-  const act = actSoon();
-  if (act) addMsg('warn', `⏰ חוג בקרוב: <b>${act}</b>. בולוס הארוחה יופחת אוטומטית.`);
-}
-
-// ═══════════════════════════════════════════════════════
-//  AUDIT
-// ═══════════════════════════════════════════════════════
-function checkAudit(treats) {
-  if (!S.lastRec) return;
-  const now = Date.now();
-  const recent = treats.find(t => {
-    if (!t.insulin) return false;
-    const age = (now - new Date(t.created_at || t.timestamp || t.date).getTime()) / 60000;
-    return age < 45;
-  });
-  const el = document.getElementById('audit');
-  if (!recent) return;
-  const diff = recent.insulin - S.lastRec.dose;
-  if (Math.abs(diff) > 0.5) {
-    el.style.display = '';
-    document.getElementById('audit-body').innerHTML =
-      `<div class="audit-row">המלצה: <b>${S.lastRec.dose}U</b> | בוצע: <b>${recent.insulin}U</b></div>
-       <div class="audit-row">פער: <b>${diff > 0 ? '+' : ''}${diff.toFixed(1)}U</b> — ${diff > 0 ? 'הוזרק יותר' : 'הוזרק פחות'} מהמומלץ</div>`;
-  } else {
-    el.style.display = 'none';
-  }
-}
-
-// ═══════════════════════════════════════════════════════
-//  POD
-// ═══════════════════════════════════════════════════════
-function updatePod() {
-  if (!S.pod.at) { document.getElementById('pod-age').textContent = '–'; return; }
-  const ageH = (Date.now() - new Date(S.pod.at).getTime()) / 3600000;
-  const h = Math.floor(ageH);
-  document.getElementById('pod-age').textContent = h + 'h';
-  document.getElementById('pod-h').textContent = h;
-  document.getElementById('pod-since').textContent = 'הוחלף: ' + new Date(S.pod.at).toLocaleString('he-IL');
-
-  const badge = document.getElementById('pod-badge');
-  const proto = document.getElementById('pod-proto');
-
-  if (ageH < 3) {
-    badge.className = 'pod-badge new'; badge.textContent = 'פוד חדש – הנעה';
-    const sgv = S.ns.sgv;
-    let hint = '';
-    if (sgv >= 250) hint = '🟠 הנעה: 0.3U דרך החץ הכתום';
-    else if (sgv >= 200) hint = '🟠 הנעה: 0.2U';
-    else if (sgv >= 160) hint = '🟠 הנעה: 0.1U';
-    else hint = '✅ סוכר תקין – המתן לייצוב';
-    proto.style.display = '';
-    proto.innerHTML = `<b>פרוטוקול פוד חדש (0–3h)</b><br>${hint}`;
-  } else if (ageH > 60) {
-    badge.className = 'pod-badge warn'; badge.textContent = 'פוד ישן';
-    proto.style.display = '';
-    proto.innerHTML = `<b>⚠️ פוד ישן (${h}h)</b> – שקול/י החלפה`;
-  } else {
-    badge.className = 'pod-badge ok'; badge.textContent = 'תקין';
-    proto.style.display = 'none';
-  }
-}
-
-// ═══════════════════════════════════════════════════════
-//  ACTIVITIES
-// ═══════════════════════════════════════════════════════
-function loadActivities() { S.activities = load('activities', []); renderActs(); }
-function addAct() {
-  const name = document.getElementById('an').value.trim();
-  if (!name) return;
-  S.activities.push({ name, day: document.getElementById('ad').value, time: document.getElementById('at').value, id: Date.now() });
-  save('activities', S.activities);
-  document.getElementById('an').value = '';
-  renderActs();
-}
-function delAct(id) {
-  S.activities = S.activities.filter(a => a.id !== id);
-  save('activities', S.activities);
-  renderActs();
-}
-function renderActs() {
-  const el = document.getElementById('act-list');
-  if (!S.activities.length) { el.innerHTML = '<div class="empty">אין חוגים. הוסף/י ידנית או ייבא/י מגוגל.</div>'; return; }
-  el.innerHTML = S.activities.map(a => `
-    <div class="act-item">
-      <div>
-        <div class="act-name">${a.name}</div>
-        <div class="act-meta">יום ${a.day} בשעה ${a.time}</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <span class="act-day">${a.day}</span>
-        <button class="del-btn" onclick="delAct(${a.id})">מחק</button>
-      </div>
-    </div>`).join('');
-}
-
-// ═══════════════════════════════════════════════════════
-//  GOOGLE CALENDAR IMPORT
-// ═══════════════════════════════════════════════════════
-function openGcal() {
-  const s = S.settings;
-  if (!s.calid || !s.calkey) {
-    addMsg('err', '⚠️ נא להגדיר Google Calendar ID ו-API Key בהגדרות.');
-    sw('settings');
-    return;
-  }
-  loadGcal();
-}
-async function loadGcal() {
-  const s = S.settings;
-  const now = new Date().toISOString();
-  const end = new Date(Date.now() + 14*24*3600000).toISOString();
-  try {
-    const r = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(s.calid)}/events?timeMin=${now}&timeMax=${end}&key=${s.calkey}&singleEvents=true&orderBy=startTime`);
-    const d = await r.json();
-    const evts = (d.items || []).filter(e => e.summary);
-    if (!evts.length) { addMsg('bot', '📅 לא נמצאו אירועים בשבועיים הקרובים.'); return; }
-    renderCalModal(evts);
-  } catch(e) {
-    addMsg('err', '⚠️ שגיאה ב-Google Calendar. בדוק/י הרשאות ו-API Key.');
-  }
-}
-function renderCalModal(evts) {
-  const el = document.getElementById('cal-list');
-  el._evts = evts;
-  el.innerHTML = evts.map((e,i) => {
-    const start = new Date(e.start?.dateTime || e.start?.date);
-    return `<div class="cal-item" id="ci${i}" onclick="togCal(${i})">
-      <input type="checkbox" id="cc${i}" onclick="event.stopPropagation();togCal(${i})">
-      <div>
-        <div class="cal-item-name">${e.summary}</div>
-        <div class="cal-item-meta">${start.toLocaleDateString('he-IL')} ${start.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}</div>
-      </div>
+  const html = preds.map(p => {
+    const cls = p.val > sgv ? 'rising' : p.val < sgv ? 'falling' : 'stable';
+    return `<div class="pred-row">
+      <span class="pred-time">+${p.min} דק'</span>
+      <span class="pred-val ${cls}">${Math.max(40,Math.min(400,p.val))} mg/dL</span>
     </div>`;
   }).join('');
-  document.getElementById('cal-modal').classList.add('open');
+  document.getElementById('predictions-content').innerHTML = html;
 }
-function togCal(i) {
-  const chk = document.getElementById('cc'+i);
-  chk.checked = !chk.checked;
-  document.getElementById('ci'+i).classList.toggle('sel', chk.checked);
-}
-function closeModal() { document.getElementById('cal-modal').classList.remove('open'); }
-function importCal() {
-  const el = document.getElementById('cal-list');
-  const evts = el._evts || [];
-  const dayMap = {0:'ראשון',1:'שני',2:'שלישי',3:'רביעי',4:'חמישי',5:'שישי',6:'שבת'};
-  let n = 0;
-  evts.forEach((e,i) => {
-    if (document.getElementById('cc'+i)?.checked) {
-      const s = new Date(e.start?.dateTime || e.start?.date);
-      S.activities.push({ name:e.summary, day:dayMap[s.getDay()], time:`${s.getHours().toString().padStart(2,'0')}:${s.getMinutes().toString().padStart(2,'0')}`, id:Date.now()+i });
-      n++;
+
+// ── RESISTANCE LOGIC ──
+function checkResistance(sgv) {
+  if(sgv > 180 && S.iob > 0.5) {
+    S.resistanceMinutes += 5;
+    if(S.resistanceMinutes >= 45) {
+      document.getElementById('resistance-card').classList.add('visible');
     }
-  });
-  save('activities', S.activities);
-  renderActs();
-  closeModal();
-  if (n) addMsg('ok', `✅ יובאו ${n} חוגים מ-Google Calendar.`);
-}
-
-// ═══════════════════════════════════════════════════════
-//  OMNIBOX
-// ═══════════════════════════════════════════════════════
-function sendOmni() {
-  const inp = document.getElementById('omni');
-  const txt = inp.value.trim();
-  if (!txt) return;
-  inp.value = '';
-  addMsg('user', txt);
-  processOmni(txt);
-}
-
-function processOmni(raw) {
-  const t = raw;
-  const lo = t.toLowerCase();
-
-  // ── Carbs with food type ──
-  const carbMatch = t.match(/(\d+)\s*(גרם|g|ג'|פחמ)/i);
-  if (carbMatch) {
-    const carbs = +carbMatch[1];
-    let ftype = '';
-    if (/פסט|המבורג/i.test(t)) ftype = 'pasta';
-    else if (/אורז|פית/i.test(t)) ftype = 'rice';
-    const dose = calcBolus(carbs, ftype);
-    addMsg('bot', `💉 <b>להזריק כעת: ${dose}U</b>\nסוכר: ${S.ns.sgv||'–'} | IOB: ${S.ns.iob}U | ${carbs}g פחמימות`);
-    return;
-  }
-
-  // ── Simple number = treat as carbs ──
-  const numMatch = t.match(/^(\d+)$/);
-  if (numMatch) {
-    const dose = calcBolus(+numMatch[1], '');
-    addMsg('bot', `💉 <b>להזריק: ${dose}U</b> לפי ${numMatch[1]}g פחמימות`);
-    return;
-  }
-
-  // ── Pod changed ──
-  if (/פוד הוחלף|החלפת פוד|pod change|פוד חדש/i.test(t)) {
-    S.pod.at = new Date();
-    save('pod', S.pod.at.toISOString());
-    updatePod();
-    addMsg('ok', '🟠 פוד חדש נרשם! פרוטוקול הנעה פעיל ל-3 שעות.');
-    return;
-  }
-
-  // ── Cancel activity ──
-  if (/בטל חוג|ביטול חוג/i.test(t)) {
-    const act = S.activities[0];
-    addMsg(act ? 'ok' : 'bot', act ? `✅ חוג "${act.name}" בוטל. מעבר לאסטרטגיה רגילה.` : 'אין חוגים פעילים לביטול.');
-    return;
-  }
-
-  // ── Add activity via omni ──
-  const actM = t.match(/הוסף חוג (.+?) (?:ביום )?(\S+) (?:בשעה )?(\d{1,2}:\d{2})/);
-  if (actM) {
-    S.activities.push({ name:actM[1], day:actM[2], time:actM[3], id:Date.now() });
-    save('activities', S.activities);
-    renderActs();
-    addMsg('ok', `✅ חוג "${actM[1]}" נוסף ל-${actM[2]} בשעה ${actM[3]}.`);
-    return;
-  }
-
-  // ── Reports ──
-  if (/דוח|tir|autotune|שבועי/i.test(t)) { sw('reports'); addMsg('bot','📈 מעבר לדוחות...'); return; }
-
-  // ── Override guide ──
-  if (/איך עושים|override|אוברייד/i.test(t)) {
-    addMsg('bot', `📱 <b>Override באייפון:</b><br>1. פתח/י Loop<br>2. ⚙️ → Override Presets<br>3. 🟢 Sport / 💙 Low<br>4. הגדר/י משך → Enable<br>או: לחץ/י על המדד הנוכחי → Override`);
-    return;
-  }
-
-  // ── Status ──
-  if (/מצב|סיכום|status/i.test(t)) {
-    addMsg('bot', `📊 סוכר: ${S.ns.sgv||'–'} | IOB: ${S.ns.iob}U | TIR: ${document.getElementById('tir7').textContent}% | פוד: ${document.getElementById('pod-age').textContent}`);
-    return;
-  }
-
-  // ── Activity question (after reduced bolus) ──
-  if (/הפסקה|לא יצא|לא הלך/i.test(t)) {
-    addMsg('warn', '📌 אם לא יצא להפסקה – הסוכר עשוי לעלות. שקול/י תיקון קטן של 0.5U.');
-    return;
-  }
-
-  addMsg('bot', `🤔 לא הבנתי. נסה/י:<br>"45 גרם" • "45 גרם פסטה" • "פוד הוחלף" • "הוסף חוג כדורגל שלישי 16:00" • "בטל חוג" • "דוח" • "איך עושים?"`);
-}
-
-function addMsg(type, html) {
-  const area = document.getElementById('chat');
-  const d = document.createElement('div');
-  d.className = 'msg ' + type;
-  d.innerHTML = html.replace(/\n/g,'<br>');
-  area.appendChild(d);
-  area.scrollTop = area.scrollHeight;
-  // Keep only last 30 messages
-  while (area.children.length > 30) area.removeChild(area.firstChild);
-}
-
-// ═══════════════════════════════════════════════════════
-//  REPORTS
-// ═══════════════════════════════════════════════════════
-function renderReports() {
-  const at = document.getElementById('autotune');
-  const { icr, isf, basal, dia } = S.params;
-  at.textContent = [
-    `Loopie v25.3 — Autotune Report`,
-    `Date: ${new Date().toLocaleDateString('he-IL')}`,
-    `──────────────────────────────────`,
-    `Basal:   ${basal} U/h`,
-    `ICR:     ${icr} g/U`,
-    `ISF:     ${isf} mg/dL/U`,
-    `DIA:     ${dia} h`,
-    `──────────────────────────────────`,
-    `TIR(7d): ${document.getElementById('tir7').textContent}%`,
-    `Avg BG:  ${document.getElementById('avg24').textContent} mg/dL`,
-    `Pod age: ${document.getElementById('pod-age').textContent}`,
-    `──────────────────────────────────`,
-    `Source: Nightscout live data`,
-    `Run full Autotune via oref0 for`,
-    `parameter optimization.`,
-  ].join('\n');
-}
-
-// ═══════════════════════════════════════════════════════
-//  ML ENGINE
-// ═══════════════════════════════════════════════════════
-let ML_PENDING = [
-  { id:'m1', type:'tact', title:'ICR ארוחת ערב', body:'מגמה של 3 ימים: סוכר גבוה אחרי ארוחת ערב. מומלץ להפחית ICR ל-8g/U לסעודה זו.' },
-  { id:'m2', type:'strat', title:'ISF – בדיקה דו-שבועית', body:'ISF נוכחי (50) מייצר תיקון איטי. ניסיון: ISF=45 לשבועיים עם מעקב.' },
-];
-function renderML() {
-  const el = document.getElementById('ml-list');
-  if (!ML_PENDING.length) { el.innerHTML = '<div class="empty">אין המלצות כרגע. המנוע אוסף נתונים...</div>'; return; }
-  el.innerHTML = ML_PENDING.map(m => `
-    <div class="ml-card" id="ml-${m.id}">
-      <span class="ml-badge ${m.type}">${m.type==='tact'?'⚡ טקטי':'🔭 אסטרטגי'}</span>
-      <div class="ml-title">${m.title}</div>
-      <div class="ml-text">${m.body}</div>
-      <div class="ml-btns">
-        <button class="ml-yes" onclick="mlYes('${m.id}')">✓ אשר</button>
-        <button class="ml-no" onclick="mlNo('${m.id}')">✗ דחה</button>
-      </div>
-    </div>`).join('');
-}
-function mlYes(id) {
-  const c = document.getElementById('ml-'+id);
-  c.querySelector('.ml-btns').innerHTML = '<span style="color:var(--green);font-size:12px;font-weight:600">✅ אושר – ברירת מחדל עודכנה</span>';
-  c.style.opacity = '.6';
-}
-function mlNo(id) {
-  const c = document.getElementById('ml-'+id);
-  c.querySelector('.ml-btns').innerHTML = '<span style="color:var(--text3);font-size:12px">דחיתי</span>';
-  c.style.opacity = '.4';
-}
-function runML(vals) {
-  // Analyze last 3 days evening highs
-  // (stub – real implementation would segment by hour)
-}
-
-// ═══════════════════════════════════════════════════════
-//  PROFILE
-// ═══════════════════════════════════════════════════════
-function renderProfile() {
-  const p = S.profile;
-  document.getElementById('pf-name').value = p.name || '';
-  document.getElementById('pf-dob').value = p.dob || '';
-  document.getElementById('pf-h').value = p.height ? p.height + ' ס"מ' : '';
-  document.getElementById('pf-w').value = p.weight ? p.weight + ' ק"ג' : '';
-}
-
-// ═══════════════════════════════════════════════════════
-//  BIRTHDAY
-// ═══════════════════════════════════════════════════════
-function checkBirthday() {
-  const dob = S.profile.dob;
-  if (!dob) return;
-  const today = new Date();
-  const d = new Date(dob);
-  if (today.getMonth() === d.getMonth() && today.getDate() === d.getDate()) {
-    const banner = document.getElementById('bday-banner');
-    banner.style.display = 'block';
-    banner.textContent = `🎂 יום הולדת שמח, ${S.profile.name}! 🎉`;
-    setTimeout(() => banner.style.display = 'none', 10000);
+  } else {
+    S.resistanceMinutes = 0;
+    document.getElementById('resistance-card').classList.remove('visible');
   }
 }
 
-// ═══════════════════════════════════════════════════════
-//  INIT
-// ═══════════════════════════════════════════════════════
-(function init() {
-  S.profile  = load('profile',    {});
-  S.settings = load('settings',   {});
-  S.activities = load('activities', []);
-  if (S.profile.name) launch();
-})();
+function manualCorrection() {
+  const correction = ((S.currentSgv - S.target) / S.isf_runtime).toFixed(1);
+  showToast(`תיקון ידני מומלץ: ${correction}U – אשר עם הרופא`, 'info');
+  addLog(`המלצת תיקון ידני ${correction}U (עמידות לאינסולין)`, 'orange', '🟠');
+}
+
+// ── RULE OF 3 ──
+let rule3Active = false;
+function checkRule3Trigger(sgv) {
+  if(sgv > 130 && sgv < 200 && S.cob > 0 && !rule3Active) {
+    rule3Active = true;
+    const carbs = 15;
+    const insulin = (carbs / S.cr_runtime).toFixed(1);
+    document.getElementById('r3-carbs').textContent = carbs+'ג\'';
+    document.getElementById('r3-insulin').textContent = insulin+'U';
+    document.getElementById('r3-absorb').textContent = '90 דק\'';
+    document.getElementById('r3-note').innerHTML = 
+      `🤖 המלצת הלופ: ${(insulin*0.8).toFixed(1)}U · IOB נוכחי: ${S.iob.toFixed(1)}U · מיקרו-בולוסים ≈${(S.iob*0.25).toFixed(2)}U בשעה`;
+    document.getElementById('rule3-card').classList.add('visible');
+  }
+  if(sgv <= 110 || sgv > 200) {
+    rule3Active = false;
+    document.getElementById('rule3-card').classList.remove('visible');
+  }
+}
+
+function closeRule3() {
+  document.getElementById('rule3-card').classList.remove('visible');
+  rule3Active = false;
+}
+
+// ── FOOD SPLIT (חוק ה-3 phase 1) ──
+function showFoodSplit(foodName, totalCarbs) {
+  const now70 = Math.round(totalCarbs * 0.7);
+  const later30 = totalCarbs - now70;
+  const insulinNow = (now70 / S.cr_runtime).toFixed(1);
+  const insulinLater = (later30 / S.cr_runtime).toFixed(1);
+
+  document.getElementById('split-now-insulin').textContent = insulinNow+'U';
+  document.getElementById('split-now-carbs').textContent = `על ${now70}ג' (70%)`;
+  document.getElementById('split-later-insulin').textContent = insulinLater+'U';
+  document.getElementById('split-later-carbs').textContent = `${later30}ג' (30%)`;
+  document.getElementById('food-split').classList.add('visible');
+
+  // Start 20-min countdown
+  S.waitSeconds = 20 * 60;
+  if(S.foodWaitTimer) clearInterval(S.foodWaitTimer);
+  S.foodWaitTimer = setInterval(() => {
+    S.waitSeconds--;
+    const m = Math.floor(S.waitSeconds/60), sec = S.waitSeconds%60;
+    document.getElementById('wait-timer').textContent = `${m}:${sec.toString().padStart(2,'0')}`;
+    if(S.waitSeconds <= 0) {
+      clearInterval(S.foodWaitTimer);
+      document.getElementById('wait-timer').textContent = '✅ זמן!';
+      showNotification('⏰ Loopie', `זמן להשלמת הארוחה! ${later30}ג' פחמימות`);
+    }
+  }, 1000);
+  document.getElementById('wait-timer').textContent = '20:00';
+
+  addLog(`ארוחה: ${foodName} ${totalCarbs}ג' | עכשיו ${insulinNow}U / אח"כ ${insulinLater}U`, 'blue', '🍽️');
+}
+
+function closeFoodSplit() {
+  document.getElementById('food-split').classList.remove('visible');
+  if(S.foodWaitTimer) { clearInterval(S.foodWaitTimer); S.foodWaitTimer=null; }
+}
+
+// ── OMNIBOX ──
+function omniSearch(val) {
+  const res = document.getElementById('omni-results');
+  if(!val || val.length < 2) { res.classList.remove('open'); return; }
+
+  // Parse: "פיתה 50" → food + grams
+  const parts = val.match(/^(.+?)\s*(\d+(?:\.\d+)?)?\s*$/);
+  const query = parts ? parts[1].trim().toLowerCase() : val.toLowerCase();
+  const grams = parts && parts[2] ? parseFloat(parts[2]) : null;
+
+  const matches = FOODS.filter(f => f.name.includes(query) || query.includes(f.name.split(' ')[0])).slice(0, 6);
+
+  if(matches.length === 0) { res.classList.remove('open'); return; }
+
+  res.innerHTML = matches.map(f => {
+    const carbs = grams ? Math.round(f.per100 * grams / 100) : '—';
+    return `<div class="omni-result" onclick="selectFood('${f.name}',${grams||100},${f.per100})">
+      <span class="food-name">${f.name}${grams?' '+grams+'ג\'':''}</span>
+      <span class="food-carbs">${carbs !== '—' ? carbs+'ג\' פחמ\'': f.per100+'ג\'/100'}</span>
+    </div>`;
+  }).join('');
+  res.classList.add('open');
+}
+
+function omniKey(e) {
+  if(e.key==='Escape') {
+    document.getElementById('omni-results').classList.remove('open');
+    document.getElementById('omnibox').value='';
+  }
+}
+
+function selectFood(name, grams, per100) {
+  const carbs = Math.round(per100 * grams / 100);
+  document.getElementById('omni-results').classList.remove('open');
+  document.getElementById('omnibox').value = '';
+  showFoodSplit(name+' '+grams+'ג\'', carbs);
+}
+
+// ── NS FETCH ──
+async function fetchNSData() {
+  if(!S.ns_url) return;
+  try {
+    const headers = { 'Accept':'application/json' };
+    if(S.ns_secret_sha1) headers['api-secret'] = S.ns_secret_sha1;
+
+    const [sgvRes, propRes] = await Promise.all([
+      fetch(`${S.ns_url}/api/v1/entries.json?count=100&token=`, {headers}),
+      fetch(`${S.ns_url}/api/v1/devicestatus.json?count=1`, {headers})
+    ]);
+
+    if(!sgvRes.ok) throw new Error('HTTP '+sgvRes.status);
+
+    const entries = await sgvRes.json();
+    if(entries && entries.length) {
+      graphData = entries.map(e => ({t: e.date, v: e.sgv})).reverse();
+      const latest = entries[0];
+      S.currentSgv = latest.sgv;
+      updateGlucoseUI(latest.sgv, latest.direction, latest.date);
+    }
+
+    if(propRes.ok) {
+      const devStatus = await propRes.json();
+      if(devStatus && devStatus[0]) {
+        const d = devStatus[0];
+        const loop = d.loop || d.openaps || {};
+        const iob = loop.iob?.iob ?? loop.enacted?.IOB ?? 0;
+        const cob = loop.cob?.cob ?? loop.enacted?.COB ?? 0;
+        const basal = loop.enacted?.rate ?? d.pump?.extended?.TempBasalAbsoluteRate ?? 0;
+        const res = d.pump?.reservoir ?? d.pump?.status?.reservoir ?? 0;
+        updateIOB(parseFloat(iob)||0);
+        updateCOB(parseFloat(cob)||0);
+        updateStats(calcAvg(), calcTIR(), (parseFloat(basal)||0).toFixed(2), Math.round(res));
+
+        // Pod / Sensor ages
+        const pod = d.pump?.reservoir_display_override || 
+          (d.pump?.pumpAge ? Math.round(d.pump.pumpAge/3600)+'h' : '--');
+        document.getElementById('dev-pod').textContent = pod;
+        document.getElementById('dev-sensor').textContent = 
+          d.uploader?.battery ? d.uploader.battery+'%' : '--';
+      }
+    }
+
+    setConnected(true);
+    document.getElementById('ns-conn-dot').className = 'conn-dot ok';
+    document.getElementById('ns-conn-text').textContent = 'מחובר';
+
+  } catch(e) {
+    setConnected(false);
+    document.getElementById('ns-conn-dot').className = 'conn-dot err';
+    document.getElementById('ns-conn-text').textContent = 'שגיאת חיבור: '+e.message;
+    console.warn('NS fetch error:', e);
+  }
+}
+
+function calcAvg() {
+  if(!graphData.length) return '--';
+  const last24 = graphData.filter(d => Date.now()-d.t < 86400000);
+  return last24.length ? Math.round(last24.reduce((a,d)=>a+d.v,0)/last24.length) : '--';
+}
+
+function calcTIR() {
+  if(!graphData.length) return '--';
+  const last24 = graphData.filter(d => Date.now()-d.t < 86400000);
+  if(!last24.length) return '--';
+  const inRange = last24.filter(d => d.v >= S.low && d.v <= S.high).length;
+  return Math.round(inRange/last24.length*100);
+}
+
+function setConnected(ok) {
+  S.connected = ok;
+  const dot = document.getElementById('conn-dot');
+  dot.className = 'conn-indicator' + (ok?' connected':' error');
+}
+
+// ── PUSHER ──
+let pusherInstance = null;
+function initPusher() {
+  if(!S.pusher_key || !S.pusher_cluster) return;
+  // Dynamically load Pusher
+  const s = document.createElement('script');
+  s.src = 'https://js.pusher.com/8.2.0/pusher.min.js';
+  s.onload = () => {
+    try {
+      pusherInstance = new Pusher(S.pusher_key, { cluster: S.pusher_cluster });
+      const channel = pusherInstance.subscribe('nightscout');
+      channel.bind('glucose', data => handlePusherGlucose(data));
+      document.getElementById('pusher-conn-dot').className='conn-dot ok';
+      document.getElementById('pusher-conn-text').textContent='Pusher מחובר';
+    } catch(e) {
+      document.getElementById('pusher-conn-dot').className='conn-dot err';
+      document.getElementById('pusher-conn-text').textContent='שגיאת Pusher';
+    }
+  };
+  document.head.appendChild(s);
+}
+
+function handlePusherGlucose(data) {
+  if(!data || !data.sgv) return;
+  S.currentSgv = data.sgv;
+  graphData.push({t:Date.now(), v:data.sgv});
+  updateGlucoseUI(data.sgv, data.direction||'Flat', Date.now());
+  if(data.sgv < S.low) showNotification('⚠️ סוכר נמוך!', `${data.sgv} mg/dL – צלצל!`);
+  else if(data.sgv > S.high) showNotification('⬆️ סוכר גבוה', `${data.sgv} mg/dL`);
+}
+
+// ── WEB NOTIFICATIONS ──
+function requestNotifPerms() {
+  if('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+function showNotification(title, body) {
+  if('Notification' in window && Notification.permission === 'granted') {
+    new Notification(title, { body, icon: '' });
+  } else {
+    showToast(`${title}: ${body}`, 'info');
+  }
+}
+
+// ── SIMULATION (when not connected to real NS) ──
+let simRunning = false;
+function startSimulation() {
+  if(simRunning) return;
+  simRunning = true;
+  // Seed with test value from the prompt (00:35, SGV 216)
+  let sgv = 216, iob = 0.2+0.6, cob = 45;
+  S.currentSgv = sgv;
+
+  const update = () => {
+    if(S.connected) return; // real data takes over
+
+    // Physics: basal 0.6U + bolus 0.2U vs pizza absorption
+    const insulinEffect = -(iob * 0.8 + 0.6 * 0.15); // rough drop
+    const carbEffect = cob > 0 ? (cob * 0.03) : 0;
+    const delta = insulinEffect + carbEffect + (Math.random()-0.5)*3;
+    sgv = Math.max(60, Math.min(400, sgv + delta));
+    iob = Math.max(0, iob - 0.05);
+    cob = Math.max(0, cob - 2);
+
+    const now = Date.now();
+    graphData.push({t:now, v:Math.round(sgv)});
+    if(graphData.length > 288) graphData.shift();
+
+    S.currentSgv = Math.round(sgv);
+    const dir = delta > 1?'SingleUp':delta < -1?'SingleDown':'Flat';
+    updateGlucoseUI(Math.round(sgv), dir, now);
+    updateIOB(parseFloat(iob.toFixed(2)));
+    updateCOB(Math.round(cob));
+    updateStats(calcAvg(), calcTIR(), 0.6, 180);
+    drawGraph();
+  };
+
+  // Immediate first tick
+  update();
+  setInterval(update, 5*60*1000); // every 5 min like CGM
+  // For demo – faster ticks
+  setInterval(() => { if(!S.connected) { drawGraph(); } }, 30000);
+}
+
+// ── SETTINGS ──
+function openSettings() {
+  document.getElementById('settings-panel').classList.add('open');
+}
+function closeSettings() {
+  document.getElementById('settings-panel').classList.remove('open');
+}
+function switchSettingsTab(id, btn) {
+  document.querySelectorAll('.s-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.s-section').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('s-'+id).classList.add('active');
+}
+
+function saveNS() {
+  S.ns_url = document.getElementById('cfg-ns-url').value.trim().replace(/\/$/,'');
+  S.ns_secret = document.getElementById('cfg-ns-secret').value.trim();
+  S.ns_secret_sha1 = S.ns_secret ? sha1(S.ns_secret) : '';
+  saveConfig();
+  showToast('הגדרות NS נשמרו', 'success');
+  fetchNSData();
+  if(S.timer) clearInterval(S.timer);
+  S.timer = setInterval(fetchNSData, 5*60*1000);
+}
+
+function savePusher() {
+  S.pusher_key = document.getElementById('cfg-pusher-key').value.trim();
+  S.pusher_cluster = document.getElementById('cfg-pusher-cluster').value.trim();
+  saveConfig();
+  showToast('הגדרות Pusher נשמרו', 'success');
+  if(S.pusher_key && S.pusher_cluster) initPusher();
+}
+
+function saveGCloud() {
+  const secret = document.getElementById('cfg-gcloud-secret').value.trim();
+  if(!secret) return;
+  const hashed = sha1(secret);
+  showToast(`SHA1: ${hashed.substring(0,12)}... נשמר`, 'success');
+  // Store hashed header
+  localStorage.setItem('loopie_gcloud_sha1', hashed);
+}
+
+function saveTherapy() {
+  S.isf = parseInt(document.getElementById('cfg-isf').value)||50;
+  S.cr = parseInt(document.getElementById('cfg-cr').value)||10;
+  S.low = parseInt(document.getElementById('cfg-low').value)||70;
+  S.high = parseInt(document.getElementById('cfg-high').value)||180;
+  S.target = parseInt(document.getElementById('cfg-target').value)||110;
+  S.isf_runtime = S.isf; S.cr_runtime = S.cr;
+  saveConfig();
+  showToast('פרמטרים נשמרו', 'success');
+  addLog(`פרמטרים עודכנו: ISF=${S.isf}, CR=${S.cr}`, 'info', '⚙️');
+}
+
+// ── LOG ──
+function addLog(msg, type, icon='•') {
+  const el = document.getElementById('event-log');
+  const now = new Date();
+  const t = now.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+  const colors = {info:''green':'var(--green)','orange':'var(--orange)','blue':'var(--blue-light)','red':'var(--red)'};
+  const color = colors[type]||'var(--text)';
+  const div = document.createElement('div');
+  div.className = 'log-entry';
+  div.innerHTML = `<span class="log-time">${t}</span>
+    <span class="log-desc">${icon} ${msg}</span>
+    <span class="log-val" style="color:${color}"></span>`;
+  el.insertBefore(div, el.firstChild);
+  if(el.children.length > 20) el.removeChild(el.lastChild);
+}
+
+// ── TOAST ──
+function showToast(msg, type='info') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = 'toast '+type;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity .4s'; setTimeout(()=>t.remove(),400); }, 3000);
+}
+
+// ── INIT ──
+loadConfig();
+requestNotifPerms();
+
+// Click outside omnibox
+document.addEventListener('click', e => {
+  if(!e.target.closest('.omnibox-wrapper')) {
+    document.getElementById('omni-results').classList.remove('open');
+  }
+});
+
+if(S.role && S.name && S.dob) {
+  document.getElementById('identity-overlay').classList.add('hidden');
+  launchApp();
+} else {
+  // Show identity overlay
+}
+
+// Auto-refresh NS every 5 min if configured
+if(S.ns_url) {
+  S.timer = setInterval(fetchNSData, 5*60*1000);
+}
 </script>
 </body>
 </html>
