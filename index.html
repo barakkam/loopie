@@ -2,1979 +2,1761 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Loopie v28.4</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+Hebrew:wght@300;400;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loopie v25.04 – Medical Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans+Hebrew:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* ════════════════════════════════════════
-   LOOPIE v28.4 — DESIGN SYSTEM
-   Aesthetic: Medical-grade dark precision
-   ════════════════════════════════════════ */
 :root {
-  --bg:        #0d0d0f;
-  --bg2:       #141418;
-  --bg3:       #1c1c22;
-  --bg4:       #242430;
-  --surface:   #1a1a20;
-  --border:    rgba(255,255,255,.08);
-  --border2:   rgba(255,255,255,.13);
-  --text:      #f0f0f4;
-  --text2:     #9090a0;
-  --text3:     #50505e;
-  --blue:      #3b82f6;
-  --blue-d:    #1d4ed8;
-  --blue-l:    #93c5fd;
-  --blue-glow: rgba(59,130,246,.18);
-  --green:     #22c55e;
-  --green-d:   #15803d;
-  --yellow:    #fbbf24;
-  --orange:    #f97316;
-  --red:       #ef4444;
-  --purple:    #a78bfa;
-  --mono:      'IBM Plex Mono', monospace;
-  --sans:      'Noto Sans Hebrew', 'Segoe UI', Arial, sans-serif;
-  --r:         10px;
-  --r-lg:      16px;
-  --r-xl:      22px;
-  --shadow:    0 8px 40px rgba(0,0,0,.7);
-  --shadow-sm: 0 2px 12px rgba(0,0,0,.5);
+  --bg: #0a0a0f;
+  --bg2: #111118;
+  --bg3: #1a1a24;
+  --bg4: #22222f;
+  --border: #2a2a3a;
+  --border2: #363648;
+  --accent: #3d7eff;
+  --accent2: #5b9aff;
+  --accent-glow: rgba(61,126,255,0.18);
+  --green: #00d97e;
+  --green-dim: rgba(0,217,126,0.13);
+  --yellow: #f5c842;
+  --yellow-dim: rgba(245,200,66,0.13);
+  --orange: #ff7a30;
+  --orange-dim: rgba(255,122,48,0.13);
+  --red: #ff4060;
+  --red-dim: rgba(255,64,96,0.13);
+  --purple: #a259ff;
+  --text: #e8e8f0;
+  --text2: #9090aa;
+  --text3: #55556a;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans Hebrew', sans-serif;
+  --r: 10px;
+  --r2: 16px;
+  --shadow: 0 4px 32px rgba(0,0,0,0.55);
 }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--sans);
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+/* SPLASH / ONBOARDING */
+#splash{
+  position:fixed;inset:0;background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:9999;transition:opacity .5s;
+}
+.splash-logo{
+  width:90px;height:90px;margin-bottom:24px;
+  animation:float 3s ease-in-out infinite;
+}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.splash-title{font-size:2.2rem;font-weight:700;letter-spacing:.02em;color:var(--text);margin-bottom:4px}
+.splash-ver{font-family:var(--mono);font-size:.75rem;color:var(--accent);margin-bottom:36px}
+.splash-card{
+  background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r2);
+  padding:32px 36px;width:min(420px,92vw);
+  box-shadow:var(--shadow),0 0 60px var(--accent-glow);
+}
+.splash-step{display:none}
+.splash-step.active{display:block}
+.splash-label{font-size:.8rem;color:var(--text2);margin-bottom:8px;font-weight:500}
+.splash-input{
+  width:100%;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;
+  color:var(--text);font-family:var(--sans);font-size:.95rem;padding:11px 14px;outline:none;
+  transition:border-color .2s;margin-bottom:14px;
+}
+.splash-input:focus{border-color:var(--accent)}
+.splash-select{
+  width:100%;background:var(--bg4);border:1px solid var(--border2);border-radius:8px;
+  color:var(--text);font-family:var(--sans);font-size:.95rem;padding:11px 14px;outline:none;
+  margin-bottom:14px;appearance:none;cursor:pointer;
+}
+.role-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:18px}
+.role-btn{
+  border:1px solid var(--border2);border-radius:10px;background:var(--bg4);
+  color:var(--text2);padding:16px 8px;cursor:pointer;text-align:center;transition:all .2s;
+  font-family:var(--sans);
+}
+.role-btn:hover{border-color:var(--accent);color:var(--text);background:var(--accent-glow)}
+.role-btn.selected{border-color:var(--accent);background:var(--accent-glow);color:var(--accent)}
+.role-icon{font-size:1.6rem;display:block;margin-bottom:6px}
+.role-name{font-size:.8rem;font-weight:600}
+.btn-primary{
+  width:100%;background:var(--accent);color:#fff;border:none;border-radius:8px;
+  padding:13px;font-size:1rem;font-weight:600;cursor:pointer;font-family:var(--sans);
+  transition:background .2s,box-shadow .2s;margin-top:4px;
+}
+.btn-primary:hover{background:var(--accent2);box-shadow:0 0 20px var(--accent-glow)}
+.btn-ghost{
+  width:100%;background:transparent;color:var(--text2);border:1px solid var(--border2);
+  border-radius:8px;padding:11px;font-size:.9rem;cursor:pointer;font-family:var(--sans);
+  transition:all .2s;margin-top:8px;
+}
+.btn-ghost:hover{border-color:var(--accent);color:var(--text)}
+.ns-row{display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:14px}
+.ns-row .splash-input{margin-bottom:0}
+.ns-test-btn{
+  background:var(--bg4);border:1px solid var(--border2);border-radius:8px;color:var(--text2);
+  padding:0 14px;cursor:pointer;font-size:.85rem;white-space:nowrap;transition:all .2s;font-family:var(--sans);
+}
+.ns-test-btn:hover{border-color:var(--green);color:var(--green)}
+.ns-status{font-family:var(--mono);font-size:.75rem;margin-bottom:12px;min-height:16px}
+.ns-ok{color:var(--green)}.ns-err{color:var(--red)}
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* MAIN APP */
+#app{display:none;flex-direction:column;min-height:100vh}
+/* TOPBAR */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  background:rgba(10,10,15,.92);backdrop-filter:blur(18px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:12px;padding:0 20px;height:56px;
+}
+.topbar-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.topbar-logo svg{width:34px;height:34px}
+.topbar-name{font-size:1.1rem;font-weight:700;color:var(--text);letter-spacing:.01em}
+.topbar-ver{font-family:var(--mono);font-size:.65rem;color:var(--accent);margin-right:-4px}
+.topbar-spacer{flex:1}
+.topbar-user{
+  display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--text2);
+  cursor:pointer;padding:6px 10px;border-radius:8px;transition:background .2s;
+}
+.topbar-user:hover{background:var(--bg3)}
+.user-dot{width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;color:#fff}
+.topbar-ns-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.topbar-btn{
+  background:transparent;border:1px solid var(--border2);border-radius:8px;
+  color:var(--text2);padding:6px 12px;font-size:.8rem;cursor:pointer;font-family:var(--sans);
+  transition:all .2s;display:flex;align-items:center;gap:5px;
+}
+.topbar-btn:hover{border-color:var(--accent);color:var(--accent)}
 
-html { font-size: 16px; }
+/* MAIN LAYOUT */
+.main-content{flex:1;padding:20px;max-width:1100px;margin:0 auto;width:100%}
 
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--sans);
-  min-height: 100vh;
-  overflow-x: hidden;
-  -webkit-font-smoothing: antialiased;
+/* GLUCOSE HERO */
+.glucose-hero{
+  display:grid;grid-template-columns:auto 1fr;gap:24px;
+  background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);
+  padding:24px;margin-bottom:18px;align-items:center;
+  position:relative;overflow:hidden;
 }
+.glucose-hero::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 0% 50%,var(--accent-glow) 0%,transparent 60%);
+  pointer-events:none;
+}
+.glucose-val{
+  font-family:var(--mono);font-size:4.5rem;font-weight:600;line-height:1;
+  color:var(--green);text-shadow:0 0 30px var(--green);
+  transition:color .5s,text-shadow .5s;
+}
+.glucose-val.high{color:var(--orange);text-shadow:0 0 30px rgba(255,122,48,.5)}
+.glucose-val.low{color:var(--red);text-shadow:0 0 30px rgba(255,64,96,.5)}
+.glucose-val.target{color:var(--green);text-shadow:0 0 30px rgba(0,217,126,.5)}
+.glucose-trend{font-size:2rem;margin-right:8px;display:inline-block}
+.glucose-meta{display:flex;flex-direction:column;gap:4px}
+.glucose-label{font-size:.75rem;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em}
+.glucose-time{font-family:var(--mono);font-size:.8rem;color:var(--text2)}
+.glucose-delta{font-family:var(--mono);font-size:.85rem;color:var(--text2);margin-top:4px}
+.glucose-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px}
+.stat-box{
+  background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);
+  padding:14px 16px;
+}
+.stat-label{font-size:.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-family:var(--mono);margin-bottom:4px}
+.stat-val{font-size:1.2rem;font-weight:600;font-family:var(--mono);color:var(--text)}
+.stat-unit{font-size:.7rem;color:var(--text2)}
 
-/* ── UTILS ── */
-.hidden { display: none !important; }
-.mono { font-family: var(--mono); }
+/* ALERTS */
+.alert-bar{
+  display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;
+}
+.alert-pill{
+  display:flex;align-items:center;gap:8px;
+  border-radius:999px;padding:8px 16px;font-size:.82rem;font-weight:500;
+  cursor:pointer;transition:all .2s;border:1px solid transparent;
+}
+.alert-pill.orange{background:var(--orange-dim);color:var(--orange);border-color:rgba(255,122,48,.25)}
+.alert-pill.red{background:var(--red-dim);color:var(--red);border-color:rgba(255,64,96,.25)}
+.alert-pill.yellow{background:var(--yellow-dim);color:var(--yellow);border-color:rgba(245,200,66,.25)}
+.alert-pill.green{background:var(--green-dim);color:var(--green);border-color:rgba(0,217,126,.25)}
 
-/* ── ANIMATIONS ── */
-@keyframes fadeUp {
-  from { opacity:0; transform:translateY(20px); }
-  to   { opacity:1; transform:translateY(0); }
+/* OMNIBOX */
+.omnibox-section{margin-bottom:18px}
+.omnibox-wrap{
+  background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);
+  padding:16px;transition:border-color .2s,box-shadow .2s;
 }
-@keyframes fadeIn {
-  from { opacity:0; }
-  to   { opacity:1; }
+.omnibox-wrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-glow)}
+.omnibox-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.omnibox-title{font-size:.8rem;color:var(--text2);font-weight:500}
+.omnibox-quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.quick-chip{
+  background:var(--bg4);border:1px solid var(--border);border-radius:8px;
+  padding:6px 12px;font-size:.8rem;cursor:pointer;color:var(--text2);
+  transition:all .2s;white-space:nowrap;
 }
-@keyframes pulse {
-  0%,100% { opacity:1; }
-  50%      { opacity:.4; }
+.quick-chip:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-glow)}
+.omnibox-input{
+  width:100%;background:transparent;border:none;color:var(--text);
+  font-family:var(--sans);font-size:1rem;padding:4px 0;outline:none;
+  placeholder-color:var(--text3);
 }
-@keyframes spin {
-  to { transform:rotate(360deg); }
+.omnibox-input::placeholder{color:var(--text3)}
+.omnibox-footer{display:flex;justify-content:space-between;align-items:center;margin-top:10px;gap:8px;flex-wrap:wrap}
+.omnibox-hint{font-family:var(--mono);font-size:.72rem;color:var(--text3)}
+.omnibox-actions{display:flex;gap:8px}
+.ob-btn{
+  background:var(--bg4);border:1px solid var(--border);border-radius:8px;
+  color:var(--text2);padding:7px 14px;font-size:.82rem;cursor:pointer;
+  font-family:var(--sans);transition:all .2s;
 }
-@keyframes slideRight {
-  from { transform:translateX(100%); opacity:0; }
-  to   { transform:translateX(0);    opacity:1; }
-}
-@keyframes glow {
-  0%,100% { box-shadow: 0 0 0 0 var(--blue-glow); }
-  50%      { box-shadow: 0 0 0 8px transparent; }
-}
+.ob-btn:hover{border-color:var(--accent);color:var(--accent)}
+.ob-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.ob-btn.primary:hover{background:var(--accent2)}
 
-/* ══════════════════════════════════════════
-   ONBOARDING OVERLAY
-   ══════════════════════════════════════════ */
-#onboarding {
-  position: fixed; inset: 0; z-index: 1000;
-  background: var(--bg);
-  display: flex; align-items: center; justify-content: center;
-  padding: 20px;
+/* SUGGESTIONS */
+.suggest-drop{
+  background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);
+  margin-top:6px;overflow:hidden;display:none;
 }
+.suggest-drop.open{display:block}
+.suggest-item{
+  display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;
+  transition:background .15s;border-bottom:1px solid var(--border);
+}
+.suggest-item:last-child{border-bottom:none}
+.suggest-item:hover{background:var(--bg4)}
+.si-emoji{font-size:1.2rem;width:24px}
+.si-name{font-size:.88rem;color:var(--text);flex:1}
+.si-meta{font-family:var(--mono);font-size:.72rem;color:var(--text2);text-align:left}
 
-.ob-wrap {
-  width: 100%; max-width: 460px;
-  animation: fadeUp .5s cubic-bezier(.16,1,.3,1);
+/* GRID PANELS */
+.panels-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+@media(max-width:700px){.panels-grid{grid-template-columns:1fr}}
+.panel{
+  background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);padding:18px;
 }
+.panel-title{
+  font-size:.78rem;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;
+  font-family:var(--mono);margin-bottom:14px;display:flex;align-items:center;gap:6px;
+}
+.panel-title span{color:var(--accent)}
 
-/* Logo */
-.ob-logo {
-  display: flex; align-items: center; justify-content: center;
-  gap: 14px; margin-bottom: 36px;
+/* LOOPY RECOMMENDATION */
+.rec-box{
+  background:linear-gradient(135deg,var(--bg3),var(--bg4));
+  border:1px solid var(--accent);border-radius:var(--r2);padding:18px;margin-bottom:18px;
+  position:relative;overflow:hidden;
 }
-.ob-logo svg { width: 44px; height: 50px; }
-.ob-logo-text h1 {
-  font-size: 1.9rem; font-weight: 700; letter-spacing: -.5px; color: var(--text);
+.rec-box::after{
+  content:'';position:absolute;top:0;right:0;width:180px;height:180px;
+  background:radial-gradient(circle,var(--accent-glow) 0%,transparent 70%);
+  pointer-events:none;
 }
-.ob-logo-text span {
-  font-size: .7rem; color: var(--blue); font-family: var(--mono); font-weight: 600;
-  letter-spacing: 2px; text-transform: uppercase;
+.rec-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.rec-icon{font-size:1.4rem}
+.rec-label{font-size:.85rem;font-weight:600;color:var(--accent)}
+.rec-badge{
+  background:var(--accent);color:#fff;font-size:.65rem;font-family:var(--mono);
+  padding:2px 8px;border-radius:999px;margin-right:auto;
 }
+.rec-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.rec-item{
+  background:rgba(0,0,0,.3);border-radius:var(--r);padding:12px 14px;
+  border:1px solid var(--border2);
+}
+.rec-item-label{font-size:.7rem;color:var(--text3);margin-bottom:4px;font-family:var(--mono)}
+.rec-item-val{font-size:1.4rem;font-weight:700;color:var(--text);font-family:var(--mono)}
+.rec-item-unit{font-size:.75rem;color:var(--text2);margin-right:2px}
+.rec-compare{
+  font-size:.78rem;color:var(--text2);background:var(--bg3);border-radius:8px;
+  padding:8px 12px;display:flex;justify-content:space-between;align-items:center;
+}
+.compare-loopy{color:var(--accent);font-weight:600}
+.compare-loop{color:var(--text3)}
 
-/* Step card */
-.ob-card {
-  background: var(--bg2);
-  border: 1px solid var(--border2);
-  border-radius: var(--r-xl);
-  padding: 32px;
-  box-shadow: var(--shadow);
-}
+/* MINI CHART */
+.mini-chart{position:relative;height:80px;margin:8px 0}
+.chart-svg{width:100%;height:100%}
+.chart-line{fill:none;stroke:var(--accent);stroke-width:1.5;stroke-linecap:round}
+.chart-area{fill:url(#chartGrad);opacity:.3}
+.target-line{stroke:var(--green);stroke-width:1;stroke-dasharray:3,3;opacity:.4}
 
-.ob-step { display: none; }
-.ob-step.active { display: block; animation: fadeIn .3s ease; }
+/* DEBT TRACKER */
+.debt-bar-wrap{margin-bottom:10px}
+.debt-info{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.75rem;color:var(--text2);margin-bottom:5px}
+.debt-bar{height:6px;background:var(--bg4);border-radius:3px;overflow:hidden}
+.debt-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--purple));transition:width .5s}
 
-.ob-step-title {
-  font-size: 1.1rem; font-weight: 600;
-  margin-bottom: 6px; color: var(--text);
+/* FOOD LOG */
+.food-entry{
+  display:flex;align-items:center;gap:10px;padding:9px 0;
+  border-bottom:1px solid var(--border);
 }
-.ob-step-sub {
-  font-size: .85rem; color: var(--text2); margin-bottom: 24px;
-  line-height: 1.6;
+.food-entry:last-child{border-bottom:none}
+.fe-emoji{font-size:1.1rem;width:22px}
+.fe-info{flex:1}
+.fe-name{font-size:.85rem;color:var(--text)}
+.fe-time{font-family:var(--mono);font-size:.7rem;color:var(--text3)}
+.fe-carbs{font-family:var(--mono);font-size:.82rem;color:var(--yellow);font-weight:600}
+.fe-abs{
+  font-size:.7rem;color:var(--text3);font-family:var(--mono);
+  padding:2px 7px;background:var(--bg4);border-radius:999px;
 }
+.fe-status{width:8px;height:8px;border-radius:50%;background:var(--green)}
+.fe-status.active{background:var(--yellow);animation:pulse 1.5s infinite}
 
-/* Role buttons */
-.role-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;
+/* MODAL */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);
+  z-index:1000;display:none;align-items:center;justify-content:center;padding:20px;
 }
-.role-btn {
-  background: var(--bg3);
-  border: 2px solid var(--border2);
-  border-radius: var(--r-lg);
-  padding: 22px 16px;
-  cursor: pointer;
-  transition: border-color .2s, background .2s, transform .1s;
-  color: var(--text); font-family: var(--sans);
-  text-align: center;
+.modal-overlay.open{display:flex}
+.modal{
+  background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);
+  padding:28px;width:min(480px,96vw);position:relative;
+  box-shadow:var(--shadow),0 0 80px var(--accent-glow);animation:slideUp .25s ease-out;
 }
-.role-btn:hover { background: var(--bg4); }
-.role-btn:active { transform: scale(.97); }
-.role-btn.selected {
-  border-color: var(--blue);
-  background: var(--blue-glow);
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-close{
+  position:absolute;top:16px;left:16px;background:var(--bg4);border:1px solid var(--border);
+  border-radius:6px;color:var(--text2);padding:4px 10px;cursor:pointer;font-size:.8rem;
+  font-family:var(--sans);transition:all .2s;
 }
-.role-btn .ri { font-size: 2.2rem; display: block; margin-bottom: 10px; }
-.role-btn .rl { font-size: .9rem; font-weight: 600; }
-.role-btn .rs { font-size: .75rem; color: var(--text2); margin-top: 3px; }
+.modal-close:hover{border-color:var(--red);color:var(--red)}
+.modal-title{font-size:1.15rem;font-weight:700;margin-bottom:18px;color:var(--text)}
+.modal-section{margin-bottom:14px}
+.modal-section-label{font-size:.75rem;color:var(--text3);font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.modal-val{font-family:var(--mono);font-size:1.6rem;font-weight:700;color:var(--text)}
+.law3-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px}
+.law3-item{
+  background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);
+  padding:14px 10px;text-align:center;
+}
+.law3-num{font-family:var(--mono);font-size:1.6rem;font-weight:700;color:var(--accent);display:block}
+.law3-label{font-size:.7rem;color:var(--text2);margin-top:3px;display:block}
 
-/* Form field */
-.field { margin-bottom: 16px; }
-.field label {
-  display: block; font-size: .78rem; color: var(--text2);
-  margin-bottom: 6px; font-weight: 500; letter-spacing: .3px;
+/* TABS */
+.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border)}
+.tab-btn{
+  padding:9px 16px;font-size:.84rem;font-weight:500;color:var(--text2);cursor:pointer;
+  background:transparent;border:none;border-bottom:2px solid transparent;
+  margin-bottom:-1px;font-family:var(--sans);transition:all .2s;
 }
-.field input, .field select {
-  width: 100%;
-  background: var(--bg3);
-  border: 1px solid var(--border2);
-  border-radius: var(--r);
-  padding: 12px 14px;
-  color: var(--text); font-family: var(--sans); font-size: .95rem;
-  outline: none;
-  transition: border-color .2s, box-shadow .2s;
-  appearance: none; -webkit-appearance: none;
-}
-.field input:focus, .field select:focus {
-  border-color: var(--blue);
-  box-shadow: 0 0 0 3px var(--blue-glow);
-}
-.field input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(.6); cursor: pointer;
-}
-.field input.valid { border-color: var(--green); }
-.field input.invalid { border-color: var(--red); }
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
 
-/* Buttons */
-.btn {
-  display: block; width: 100%;
-  padding: 13px; border: none; border-radius: var(--r);
-  font-family: var(--sans); font-size: .95rem; font-weight: 600;
-  cursor: pointer; transition: all .2s; position: relative;
-  overflow: hidden;
-}
-.btn-primary {
-  background: var(--blue); color: #fff;
-}
-.btn-primary:hover { background: var(--blue-d); }
-.btn-primary:disabled {
-  background: var(--bg4); color: var(--text3);
-  cursor: not-allowed;
-}
-.btn-primary:not(:disabled):active { transform: scale(.98); }
-.btn-ghost {
-  background: var(--bg3); color: var(--text2);
-  border: 1px solid var(--border2);
-  margin-top: 10px;
-}
-.btn-ghost:hover { color: var(--text); border-color: var(--border2); }
+/* PROFILE */
+.profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.profile-item{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:14px}
+.pi-label{font-size:.7rem;color:var(--text3);font-family:var(--mono);margin-bottom:4px}
+.pi-val{font-size:1rem;font-weight:600;color:var(--text)}
 
-/* Progress dots */
-.ob-dots {
-  display: flex; justify-content: center; gap: 8px; margin-top: 24px;
+/* TOAST */
+.toast-container{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:2000;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{
+  background:var(--bg3);border:1px solid var(--border2);border-radius:999px;
+  padding:10px 22px;font-size:.85rem;color:var(--text);
+  box-shadow:var(--shadow);animation:toastIn .3s ease-out;
+  pointer-events:all;
 }
-.ob-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--border2); transition: background .3s, width .3s;
-}
-.ob-dot.active { background: var(--blue); width: 20px; border-radius: 3px; }
+@keyframes toastIn{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.toast.green{border-color:var(--green);color:var(--green)}
+.toast.orange{border-color:var(--orange);color:var(--orange)}
+.toast.red{border-color:var(--red);color:var(--red)}
 
-/* Error msg */
-.field-error { font-size: .75rem; color: var(--red); margin-top: 5px; display: none; }
-.field-error.show { display: block; }
+/* BIRTHDAY */
+#birthdayOverlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:5000;
+  display:none;align-items:center;justify-content:center;flex-direction:column;
+  animation:fadeIn .5s;
+}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.bday-emoji{font-size:5rem;animation:bounce 1s infinite}
+@keyframes bounce{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.bday-text{font-size:1.8rem;font-weight:700;color:var(--text);margin:16px 0 8px}
+.bday-sub{color:var(--text2);font-size:1rem;margin-bottom:24px}
 
-/* ══════════════════════════════════════════
-   BIRTHDAY MODAL
-   ══════════════════════════════════════════ */
-#bday-modal {
-  position: fixed; inset: 0; z-index: 2000;
-  background: rgba(0,0,0,.85);
-  display: flex; align-items: center; justify-content: center;
-  backdrop-filter: blur(6px);
-  animation: fadeIn .3s ease;
-}
-.bday-card {
-  background: linear-gradient(135deg, #0f0c29, #1a1040, #0d0d1a);
-  border: 1px solid #6366f1;
-  border-radius: var(--r-xl);
-  padding: 40px 36px;
-  max-width: 380px; width: 92%;
-  text-align: center;
-  box-shadow: 0 0 60px rgba(99,102,241,.3);
-  animation: fadeUp .4s ease;
-}
-.bday-emojis { font-size: 2.8rem; margin-bottom: 14px; letter-spacing: 6px; }
-.bday-name { font-size: 1.5rem; font-weight: 700; color: #a5b4fc; margin-bottom: 10px; }
-.bday-msg { color: var(--text2); line-height: 1.7; font-size: .9rem; margin-bottom: 24px; }
+/* RESISTANCE INDICATOR */
+.resistance-meter{display:flex;align-items:center;gap:10px;padding:10px 0}
+.rm-bar{flex:1;height:8px;background:var(--bg4);border-radius:4px;overflow:hidden}
+.rm-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--green),var(--yellow),var(--orange),var(--red));transition:width .5s}
+.rm-label{font-family:var(--mono);font-size:.72rem;color:var(--text2);min-width:60px;text-align:left}
 
-/* ══════════════════════════════════════════
-   MAIN APP
-   ══════════════════════════════════════════ */
-#app { display: flex; flex-direction: column; min-height: 100vh; }
+/* PATIENT SIMPLE VIEW */
+.patient-hero{text-align:center;padding:40px 20px}
+.patient-glucose-big{font-family:var(--mono);font-size:6rem;font-weight:700;line-height:1;margin-bottom:8px}
+.patient-trend{font-size:3rem}
+.patient-instruction{
+  margin:28px auto;max-width:340px;
+  background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r2);padding:20px;
+  font-size:1.05rem;line-height:1.6;color:var(--text);
+}
+.patient-instruction strong{color:var(--accent)}
 
-/* ── HEADER ── */
-header {
-  background: var(--bg2);
-  border-bottom: 1px solid var(--border);
-  height: 54px;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 16px;
-  position: sticky; top: 0; z-index: 200;
-}
-.h-left { display: flex; align-items: center; gap: 10px; }
-.h-left svg { width: 24px; height: 28px; flex-shrink: 0; }
-.h-title { font-size: 1.05rem; font-weight: 700; }
-.h-ver { font-size: .65rem; font-family: var(--mono); color: var(--blue); letter-spacing: 1px; margin-top: 1px; }
-.h-right { display: flex; align-items: center; gap: 8px; }
-.h-badge {
-  font-size: .72rem; font-weight: 600;
-  background: var(--blue-glow); color: var(--blue-l);
-  border: 1px solid rgba(59,130,246,.3);
-  border-radius: 20px; padding: 3px 10px;
-}
-.h-name { font-size: .82rem; color: var(--text2); }
-.conn-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--text3); transition: all .4s;
-  flex-shrink: 0;
-}
-.conn-dot.ok { background: var(--green); box-shadow: 0 0 6px var(--green); }
-.conn-dot.err { background: var(--red); animation: pulse 2s infinite; }
-.conn-dot.connecting { background: var(--yellow); animation: pulse 1s infinite; }
-.icon-btn {
-  width: 34px; height: 34px; border-radius: var(--r);
-  border: 1px solid var(--border2);
-  background: none; cursor: pointer; color: var(--text2);
-  display: flex; align-items: center; justify-content: center;
-  font-size: .95rem; transition: all .2s;
-}
-.icon-btn:hover { border-color: var(--blue); color: var(--blue-l); }
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 
-/* ── MAIN CONTENT ── */
-main {
-  flex: 1; max-width: 960px; width: 100%;
-  margin: 0 auto; padding: 14px 12px 32px;
-  display: flex; flex-direction: column; gap: 12px;
+/* INVITE */
+.invite-box{
+  background:var(--bg3);border:1px dashed var(--border2);border-radius:var(--r);
+  padding:14px;display:flex;gap:10px;align-items:center;
 }
+.invite-url{flex:1;font-family:var(--mono);font-size:.75rem;color:var(--text2);word-break:break-all}
+.invite-copy{background:var(--bg4);border:1px solid var(--border);border-radius:6px;color:var(--text2);padding:5px 12px;font-size:.78rem;cursor:pointer;font-family:var(--sans);transition:all .2s;white-space:nowrap}
+.invite-copy:hover{border-color:var(--green);color:var(--green)}
 
-/* ── PATIENT VIEW (minimal) ── */
-#view-patient { display: none; }
-#view-patient.active { display: flex; flex-direction: column; gap: 12px; }
+/* hidden helpers */
+.hidden{display:none!important}
 
-.patient-hero {
-  text-align: center; padding: 32px 20px 20px;
-}
-.patient-sgv {
-  font-size: 5rem; font-weight: 700; font-family: var(--mono);
-  line-height: 1; transition: color .4s;
-}
-.patient-sgv.low    { color: var(--red); }
-.patient-sgv.ok     { color: var(--green); }
-.patient-sgv.high   { color: var(--yellow); }
-.patient-sgv.vhigh  { color: var(--red); }
-.patient-trend  { font-size: 2rem; margin-top: 6px; }
-.patient-meta   { font-size: .82rem; color: var(--text2); margin-top: 6px; }
-
-/* ── PARENT VIEW (full dashboard) ── */
-#view-parent { display: none; }
-#view-parent.active { display: flex; flex-direction: column; gap: 12px; }
-
-/* ── OMNIBOX ── */
-.omnibox-wrap { position: relative; }
-.omnibox {
-  width: 100%;
-  background: var(--bg2);
-  border: 1.5px solid var(--border2);
-  border-radius: var(--r-lg);
-  padding: 14px 18px 14px 50px;
-  font-family: var(--sans); font-size: 1rem; color: var(--text);
-  outline: none; transition: border-color .2s, box-shadow .2s;
-}
-.omnibox:focus { border-color: var(--blue); box-shadow: 0 0 0 3px var(--blue-glow); }
-.omnibox::placeholder { color: var(--text3); }
-.omni-icon {
-  position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
-  color: var(--text3); font-size: 1.1rem; pointer-events: none;
-}
-.omni-results {
-  position: absolute; top: calc(100% + 6px); left: 0; right: 0;
-  background: var(--bg2); border: 1px solid var(--border2);
-  border-radius: var(--r-lg); z-index: 300;
-  max-height: 320px; overflow-y: auto; display: none;
-  box-shadow: var(--shadow);
-}
-.omni-results.open { display: block; animation: fadeUp .2s ease; }
-.omni-item {
-  padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;
-  cursor: pointer; border-bottom: 1px solid var(--border);
-  transition: background .15s;
-}
-.omni-item:last-child { border-bottom: none; }
-.omni-item:hover { background: var(--bg3); }
-.omni-item .fn { font-weight: 500; font-size: .9rem; }
-.omni-item .fc { font-size: .8rem; color: var(--blue-l); font-family: var(--mono); }
-
-/* ── GLUCOSE CARD ── */
-.glucose-card {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--r-xl); padding: 18px; position: relative; overflow: hidden;
-}
-.glucose-card::after {
-  content: ''; position: absolute; top: -30px; left: -30px;
-  width: 160px; height: 160px;
-  background: radial-gradient(circle, var(--blue-glow) 0%, transparent 70%);
-  pointer-events: none;
-}
-.gc-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
-.gc-val-row { display: flex; align-items: baseline; gap: 8px; }
-.gc-val {
-  font-size: 3.4rem; font-weight: 700; font-family: var(--mono);
-  line-height: 1; transition: color .3s;
-}
-.gc-val.low   { color: var(--red); }
-.gc-val.ok    { color: var(--green); }
-.gc-val.high  { color: var(--yellow); }
-.gc-val.vhigh { color: var(--red); }
-.gc-trend { font-size: 1.9rem; }
-.gc-unit  { font-size: .78rem; color: var(--text2); margin-top: 5px; }
-.gc-time  { font-size: .75rem; color: var(--text3); margin-top: 2px; font-family: var(--mono); }
-
-.gc-badges { display: flex; flex-wrap: wrap; gap: 6px; }
-.badge {
-  display: flex; align-items: center; gap: 5px;
-  background: var(--bg3); border: 1px solid var(--border2);
-  border-radius: 20px; padding: 4px 10px;
-  font-size: .76rem; color: var(--text2);
-}
-.badge.ok   { border-color: rgba(34,197,94,.3); color: var(--green); }
-.badge.warn { border-color: rgba(249,115,22,.3); color: var(--orange); }
-.badge.info { border-color: rgba(59,130,246,.3); color: var(--blue-l); }
-
-.gc-stats {
-  display: grid; grid-template-columns: repeat(4,1fr); gap: 10px;
-  padding-top: 14px; border-top: 1px solid var(--border); margin-top: 4px;
-}
-.gs-item { text-align: center; }
-.gs-val { font-size: 1.05rem; font-weight: 700; font-family: var(--mono); }
-.gs-label { font-size: .68rem; color: var(--text3); margin-top: 3px; text-transform: uppercase; letter-spacing: .3px; }
-
-/* ── GRAPH ── */
-.graph-card {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--r-xl); padding: 14px; overflow: hidden;
-}
-.graph-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.graph-title { font-size: .78rem; color: var(--text2); font-weight: 500; text-transform: uppercase; letter-spacing: .5px; }
-.time-tabs { display: flex; gap: 4px; }
-.tt {
-  padding: 3px 10px; border-radius: 6px; font-size: .72rem;
-  border: 1px solid var(--border2); background: none; color: var(--text2);
-  cursor: pointer; font-family: var(--sans); transition: all .15s;
-}
-.tt.active { background: var(--blue); border-color: var(--blue); color: #fff; }
-#chart { width: 100%; height: 130px; display: block; }
-
-/* ── PANELS ── */
-.panels { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.panel {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--r-lg); padding: 14px;
-}
-.panel-label { font-size: .7rem; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
-.panel-val { font-size: 1.9rem; font-weight: 700; font-family: var(--mono); }
-.panel-sub { font-size: .75rem; color: var(--text2); margin-top: 4px; }
-.mini-bar { height: 4px; background: var(--bg3); border-radius: 2px; margin-top: 10px; overflow: hidden; }
-.mini-bar-fill { height: 100%; border-radius: 2px; transition: width .6s ease; }
-
-/* ── DEVICES ── */
-.devices { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
-.dev-card {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 12px; text-align: center;
-}
-.dev-icon { font-size: 1.3rem; margin-bottom: 5px; }
-.dev-label { font-size: .68rem; color: var(--text3); text-transform: uppercase; letter-spacing: .3px; }
-.dev-val { font-size: .85rem; font-weight: 600; margin-top: 3px; font-family: var(--mono); }
-.dev-val.ok   { color: var(--green); }
-.dev-val.warn { color: var(--orange); }
-.dev-val.crit { color: var(--red); }
-
-/* ── PREDICTION ── */
-.pred-card {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: var(--r-lg); padding: 14px;
-}
-.pred-card .panel-label { margin-bottom: 10px; }
-.pred-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); }
-.pred-row:last-child { border-bottom: none; }
-.pred-time { font-size: .8rem; color: var(--text2); }
-.pred-val  { font-size: .85rem; font-weight: 600; font-family: var(--mono); }
-.pred-val.up   { color: var(--yellow); }
-.pred-val.down { color: var(--green); }
-.pred-val.flat { color: var(--blue-l); }
-
-/* ── ALERT CARDS ── */
-.alert-card {
-  border-radius: var(--r-lg); padding: 16px;
-  animation: fadeUp .3s ease; display: none;
-}
-.alert-card.show { display: block; }
-.alert-card.rule3 { background: #1a1200; border: 1.5px solid var(--yellow); }
-.alert-card.resist { background: #180d00; border: 1.5px solid var(--orange); }
-.alert-card.split { background: var(--bg2); border: 1.5px solid var(--blue); }
-
-.ac-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.ac-title { font-size: .92rem; font-weight: 600; }
-.ac-close { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 1.1rem; padding: 2px 6px; border-radius: 4px; }
-.ac-close:hover { color: var(--text); background: var(--bg3); }
-
-.ac-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 10px; }
-.ac-item { text-align: center; }
-.ac-val { font-size: 1.4rem; font-weight: 700; font-family: var(--mono); }
-.ac-label { font-size: .7rem; color: var(--text2); margin-top: 3px; }
-
-.ac-note {
-  font-size: .8rem; color: var(--text2); line-height: 1.6;
-  padding-top: 10px; border-top: 1px solid rgba(255,255,255,.06);
-}
-
-.split-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-.split-box {
-  background: var(--bg3); border-radius: var(--r); padding: 12px; text-align: center;
-}
-.split-box .sb-lbl { font-size: .72rem; color: var(--text2); margin-bottom: 6px; }
-.split-box .sb-val { font-size: 1.5rem; font-weight: 700; font-family: var(--mono); color: var(--blue-l); }
-.split-box .sb-sub { font-size: .7rem; color: var(--text3); margin-top: 3px; }
-
-.wait-strip {
-  background: var(--blue-glow);
-  border: 1px solid rgba(59,130,246,.3);
-  border-radius: var(--r); padding: 10px 14px;
-  display: flex; align-items: center; gap: 10px;
-  font-size: .82rem; color: var(--blue-l);
-}
-.wait-countdown { font-family: var(--mono); font-weight: 600; font-size: 1rem; margin-right: auto; }
-
-/* Resist inline */
-.resist-row { display: flex; align-items: center; gap: 12px; }
-.resist-row .ri { font-size: 1.4rem; flex-shrink: 0; }
-.resist-text h4 { font-size: .88rem; color: var(--orange); margin-bottom: 3px; }
-.resist-text p  { font-size: .76rem; color: var(--text2); }
-.resist-btn {
-  margin-right: auto; flex-shrink: 0;
-  background: var(--orange); border: none; border-radius: 8px;
-  padding: 7px 14px; color: #fff; font-size: .82rem; font-weight: 600;
-  cursor: pointer; font-family: var(--sans);
-}
-.resist-btn:hover { background: #ea6709; }
-
-/* ── LOG ── */
-.log-section .panel-label { margin-bottom: 8px; }
-.log-entry {
-  display: flex; align-items: center; gap: 10px;
-  padding: 9px 12px; background: var(--bg2);
-  border: 1px solid var(--border); border-radius: var(--r);
-  margin-bottom: 5px; font-size: .84rem;
-}
-.log-icon { font-size: .95rem; flex-shrink: 0; }
-.log-desc { flex: 1; }
-.log-time { font-size: .72rem; color: var(--text3); font-family: var(--mono); white-space: nowrap; }
-
-/* ══════════════════════════════════════════
-   SETTINGS DRAWER
-   ══════════════════════════════════════════ */
-#settings-backdrop {
-  position: fixed; inset: 0; z-index: 500;
-  background: rgba(0,0,0,.6); backdrop-filter: blur(4px);
-  display: none;
-}
-#settings-backdrop.open { display: block; }
-#settings-drawer {
-  position: fixed; top: 0; left: 0; bottom: 0; z-index: 501;
-  width: 360px; max-width: 95vw;
-  background: var(--bg2); border-right: 1px solid var(--border2);
-  display: flex; flex-direction: column;
-  transform: translateX(-100%); transition: transform .3s cubic-bezier(.16,1,.3,1);
-  overflow: hidden;
-}
-#settings-drawer.open { transform: translateX(0); animation: slideRight .3s ease; }
-.sd-header {
-  padding: 18px 20px; border-bottom: 1px solid var(--border);
-  display: flex; justify-content: space-between; align-items: center;
-}
-.sd-header h2 { font-size: 1rem; font-weight: 600; }
-.sd-tabs {
-  display: flex; border-bottom: 1px solid var(--border);
-  overflow-x: auto; flex-shrink: 0;
-}
-.sd-tab {
-  padding: 10px 16px; font-size: .8rem; color: var(--text2);
-  background: none; border: none; cursor: pointer; font-family: var(--sans);
-  border-bottom: 2px solid transparent; margin-bottom: -1px;
-  white-space: nowrap; transition: color .2s;
-}
-.sd-tab.active { color: var(--blue-l); border-bottom-color: var(--blue); }
-.sd-body { flex: 1; overflow-y: auto; padding: 20px; }
-.sd-section { display: none; }
-.sd-section.active { display: block; }
-.sd-section h4 {
-  font-size: .72rem; color: var(--text3); text-transform: uppercase;
-  letter-spacing: .5px; margin-bottom: 14px; margin-top: 20px;
-}
-.sd-section h4:first-child { margin-top: 0; }
-.sd-row { margin-bottom: 14px; }
-.sd-row label { display: block; font-size: .8rem; color: var(--text2); margin-bottom: 5px; }
-.sd-row input {
-  width: 100%; background: var(--bg3); border: 1px solid var(--border2);
-  border-radius: var(--r); padding: 10px 12px; color: var(--text);
-  font-size: .9rem; font-family: var(--sans); outline: none;
-  transition: border-color .2s;
-}
-.sd-row input:focus { border-color: var(--blue); }
-.sd-conn-status {
-  display: flex; align-items: center; gap: 8px;
-  font-size: .8rem; color: var(--text2);
-  background: var(--bg3); border-radius: var(--r); padding: 8px 12px; margin-top: 8px;
-}
-.sd-conn-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); }
-.sd-conn-dot.ok  { background: var(--green); }
-.sd-conn-dot.err { background: var(--red); }
-
-/* ── TOAST ── */
-#toasts {
-  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-  display: flex; flex-direction: column-reverse; align-items: center; gap: 8px;
-  z-index: 999; pointer-events: none;
-}
-.toast {
-  background: var(--bg3); border: 1px solid var(--border2);
-  border-radius: 10px; padding: 10px 18px; font-size: .86rem;
-  box-shadow: var(--shadow); animation: fadeUp .3s ease;
-  pointer-events: auto; max-width: 320px; text-align: center;
-}
-.toast.s { border-color: rgba(34,197,94,.4); color: var(--green); }
-.toast.e { border-color: rgba(239,68,68,.4); color: var(--red); }
-.toast.i { border-color: rgba(59,130,246,.4); color: var(--blue-l); }
-
-/* Scrollbar */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
-
-/* ── RESPONSIVE ── */
-@media (max-width: 580px) {
-  .panels { grid-template-columns: 1fr; }
-  .gc-stats { grid-template-columns: repeat(2,1fr); }
-  .devices { grid-template-columns: repeat(2,1fr); }
-  .ac-grid { grid-template-columns: 1fr 1fr; }
-  .role-grid { grid-template-columns: 1fr; }
-  #settings-drawer { width: 100%; }
+/* Viewer badge */
+.viewer-banner{
+  background:var(--yellow-dim);border:1px solid rgba(245,200,66,.25);
+  border-radius:8px;padding:8px 14px;font-size:.8rem;color:var(--yellow);
+  margin-bottom:14px;display:flex;align-items:center;gap:8px;
 }
 </style>
 </head>
 <body>
 
-<!-- ══════════════════════════════════════
-     ONBOARDING
-══════════════════════════════════════ -->
-<div id="onboarding">
-  <div class="ob-wrap">
+<!-- ===== ONBOARDING ===== -->
+<div id="splash">
+  <svg class="splash-logo" viewBox="0 0 90 90" fill="none">
+    <defs>
+      <linearGradient id="shieldGrad" x1="0" y1="0" x2="90" y2="90" gradientUnits="userSpaceOnUse">
+        <stop offset="0%" stop-color="#3d7eff"/>
+        <stop offset="100%" stop-color="#5b9aff"/>
+      </linearGradient>
+    </defs>
+    <path d="M45 6 L78 20 L78 48 C78 66 63 78 45 84 C27 78 12 66 12 48 L12 20 Z" fill="url(#shieldGrad)" opacity=".15" stroke="url(#shieldGrad)" stroke-width="1.5"/>
+    <path d="M45 14 L70 25 L70 48 C70 62 59 72 45 77 C31 72 20 62 20 48 L20 25 Z" fill="url(#shieldGrad)" opacity=".25"/>
+    <!-- Straw hat -->
+    <ellipse cx="45" cy="42" rx="22" ry="6" fill="#3d7eff" opacity=".9"/>
+    <path d="M30 42 Q45 28 60 42" fill="#5b9aff" opacity=".8"/>
+    <ellipse cx="45" cy="42" rx="22" ry="6" fill="none" stroke="#3d7eff" stroke-width="1.5" opacity=".6"/>
+  </svg>
+  <div class="splash-title">Loopie</div>
+  <div class="splash-ver">v25.04 Medical Intelligence</div>
 
-    <div class="ob-logo">
-      <svg viewBox="0 0 72 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M36 3L7 16v22c0 19 13 35 29 39 16-4 29-20 29-39V16L36 3z" fill="#1e3a8a"/>
-        <path d="M36 9L11 20v18c0 16 11 29 25 33 14-4 25-17 25-33V20L36 9z" fill="#2563eb"/>
-        <path d="M36 9L11 20v18c0 16 11 29 25 33 14-4 25-17 25-33V20L36 9z" fill="url(#sg)" opacity=".4"/>
-        <!-- Straw hat – clean, no face -->
-        <ellipse cx="36" cy="46" rx="20" ry="5.5" fill="#78350f" opacity=".95"/>
-        <ellipse cx="36" cy="43" rx="13" ry="9" fill="#92400e"/>
-        <ellipse cx="36" cy="40" rx="9" ry="6.5" fill="#a16207"/>
-        <!-- Hat band -->
-        <path d="M23 46 Q36 43 49 46" stroke="#451a03" stroke-width="1.2" fill="none" opacity=".6"/>
-        <defs>
-          <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#3b82f6" stop-opacity=".3"/>
-            <stop offset="1" stop-color="#1e40af" stop-opacity="0"/>
-          </linearGradient>
-        </defs>
-      </svg>
-      <div class="ob-logo-text">
-        <h1>Loopie</h1>
-        <span>V28.4 · BULLETPROOF</span>
+  <div class="splash-card">
+    <!-- Step 0: Role -->
+    <div class="splash-step active" id="step0">
+      <div class="splash-label">מי אתה?</div>
+      <div class="role-grid">
+        <button class="role-btn" data-role="patient" onclick="selectRole(this)">
+          <span class="role-icon">🧒</span><span class="role-name">מטופל</span>
+        </button>
+        <button class="role-btn" data-role="parent" onclick="selectRole(this)">
+          <span class="role-icon">👨‍👩‍👧</span><span class="role-name">הורה</span>
+        </button>
+        <button class="role-btn" data-role="viewer" onclick="selectRole(this)">
+          <span class="role-icon">👁️</span><span class="role-name">צופה</span>
+        </button>
       </div>
+      <button class="btn-primary" onclick="nextStep(1)">המשך →</button>
     </div>
 
-    <div class="ob-card">
-
-      <!-- Step 1: Role -->
-      <div class="ob-step active" id="ob-s1">
-        <div class="ob-step-title">ברוכים הבאים לוופי 👋</div>
-        <div class="ob-step-sub">מי ישתמש במערכת? בחר את תפקידך כדי להתאים את הממשק.</div>
-        <div class="role-grid">
-          <button class="role-btn" id="role-patient" onclick="selectRole('patient')">
-            <span class="ri">🧒</span>
-            <div class="rl">אני המטופל</div>
-            <div class="rs">ממשק מינימלי ונקי</div>
-          </button>
-          <button class="role-btn" id="role-parent" onclick="selectRole('parent')">
-            <span class="ri">👨‍👩‍👧</span>
-            <div class="rl">אני ההורה</div>
-            <div class="rs">דשבורד מלא עם גרף</div>
-          </button>
+    <!-- Step 1: Personal -->
+    <div class="splash-step" id="step1">
+      <div class="splash-label">שם מלא</div>
+      <input class="splash-input" id="inp_name" placeholder="ישראל ישראלי" />
+      <div class="splash-label">תאריך לידה</div>
+      <input class="splash-input" id="inp_dob" type="date" placeholder="DD/MM/YYYY" />
+      <div class="splash-label">מגדר</div>
+      <select class="splash-select" id="inp_gender">
+        <option value="">בחר</option>
+        <option value="male">זכר</option>
+        <option value="female">נקבה</option>
+        <option value="other">אחר</option>
+      </select>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <div class="splash-label">גובה (ס"מ)</div>
+          <input class="splash-input" id="inp_height" type="number" placeholder="130" style="margin-bottom:0"/>
         </div>
-        <button class="btn btn-primary" id="btn-s1" onclick="goStep(2)" disabled>המשך →</button>
+        <div>
+          <div class="splash-label">משקל (ק"ג)</div>
+          <input class="splash-input" id="inp_weight" type="number" placeholder="35" style="margin-bottom:0"/>
+        </div>
       </div>
-
-      <!-- Step 2: Profile -->
-      <div class="ob-step" id="ob-s2">
-        <div class="ob-step-title">פרטים אישיים</div>
-        <div class="ob-step-sub">הנתונים נשמרים מקומית בדפדפן בלבד ולא נשלחים לשרת.</div>
-
-        <div class="field">
-          <label>שם פרטי של המטופל *</label>
-          <input type="text" id="inp-name" placeholder="למשל: יובל" maxlength="40"
-                 oninput="validateStep2()"/>
-          <div class="field-error" id="err-name">שם הוא שדה חובה</div>
-        </div>
-
-        <div class="field">
-          <label>תאריך לידה של המטופל *</label>
-          <input type="date" id="inp-dob" max="" oninput="validateStep2()"/>
-          <div class="field-error" id="err-dob">תאריך לידה הוא שדה חובה</div>
-        </div>
-
-        <div class="field">
-          <label>מייל (לאיפוס נתונים) *</label>
-          <input type="email" id="inp-email" placeholder="example@email.com" oninput="validateStep2()"/>
-          <div class="field-error" id="err-email">מייל תקין הוא שדה חובה</div>
-        </div>
-
-        <button class="btn btn-primary" id="btn-s2" onclick="goStep(3)" disabled>המשך →</button>
-        <button class="btn btn-ghost" onclick="goStep(1)">← חזרה</button>
-      </div>
-
-      <!-- Step 3: NS Connection (optional) -->
-      <div class="ob-step" id="ob-s3">
-        <div class="ob-step-title">חיבור ל-Nightscout (אופציונלי)</div>
-        <div class="ob-step-sub">ניתן להגדיר מאוחר יותר בהגדרות. ללא חיבור המערכת תרוץ במצב סימולציה.</div>
-
-        <div class="field">
-          <label>NS URL</label>
-          <input type="url" id="inp-ns-url" placeholder="https://my-site.herokuapp.com"/>
-        </div>
-        <div class="field">
-          <label>API Secret (מוצפן SHA1 אוטומטית)</label>
-          <input type="password" id="inp-ns-secret" placeholder="••••••••"/>
-        </div>
-
-        <button class="btn btn-primary" onclick="finishOnboarding()">🚀 כניסה ל-Loopie</button>
-        <button class="btn btn-ghost" onclick="finishOnboarding(true)">דלג, אכניס מאוחר יותר</button>
-        <button class="btn btn-ghost" onclick="goStep(2)">← חזרה</button>
-      </div>
-
-    </div><!-- /ob-card -->
-
-    <div class="ob-dots">
-      <div class="ob-dot active" id="dot-1"></div>
-      <div class="ob-dot" id="dot-2"></div>
-      <div class="ob-dot" id="dot-3"></div>
+      <div style="height:14px"></div>
+      <button class="btn-primary" onclick="nextStep(2)">המשך →</button>
+      <button class="btn-ghost" onclick="nextStep(0)">← חזור</button>
     </div>
 
-  </div><!-- /ob-wrap -->
-</div><!-- /onboarding -->
-
-<!-- ══════════════════════════════════════
-     BIRTHDAY MODAL
-══════════════════════════════════════ -->
-<div id="bday-modal" class="hidden">
-  <div class="bday-card">
-    <div class="bday-emojis">🎉🎂🎊</div>
-    <div class="bday-name" id="bday-name">יום הולדת שמח!</div>
-    <p class="bday-msg" id="bday-msg">הלופ שומר עליך היום ותמיד 💙</p>
-    <button class="btn btn-primary" onclick="closeBday()">תודה! 🎈</button>
+    <!-- Step 2: Nightscout -->
+    <div class="splash-step" id="step2">
+      <div class="splash-label">כתובת Nightscout</div>
+      <div class="ns-row">
+        <input class="splash-input" id="inp_ns" placeholder="https://my.nightscout.io" style="margin-bottom:0"/>
+        <button class="ns-test-btn" onclick="testNS()">בדוק</button>
+      </div>
+      <div class="ns-status" id="ns_status"></div>
+      <div class="splash-label">API Secret (אם נדרש)</div>
+      <input class="splash-input" id="inp_secret" type="password" placeholder="api secret או token"/>
+      <div class="splash-label">סוג אינסולין</div>
+      <select class="splash-select" id="inp_insulin">
+        <option value="novorapid">Novorapid</option>
+        <option value="humalog">Humalog</option>
+        <option value="fiasp">Fiasp</option>
+        <option value="lyumjev">Lyumjev</option>
+      </select>
+      <button class="btn-primary" onclick="finishOnboarding()">🚀 כניסה ל-Loopie</button>
+      <button class="btn-ghost" onclick="nextStep(1)">← חזור</button>
+    </div>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════
-     MAIN APP
-══════════════════════════════════════ -->
-<div id="app" class="hidden">
+<!-- ===== TOAST ===== -->
+<div class="toast-container" id="toastContainer"></div>
 
-  <header>
-    <div class="h-left">
-      <svg viewBox="0 0 72 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M36 3L7 16v22c0 19 13 35 29 39 16-4 29-20 29-39V16L36 3z" fill="#1e3a8a"/>
-        <path d="M36 9L11 20v18c0 16 11 29 25 33 14-4 25-17 25-33V20L36 9z" fill="#2563eb"/>
-        <ellipse cx="36" cy="46" rx="19" ry="5" fill="#78350f" opacity=".9"/>
-        <ellipse cx="36" cy="43" rx="12" ry="8.5" fill="#92400e"/>
-        <ellipse cx="36" cy="40" rx="8.5" ry="6" fill="#a16207"/>
-      </svg>
+<!-- ===== BIRTHDAY OVERLAY ===== -->
+<div id="birthdayOverlay">
+  <div class="bday-emoji">🎂</div>
+  <div class="bday-text">יום הולדת שמח!</div>
+  <div class="bday-sub" id="bdayName"></div>
+  <button class="btn-primary" style="width:auto;padding:12px 36px" onclick="document.getElementById('birthdayOverlay').style.display='none'">תודה 🎉</button>
+</div>
+
+<!-- ===== MODAL: Law of 3 ===== -->
+<div class="modal-overlay" id="law3Modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('law3Modal')">× סגור</button>
+    <div class="modal-title">📋 חוק ה-3 – השלמת ארוחה</div>
+    <div class="law3-grid">
+      <div class="law3-item">
+        <span class="law3-num" id="l3carbs">15</span>
+        <span class="law3-label">ג' פחמימה להשלמה</span>
+      </div>
+      <div class="law3-item">
+        <span class="law3-num" id="l3insulin">1.5</span>
+        <span class="law3-label">יחידות אינסולין</span>
+      </div>
+      <div class="law3-item">
+        <span class="law3-item-val" style="font-size:1.3rem" id="l3abs">3</span>
+        <span class="law3-label">שעות ספיגה</span>
+      </div>
+    </div>
+    <div class="rec-compare" style="margin-bottom:14px">
+      <span>לופי: <span class="compare-loopy" id="l3loopy">הזרק 1.5U</span></span>
+      <span>Loop: <span class="compare-loop" id="l3loop">ממתין לנתונים</span></span>
+    </div>
+    <button class="btn-primary" onclick="closeModal('law3Modal');showToast('✅ הנחיה נשלחה למטופל','green')">אישור וביצוע</button>
+  </div>
+</div>
+
+<!-- ===== MODAL: Rescue Protocol ===== -->
+<div class="modal-overlay" id="rescueModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('rescueModal')">× סגור</button>
+    <div class="modal-title">🚨 פרוטוקול חילוץ – ערך נמוך</div>
+    <div class="modal-section">
+      <div class="modal-section-label">ערך נוכחי</div>
+      <div class="modal-val" style="color:var(--red)" id="rescueSGV">--</div>
+    </div>
+    <div style="background:var(--red-dim);border:1px solid rgba(255,64,96,.25);border-radius:var(--r);padding:14px;margin-bottom:14px">
+      <div style="font-size:.85rem;line-height:1.7;color:var(--text)">
+        <strong style="color:var(--red)">טיפול מיידי:</strong><br>
+        • 15ג' גלוקוז מהיר (3 טבליות / 150מ"ל מיץ)<br>
+        • המתן 15 דק' → בדוק שוב<br>
+        • אם עדיין נמוך → חזור על הטיפול<br>
+        • הזן ב-Loop: <strong>Carbs 15g / 0 insulin</strong>
+      </div>
+    </div>
+    <div id="rescueDebt" style="font-size:.82rem;color:var(--text2);padding:10px;background:var(--bg3);border-radius:8px;margin-bottom:12px"></div>
+    <button class="btn-primary" style="background:var(--red);border-color:var(--red)" onclick="closeModal('rescueModal')">✅ טופל</button>
+  </div>
+</div>
+
+<!-- ===== MODAL: Resistance ===== -->
+<div class="modal-overlay" id="resistModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('resistModal')">× סגור</button>
+    <div class="modal-title">🟠 עמידות לאינסולין זוהתה</div>
+    <div style="font-size:.88rem;color:var(--text2);line-height:1.7;margin-bottom:16px">
+      הלופ מבצע מיקרו-בולוסים אך הסוכר תקוע מעל 180 כבר <strong style="color:var(--orange)" id="resistTime">35</strong> דקות.<br>
+      IOB: <strong style="color:var(--accent)" id="resistIOB">2.4U</strong>
+    </div>
+    <div class="rec-box" style="margin-bottom:14px">
+      <div class="rec-head"><span class="rec-icon">💉</span><span class="rec-label">המלצת לופי</span></div>
+      <div style="font-size:.9rem;color:var(--text);line-height:1.6">
+        ✅ בצע <strong style="color:var(--accent)" id="resistDose">0.8U</strong> בולוס ידני<br>
+        ✅ בדוק החלפת פוד/אינסרט<br>
+        ✅ שקול הגדלת ISF זמנית
+      </div>
+    </div>
+    <button class="btn-primary" style="background:var(--orange);border-color:var(--orange)" onclick="closeModal('resistModal');showToast('🟠 תיקון ידני אושר','orange')">ביצוע תיקון ידני</button>
+  </div>
+</div>
+
+<!-- ===== MODAL: Add Food ===== -->
+<div class="modal-overlay" id="foodModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('foodModal')">× סגור</button>
+    <div class="modal-title">🍽️ הוסף ארוחה</div>
+    <div class="splash-label">מאכל</div>
+    <input class="splash-input" id="fm_food" placeholder="פסטה, אורז, פיתה..." oninput="filterFoodSuggest(this.value)"/>
+    <div class="suggest-drop" id="foodSuggestDrop"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div>
-        <div class="h-title">Loopie</div>
-        <div class="h-ver">V28.4</div>
+        <div class="splash-label">פחמימות (ג')</div>
+        <input class="splash-input" id="fm_carbs" type="number" placeholder="50" style="margin-bottom:0"/>
+      </div>
+      <div>
+        <div class="splash-label">אינסולין (U)</div>
+        <input class="splash-input" id="fm_insulin" type="number" placeholder="3.5" style="margin-bottom:0"/>
       </div>
     </div>
-    <div class="h-right">
-      <span class="h-name" id="h-name">—</span>
-      <span class="h-badge" id="h-badge">מטופל</span>
-      <div class="conn-dot" id="conn-dot" title="סטטוס NS"></div>
-      <button class="icon-btn" onclick="openSettings()" title="הגדרות">⚙️</button>
+    <div style="height:10px"></div>
+    <div class="splash-label">שעות ספיגה</div>
+    <input class="splash-input" id="fm_abs" type="number" placeholder="3" value="3"/>
+    <div style="height:4px"></div>
+    <div id="fm_debt_hint" style="font-size:.78rem;color:var(--yellow);margin-bottom:10px;font-family:var(--mono)"></div>
+    <button class="btn-primary" onclick="addFoodEntry()">✅ הוסף ארוחה</button>
+  </div>
+</div>
+
+<!-- ===== MODAL: Settings ===== -->
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('settingsModal')">× סגור</button>
+    <div class="modal-title">⚙️ הגדרות מערכת</div>
+    <div class="splash-label">כתובת Nightscout</div>
+    <input class="splash-input" id="set_ns" />
+    <div class="splash-label">API Secret</div>
+    <input class="splash-input" id="set_secret" type="password"/>
+    <div class="splash-label">סוג אינסולין</div>
+    <select class="splash-select" id="set_insulin">
+      <option value="novorapid">Novorapid</option>
+      <option value="humalog">Humalog</option>
+      <option value="fiasp">Fiasp</option>
+      <option value="lyumjev">Lyumjev</option>
+    </select>
+    <div class="splash-label">יחס אינסולין לפחמימות (g/U)</div>
+    <input class="splash-input" id="set_icr" type="number" placeholder="10"/>
+    <div class="splash-label">ISF – גורם רגישות</div>
+    <input class="splash-input" id="set_isf" type="number" placeholder="40"/>
+    <div class="splash-label">יעד סוכר (mg/dL)</div>
+    <input class="splash-input" id="set_target" type="number" placeholder="110"/>
+    <button class="btn-primary" onclick="saveSettings()">💾 שמור הגדרות</button>
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+      <div class="splash-label">קישור הזמנה לצופה</div>
+      <div class="invite-box">
+        <div class="invite-url" id="inviteURL">https://loopie.app/v?token=...</div>
+        <button class="invite-copy" onclick="copyInvite()">העתק</button>
+      </div>
+      <button class="btn-ghost" style="margin-top:10px" onclick="shareWhatsapp()">📱 שלח ב-WhatsApp</button>
     </div>
-  </header>
+    <button class="btn-ghost" style="margin-top:10px;color:var(--red);border-color:rgba(255,64,96,.3)" onclick="logout()">🚪 התנתק</button>
+  </div>
+</div>
 
-  <main>
+<!-- ===== MAIN APP ===== -->
+<div id="app">
 
-    <!-- ── PATIENT VIEW ── -->
-    <div id="view-patient">
-      <div class="patient-hero">
-        <div class="patient-sgv ok" id="pt-sgv">--</div>
-        <div class="patient-trend" id="pt-trend">→</div>
-        <div class="patient-meta" id="pt-meta">ממתין לנתונים...</div>
-      </div>
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-logo">
+      <svg viewBox="0 0 34 34" fill="none">
+        <path d="M17 2 L29 7.5 L29 18 C29 25 23.5 30 17 32 C10.5 30 5 25 5 18 L5 7.5 Z" fill="#3d7eff" opacity=".2" stroke="#3d7eff" stroke-width="1"/>
+        <ellipse cx="17" cy="16" rx="8" ry="2.5" fill="#3d7eff" opacity=".9"/>
+        <path d="M11 16 Q17 9 23 16" fill="#5b9aff" opacity=".7"/>
+      </svg>
+      <span class="topbar-name">Loopie</span>
+      <span class="topbar-ver">v25.04</span>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-ns-dot" id="topNsDot" title="Nightscout מחובר"></div>
+    <button class="topbar-btn" onclick="openModal('settingsModal');loadSettingsModal()" id="settingsBtn">⚙️ הגדרות</button>
+    <div class="topbar-user" id="topbarUser">
+      <div class="user-dot" id="userDot">?</div>
+      <span id="userNameTop">--</span>
+    </div>
+  </div>
 
-      <!-- Omnibox (patient) -->
-      <div class="omnibox-wrap">
-        <span class="omni-icon">🔍</span>
-        <input class="omnibox" id="omni-pt" type="text"
-          placeholder="חפש אוכל... (למשל: פיתה 50)"
-          oninput="omniSearch(this.value,'pt')" onkeydown="omniKey(event,'pt')"/>
-        <div class="omni-results" id="omni-res-pt"></div>
-      </div>
+  <!-- MAIN CONTENT -->
+  <div class="main-content" id="mainContent">
 
-      <!-- Split / Rule3 alerts -->
-      <div class="alert-card split" id="split-card">
-        <div class="ac-header">
-          <span class="ac-title" style="color:var(--blue-l)">🍽️ פיצול ארוחה – Pre-bolus Novorapid</span>
-          <button class="ac-close" onclick="closeAlert('split-card')">✕</button>
-        </div>
-        <div class="split-2col">
-          <div class="split-box">
-            <div class="sb-lbl">💉 הזרקה עכשיו</div>
-            <div class="sb-val" id="sp-ins-now">—</div>
-            <div class="sb-sub" id="sp-carbs-now">—ג' (70%)</div>
+    <!-- VIEWER BANNER -->
+    <div class="viewer-banner hidden" id="viewerBanner">
+      👁️ מצב צפייה בלבד – אתה צופה ברשת
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs" id="mainTabs">
+      <button class="tab-btn active" onclick="switchTab('dashboard',this)">📊 Dashboard</button>
+      <button class="tab-btn" onclick="switchTab('food',this)">🍽️ ניהול ארוחה</button>
+      <button class="tab-btn" onclick="switchTab('profile',this)" id="profileTabBtn">👤 פרופיל רפואי</button>
+      <button class="tab-btn" onclick="switchTab('log',this)">📋 יומן</button>
+    </div>
+
+    <!-- ===== DASHBOARD TAB ===== -->
+    <div class="tab-panel active" id="tab-dashboard">
+
+      <!-- ALERTS -->
+      <div class="alert-bar" id="alertBar"></div>
+
+      <!-- GLUCOSE HERO -->
+      <div class="glucose-hero" id="glucoseHero">
+        <div>
+          <div style="display:flex;align-items:baseline;gap:4px">
+            <div class="glucose-val" id="glucoseVal">---</div>
+            <div class="glucose-trend" id="glucoseTrend">→</div>
           </div>
-          <div class="split-box">
-            <div class="sb-lbl">⏳ בעוד 20 דק'</div>
-            <div class="sb-val" id="sp-ins-later">—</div>
-            <div class="sb-sub" id="sp-carbs-later">—ג' (30%)</div>
-          </div>
+          <div class="glucose-label">mg/dL</div>
+          <div class="glucose-time" id="glucoseTime">--:--</div>
+          <div class="glucose-delta" id="glucoseDelta">Δ --</div>
         </div>
-        <div class="wait-strip">
-          ⏱ המתן <strong style="margin:0 3px">20 דקות</strong> לפני אכילת שאר הארוחה
-          <span class="wait-countdown" id="wait-cd">20:00</span>
+        <div class="glucose-stats" id="glucoseStats">
+          <div class="stat-box">
+            <div class="stat-label">IOB</div>
+            <div class="stat-val" id="statIOB">--<span class="stat-unit"> U</span></div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">COB</div>
+            <div class="stat-val" id="statCOB">--<span class="stat-unit"> ג'</span></div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">מאגר</div>
+            <div class="stat-val" id="statReservoir">--<span class="stat-unit"> U</span></div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">פוד</div>
+            <div class="stat-val" id="statPod">--<span class="stat-unit"> שע'</span></div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">סנסור</div>
+            <div class="stat-val" id="statSensor">--<span class="stat-unit"> ימים</span></div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">בזאלי</div>
+            <div class="stat-val" id="statBasal">--<span class="stat-unit"> U/h</span></div>
+          </div>
         </div>
       </div>
 
-      <div class="alert-card rule3" id="rule3-card">
-        <div class="ac-header">
-          <span class="ac-title" style="color:var(--yellow)">⚠️ חוק ה-3 – השלמת ארוחה</span>
-          <button class="ac-close" onclick="closeAlert('rule3-card')">✕</button>
-        </div>
-        <div class="ac-grid">
-          <div class="ac-item">
-            <div class="ac-val" style="color:var(--orange)" id="r3-carbs">15ג'</div>
-            <div class="ac-label">פחמימות</div>
-          </div>
-          <div class="ac-item">
-            <div class="ac-val" style="color:var(--blue-l)" id="r3-ins">0.5U</div>
-            <div class="ac-label">אינסולין</div>
-          </div>
-          <div class="ac-item">
-            <div class="ac-val" style="color:var(--purple)" id="r3-time">90 דק'</div>
-            <div class="ac-label">ספיגה</div>
-          </div>
-        </div>
-        <div class="ac-note" id="r3-note">—</div>
-      </div>
-
-      <div class="alert-card resist" id="resist-card">
-        <div class="ac-header">
-          <span class="ac-title">עמידות לאינסולין</span>
-          <button class="ac-close" onclick="closeAlert('resist-card')">✕</button>
-        </div>
-        <div class="resist-row">
-          <span class="ri">🟠</span>
-          <div class="resist-text">
-            <h4>עמידות זוהתה</h4>
-            <p>סוכר >180 למרות IOB – שקול תיקון ידני</p>
-          </div>
-          <button class="resist-btn" onclick="doCorrection()">תיקון →</button>
+      <!-- MINI CHART -->
+      <div class="panel" style="margin-bottom:18px">
+        <div class="panel-title">📈 גרף 3 שעות אחרונות</div>
+        <div class="mini-chart">
+          <svg class="chart-svg" id="chartSVG" viewBox="0 0 600 80" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#3d7eff" stop-opacity=".5"/>
+                <stop offset="100%" stop-color="#3d7eff" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <line x1="0" y1="30" x2="600" y2="30" class="target-line"/>
+            <path id="chartArea" class="chart-area" d="M0,80 L0,40 L600,40 L600,80 Z"/>
+            <path id="chartLine" class="chart-line" d="M0,40 L600,40"/>
+          </svg>
         </div>
       </div>
 
-      <div class="log-section">
-        <div class="panel-label">פעילות אחרונה</div>
-        <div id="log-pt"></div>
+      <!-- RECOMMENDATION -->
+      <div class="rec-box" id="recBox">
+        <div class="rec-head">
+          <span class="rec-icon">🧠</span>
+          <span class="rec-label">המלצת לופי</span>
+          <span class="rec-badge">LIVE</span>
+        </div>
+        <div class="rec-grid">
+          <div class="rec-item">
+            <div class="rec-item-label">בולוס מוצע</div>
+            <div class="rec-item-val"><span class="rec-item-unit">U</span><span id="recBolus">--</span></div>
+          </div>
+          <div class="rec-item">
+            <div class="rec-item-label">Pre-bolus</div>
+            <div class="rec-item-val"><span id="recPre">--</span><span class="rec-item-unit"> דק'</span></div>
+          </div>
+          <div class="rec-item">
+            <div class="rec-item-label">COB פעיל</div>
+            <div class="rec-item-val"><span id="recCOB">--</span><span class="rec-item-unit"> ג'</span></div>
+          </div>
+          <div class="rec-item">
+            <div class="rec-item-label">מגמה</div>
+            <div class="rec-item-val" id="recTrend">--</div>
+          </div>
+        </div>
+        <div class="rec-compare">
+          <span>לופי: <span class="compare-loopy" id="recLoopyStr">מחשב...</span></span>
+          <span>Loop: <span class="compare-loop" id="recLoopStr">--</span></span>
+        </div>
       </div>
-    </div><!-- /view-patient -->
 
-    <!-- ── PARENT VIEW ── -->
-    <div id="view-parent">
-
-      <!-- Omnibox above graph -->
-      <div class="omnibox-wrap">
-        <span class="omni-icon">🔍</span>
-        <input class="omnibox" id="omni-pr" type="text"
-          placeholder="חפש אוכל, פעולה... (למשל: אורז 80, תיקון, COB)"
-          oninput="omniSearch(this.value,'pr')" onkeydown="omniKey(event,'pr')"/>
-        <div class="omni-results" id="omni-res-pr"></div>
-      </div>
-
-      <!-- Glucose card -->
-      <div class="glucose-card">
-        <div class="gc-top">
-          <div>
-            <div class="gc-val-row">
-              <div class="gc-val ok" id="gc-val">--</div>
-              <div class="gc-trend" id="gc-trend">→</div>
+      <!-- RESISTANCE & DEBT -->
+      <div class="panels-grid">
+        <div class="panel">
+          <div class="panel-title">🟠 מדד עמידות <span id="riLabel">--</span></div>
+          <div class="resistance-meter">
+            <div class="rm-label">נמוכה</div>
+            <div class="rm-bar"><div class="rm-fill" id="riFill" style="width:0%"></div></div>
+            <div class="rm-label" style="text-align:right">גבוהה</div>
+          </div>
+          <div style="font-size:.78rem;color:var(--text2);margin-top:8px" id="riDesc">אין נתוני עמידות זמינים</div>
+        </div>
+        <div class="panel">
+          <div class="panel-title">💳 חוב פחמימות</div>
+          <div class="debt-bar-wrap">
+            <div class="debt-info">
+              <span>חוב: <strong id="debtCarbs" style="color:var(--yellow)">0ג'</strong></span>
+              <span>מסוּים: <strong id="debtDone" style="color:var(--green)">0ג'</strong></span>
             </div>
-            <div class="gc-unit">mg/dL</div>
-            <div class="gc-time" id="gc-time">—</div>
+            <div class="debt-bar"><div class="debt-fill" id="debtFill" style="width:0%"></div></div>
           </div>
-          <div class="gc-badges">
-            <span class="badge info">💉 IOB: <strong id="b-iob">—</strong>U</span>
-            <span class="badge info">🍽 COB: <strong id="b-cob">—</strong>ג'</span>
-            <span class="badge ok" id="b-loop">🔄 לופ פעיל</span>
-          </div>
+          <div style="font-size:.78rem;color:var(--text2)" id="debtDesc">אין חוב פחמימות פעיל</div>
         </div>
-        <div class="gc-stats">
-          <div class="gs-item">
-            <div class="gs-val" style="color:var(--green)" id="g-tir">--%</div>
-            <div class="gs-label">TIR 24h</div>
+      </div>
+
+    </div>
+
+    <!-- ===== FOOD TAB ===== -->
+    <div class="tab-panel" id="tab-food">
+      <!-- OMNIBOX -->
+      <div class="omnibox-section">
+        <div class="omnibox-wrap">
+          <div class="omnibox-header">
+            <span class="omnibox-title">🎯 Omnibox – הזן ארוחה או פקודה</span>
           </div>
-          <div class="gs-item">
-            <div class="gs-val" id="g-avg">--</div>
-            <div class="gs-label">ממוצע</div>
+          <div class="omnibox-quick" id="quickChips">
+            <div class="quick-chip" onclick="quickFood('פסטה 🍝',15,5)">🍝 פסטה</div>
+            <div class="quick-chip" onclick="quickFood('אורז 🍚',10,3)">🍚 אורז</div>
+            <div class="quick-chip" onclick="quickFood('פיתה 🥙',50,3)">🥙 פיתה</div>
+            <div class="quick-chip" onclick="quickFood('המבורגר 🍔',50,5)">🍔 המבורגר</div>
+            <div class="quick-chip" onclick="quickFood('צ׳יפס 🍟',15,3)">🍟 צ'יפס</div>
+            <div class="quick-chip" onclick="quickFood('פתיבר 🍪',7.5,3)">🍪 פתיבר</div>
           </div>
-          <div class="gs-item">
-            <div class="gs-val" style="color:var(--blue-l)" id="g-basal">--</div>
-            <div class="gs-label">בזאלי</div>
-          </div>
-          <div class="gs-item">
-            <div class="gs-val" style="color:var(--purple)" id="g-res">--U</div>
-            <div class="gs-label">מאגר</div>
+          <input class="omnibox-input" id="omniInput" placeholder="הזן ארוחה, מאכל, כמות..." oninput="onOmni(this.value)"/>
+          <div class="suggest-drop" id="omniDrop"></div>
+          <div class="omnibox-footer">
+            <span class="omnibox-hint" id="omniHint">הקלד מאכל לחישוב אוטומטי</span>
+            <div class="omnibox-actions">
+              <button class="ob-btn" onclick="openModal('foodModal')">+ הוסף מפורט</button>
+              <button class="ob-btn primary" onclick="calcOmni()">חשב →</button>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Graph -->
-      <div class="graph-card">
-        <div class="graph-header">
-          <span class="graph-title">גרף סוכר</span>
-          <div class="time-tabs">
-            <button class="tt active" onclick="setHours(1,this)">1h</button>
-            <button class="tt" onclick="setHours(3,this)">3h</button>
-            <button class="tt" onclick="setHours(6,this)">6h</button>
-            <button class="tt" onclick="setHours(12,this)">12h</button>
-          </div>
-        </div>
-        <canvas id="chart"></canvas>
-      </div>
-
-      <!-- Devices -->
-      <div class="devices">
-        <div class="dev-card">
-          <div class="dev-icon">💊</div>
-          <div class="dev-label">Pod</div>
-          <div class="dev-val ok" id="dev-pod">--</div>
-        </div>
-        <div class="dev-card">
-          <div class="dev-icon">📡</div>
-          <div class="dev-label">Sensor</div>
-          <div class="dev-val ok" id="dev-sensor">--</div>
-        </div>
-        <div class="dev-card">
-          <div class="dev-icon">🧪</div>
-          <div class="dev-label">מאגר</div>
-          <div class="dev-val" id="dev-res">--</div>
+      <!-- FOOD LOG -->
+      <div class="panel">
+        <div class="panel-title">📋 יומן ארוחות <span id="foodLogCount">0 ארוחות</span></div>
+        <div id="foodLogList">
+          <div style="text-align:center;padding:30px;color:var(--text3);font-size:.88rem">אין ארוחות מוזנות עדיין</div>
         </div>
       </div>
+    </div>
 
-      <!-- Panels -->
-      <div class="panels">
-        <div class="panel">
-          <div class="panel-label">אינסולין פעיל (IOB)</div>
-          <div class="panel-val" style="color:var(--blue-l)" id="p-iob">--U</div>
-          <div class="panel-sub" id="p-iob-sub">ממתין</div>
-          <div class="mini-bar">
-            <div class="mini-bar-fill" id="p-iob-bar" style="width:0%;background:var(--blue)"></div>
+    <!-- ===== PROFILE TAB ===== -->
+    <div class="tab-panel" id="tab-profile">
+      <div class="panel" style="margin-bottom:14px">
+        <div class="panel-title">👤 פרופיל אישי</div>
+        <div class="profile-grid">
+          <div class="profile-item">
+            <div class="pi-label">שם</div>
+            <div class="pi-val" id="profName">--</div>
           </div>
-        </div>
-        <div class="panel">
-          <div class="panel-label">פחמימות פעילות (COB)</div>
-          <div class="panel-val" style="color:var(--orange)" id="p-cob">--ג'</div>
-          <div class="panel-sub" id="p-cob-sub">ממתין</div>
-          <div class="mini-bar">
-            <div class="mini-bar-fill" id="p-cob-bar" style="width:0%;background:var(--orange)"></div>
+          <div class="profile-item">
+            <div class="pi-label">תאריך לידה</div>
+            <div class="pi-val" id="profDOB">--</div>
+          </div>
+          <div class="profile-item">
+            <div class="pi-label">גובה</div>
+            <div class="pi-val" id="profHeight">-- ס"מ</div>
+          </div>
+          <div class="profile-item">
+            <div class="pi-label">משקל</div>
+            <div class="pi-val" id="profWeight">-- ק"ג</div>
           </div>
         </div>
       </div>
-
-      <!-- Prediction -->
-      <div class="pred-card">
-        <div class="panel-label">תחזית</div>
-        <div id="pred-rows">
-          <div class="pred-row"><span class="pred-time">+15 דק'</span><span class="pred-val flat">...</span></div>
-          <div class="pred-row"><span class="pred-time">+30 דק'</span><span class="pred-val flat">...</span></div>
-          <div class="pred-row"><span class="pred-time">+60 דק'</span><span class="pred-val flat">...</span></div>
+      <div class="panel" style="margin-bottom:14px">
+        <div class="panel-title">💉 פרמטרים רפואיים (Nightscout)</div>
+        <div class="profile-grid">
+          <div class="profile-item">
+            <div class="pi-label">ICR – יחס</div>
+            <div class="pi-val" id="profICR">-- g/U</div>
+          </div>
+          <div class="profile-item">
+            <div class="pi-label">ISF – רגישות</div>
+            <div class="pi-val" id="profISF">-- mg/U</div>
+          </div>
+          <div class="profile-item">
+            <div class="pi-label">סוג אינסולין</div>
+            <div class="pi-val" id="profInsulin">--</div>
+          </div>
+          <div class="profile-item">
+            <div class="pi-label">יעד סוכר</div>
+            <div class="pi-val" id="profTarget">-- mg/dL</div>
+          </div>
+          <div class="profile-item">
+            <div class="pi-label">בזאלי קבוע</div>
+            <div class="pi-val" id="profBasal">-- U/h</div>
+          </div>
+          <div class="profile-item">
+            <div class="pi-label">TDD</div>
+            <div class="pi-val" id="profTDD">-- U/day</div>
+          </div>
         </div>
       </div>
-
-      <!-- Alerts (parent) -->
-      <div class="alert-card split" id="split-card-pr">
-        <div class="ac-header">
-          <span class="ac-title" style="color:var(--blue-l)">🍽️ פיצול ארוחה – Pre-bolus 20 דק' Novorapid</span>
-          <button class="ac-close" onclick="closeAlert('split-card-pr')">✕</button>
-        </div>
-        <div class="split-2col">
-          <div class="split-box">
-            <div class="sb-lbl">💉 עכשיו</div>
-            <div class="sb-val" id="sp-ins-now-pr">—</div>
-            <div class="sb-sub" id="sp-carbs-now-pr">—</div>
+      <div class="panel">
+        <div class="panel-title">🏥 מצב נוכחי</div>
+        <div class="profile-grid">
+          <div class="profile-item">
+            <div class="pi-label">גיל פוד</div>
+            <div class="pi-val" id="profPodAge">--</div>
           </div>
-          <div class="split-box">
-            <div class="sb-lbl">⏳ אחרי 20 דק'</div>
-            <div class="sb-val" id="sp-ins-later-pr">—</div>
-            <div class="sb-sub" id="sp-carbs-later-pr">—</div>
+          <div class="profile-item">
+            <div class="pi-label">גיל סנסור</div>
+            <div class="pi-val" id="profSensorAge">--</div>
           </div>
-        </div>
-        <div class="wait-strip">
-          ⏱ המתן <strong style="margin:0 4px">20 דקות</strong> לפני המשך הארוחה
-          <span class="wait-countdown" id="wait-cd-pr">20:00</span>
+          <div class="profile-item">
+            <div class="pi-label">מאגר</div>
+            <div class="pi-val" id="profReservoir">-- U</div>
+          </div>
+          <div class="profile-item">
+            <div class="pi-label">Loop Status</div>
+            <div class="pi-val" id="profLoopStatus">--</div>
+          </div>
         </div>
       </div>
+    </div>
 
-      <div class="alert-card rule3" id="rule3-card-pr">
-        <div class="ac-header">
-          <span class="ac-title" style="color:var(--yellow)">⚠️ חוק ה-3 – השלמת ארוחה</span>
-          <button class="ac-close" onclick="closeAlert('rule3-card-pr')">✕</button>
-        </div>
-        <div class="ac-grid">
-          <div class="ac-item">
-            <div class="ac-val" style="color:var(--orange)" id="r3-carbs-pr">15ג'</div>
-            <div class="ac-label">פחמימות</div>
-          </div>
-          <div class="ac-item">
-            <div class="ac-val" style="color:var(--blue-l)" id="r3-ins-pr">0.5U</div>
-            <div class="ac-label">אינסולין</div>
-          </div>
-          <div class="ac-item">
-            <div class="ac-val" style="color:var(--purple)" id="r3-time-pr">90 דק'</div>
-            <div class="ac-label">ספיגה</div>
-          </div>
-        </div>
-        <div class="ac-note" id="r3-note-pr">—</div>
-      </div>
-
-      <div class="alert-card resist" id="resist-card-pr">
-        <div class="ac-header">
-          <span class="ac-title">עמידות לאינסולין</span>
-          <button class="ac-close" onclick="closeAlert('resist-card-pr')">✕</button>
-        </div>
-        <div class="resist-row">
-          <span class="ri">🟠</span>
-          <div class="resist-text">
-            <h4>עמידות זוהתה</h4>
-            <p>סוכר >180 למרות IOB פעיל</p>
-          </div>
-          <button class="resist-btn" onclick="doCorrection()">תיקון →</button>
+    <!-- ===== LOG TAB ===== -->
+    <div class="tab-panel" id="tab-log">
+      <div class="panel">
+        <div class="panel-title">📋 יומן אירועים</div>
+        <div id="eventLog" style="max-height:400px;overflow-y:auto">
+          <div style="text-align:center;padding:30px;color:var(--text3);font-size:.88rem">אין אירועים מוזנים</div>
         </div>
       </div>
+    </div>
 
-      <div class="log-section">
-        <div class="panel-label">פעילות אחרונה</div>
-        <div id="log-pr"></div>
+  </div><!-- /main-content -->
+
+  <!-- PATIENT SIMPLE VIEW -->
+  <div id="patientView" class="hidden">
+    <div class="patient-hero">
+      <div class="patient-glucose-big" id="patGlucose">---</div>
+      <div class="patient-trend" id="patTrend">→</div>
+      <div style="font-family:var(--mono);font-size:.85rem;color:var(--text2);margin-top:8px" id="patTime">--:--</div>
+      <div class="patient-instruction" id="patInstruction">
+        ⏳ מחכה לנתוני Nightscout...
       </div>
-    </div><!-- /view-parent -->
+      <div class="omnibox-quick" style="justify-content:center;margin-top:16px">
+        <div class="quick-chip" onclick="quickFood('פסטה 🍝',15,5)">🍝 פסטה</div>
+        <div class="quick-chip" onclick="quickFood('פיתה 🥙',50,3)">🥙 פיתה</div>
+        <div class="quick-chip" onclick="quickFood('המבורגר 🍔',50,5)">🍔 המבורגר</div>
+        <div class="quick-chip" onclick="quickFood('פתיבר 🍪',7.5,3)">🍪 פתיבר</div>
+      </div>
+    </div>
+  </div>
 
-  </main>
 </div><!-- /app -->
 
-<!-- ══════════════════════════════════════
-     SETTINGS DRAWER
-══════════════════════════════════════ -->
-<div id="settings-backdrop" onclick="closeSettings()"></div>
-<div id="settings-drawer">
-  <div class="sd-header">
-    <h2>⚙️ הגדרות Loopie</h2>
-    <button class="icon-btn" onclick="closeSettings()">✕</button>
-  </div>
-  <div class="sd-tabs">
-    <button class="sd-tab active" onclick="sdTab('ns',this)">Nightscout</button>
-    <button class="sd-tab" onclick="sdTab('conn',this)">חיבורים</button>
-    <button class="sd-tab" onclick="sdTab('therapy',this)">פרמטרים</button>
-    <button class="sd-tab" onclick="sdTab('profile',this)">פרופיל</button>
-  </div>
-  <div class="sd-body">
-
-    <!-- NS -->
-    <div class="sd-section active" id="sd-ns">
-      <h4>Nightscout</h4>
-      <div class="sd-row">
-        <label>NS URL</label>
-        <input id="c-ns-url" type="url" placeholder="https://my-site.herokuapp.com"/>
-      </div>
-      <div class="sd-row">
-        <label>API Secret (יוצפן SHA1 אוטומטית)</label>
-        <input id="c-ns-secret" type="password" placeholder="••••••••"/>
-      </div>
-      <button class="btn btn-primary" onclick="saveNS()" style="margin-top:4px">שמור וחבר</button>
-      <div class="sd-conn-status">
-        <div class="sd-conn-dot" id="ns-dot"></div>
-        <span id="ns-status">לא מחובר</span>
-      </div>
-    </div>
-
-    <!-- Pusher -->
-    <div class="sd-section" id="sd-conn">
-      <h4>Pusher (Real-time)</h4>
-      <div class="sd-row">
-        <label>Pusher App Key</label>
-        <input id="c-pk" type="text" placeholder="abc123def456..."/>
-      </div>
-      <div class="sd-row">
-        <label>Pusher Cluster</label>
-        <input id="c-pc" type="text" placeholder="eu · us2 · ap1 · mt1"/>
-      </div>
-      <button class="btn btn-primary" onclick="savePusher()" style="margin-top:4px">חבר Pusher</button>
-      <div class="sd-conn-status">
-        <div class="sd-conn-dot" id="pusher-dot"></div>
-        <span id="pusher-status">לא מוגדר</span>
-      </div>
-      <h4>Google Cloud SHA1 Fix</h4>
-      <div class="sd-row">
-        <label>API Secret לחיפוי (Failed to Fetch Fix)</label>
-        <input id="c-gc-secret" type="password" placeholder="GCloud secret"/>
-      </div>
-      <button class="btn btn-primary" onclick="saveGCloud()" style="margin-top:4px">הצפן ושמור</button>
-      <div class="sd-conn-status" id="gc-status-row" style="display:none">
-        <div class="sd-conn-dot ok"></div>
-        <span id="gc-status-text">—</span>
-      </div>
-    </div>
-
-    <!-- Therapy -->
-    <div class="sd-section" id="sd-therapy">
-      <h4>יחסי אינסולין</h4>
-      <div class="sd-row"><label>ISF – רגישות (mg/dL / U)</label><input id="c-isf" type="number" value="50"/></div>
-      <div class="sd-row"><label>CR – פחמימות (ג' / U)</label><input id="c-cr" type="number" value="10"/></div>
-      <div class="sd-row"><label>סף נמוך (mg/dL)</label><input id="c-low" type="number" value="70"/></div>
-      <div class="sd-row"><label>סף גבוה (mg/dL)</label><input id="c-high" type="number" value="180"/></div>
-      <div class="sd-row"><label>יעד סוכר (mg/dL)</label><input id="c-target" type="number" value="110"/></div>
-      <button class="btn btn-primary" onclick="saveTherapy()" style="margin-top:4px">שמור פרמטרים</button>
-    </div>
-
-    <!-- Profile -->
-    <div class="sd-section" id="sd-profile">
-      <h4>פרטי המטופל</h4>
-      <div class="sd-row"><label>שם</label><input id="c-name" type="text"/></div>
-      <div class="sd-row"><label>תאריך לידה</label><input id="c-dob" type="date"/></div>
-      <div class="sd-row"><label>מייל</label><input id="c-email" type="email"/></div>
-      <button class="btn btn-primary" onclick="saveProfile()" style="margin-top:4px">שמור פרופיל</button>
-    </div>
-
-  </div>
-</div>
-
-<div id="toasts"></div>
-
-<!-- ══════════════════════════════════════
-     SCRIPT
-══════════════════════════════════════ -->
 <script>
-'use strict';
-
-/* ═══════════════════════════════════
-   STATE
-═══════════════════════════════════ */
-const App = {
-  role: null, name: '', dob: null, email: '',
-  ns_url: '', ns_secret_sha1: '',
-  pusher_key: '', pusher_cluster: '',
-  isf: 50, cr: 10, low: 70, high: 180, target: 110,
-  glucose: [],      // {t, v}
-  sgv: null, trend: 'Flat',
-  iob: 0, cob: 0, basal: 0, reservoir: 0,
-  ns_ok: false, pusher_ok: false,
-  graphHours: 1,
-  resistMin: 0,
-  rule3Active: false,
-  waitTimer: null, waitSec: 0,
-  simInterval: null,
-  // Scratch
-  _currentStep: 1,
-  _selectedRole: null,
+// ========================
+// STATE
+// ========================
+let STATE = {
+  role: 'parent',
+  name: '',
+  dob: '',
+  gender: '',
+  height: '',
+  weight: '',
+  nsURL: '',
+  nsSecret: '',
+  insulin: 'novorapid',
+  icr: 10,
+  isf: 40,
+  target: 110,
+  foodLog: [],
+  debtCarbs: 0,
+  debtTotal: 0,
+  nsConnected: false,
+  sgvHistory: [],
+  currentSGV: null,
+  currentIOB: 0,
+  currentCOB: 0,
+  reservoir: null,
+  podAge: null,
+  sensorAge: null,
+  basalRate: null,
+  lastUpdate: null,
+  resistanceIndex: 0,
+  birthdayShown: false,
+  eventLog: [],
 };
 
-/* ═══════════════════════════════════
-   SAFE STORAGE
-═══════════════════════════════════ */
-const Store = {
-  get(k) {
-    try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; }
-    catch { return null; }
-  },
-  set(k, v) {
-    try { localStorage.setItem(k, JSON.stringify(v)); return true; }
-    catch { return false; }
-  },
-  has(k) {
-    try { return localStorage.getItem(k) !== null; }
-    catch { return false; }
+const FOOD_DB = [
+  {name:'פסטה',emoji:'🍝',carbsPer:'כוס',carbs:15,abs:5},
+  {name:'אורז',emoji:'🍚',carbsPer:'כף',carbs:5,abs:3},
+  {name:'פיתה',emoji:'🥙',carbsPer:'יחידה',carbs:50,abs:3},
+  {name:'המבורגר',emoji:'🍔',carbsPer:'יחידה',carbs:50,abs:5},
+  {name:'צ\'יפס',emoji:'🍟',carbsPer:'10 יח\'',carbs:15,abs:3},
+  {name:'פתיבר',emoji:'🍪',carbsPer:'יחידה',carbs:7.5,abs:3},
+  {name:'לחם',emoji:'🍞',carbsPer:'פרוסה',carbs:13,abs:3},
+  {name:'תפוח',emoji:'🍎',carbsPer:'יחידה',carbs:20,abs:3},
+  {name:'בננה',emoji:'🍌',carbsPer:'יחידה',carbs:25,abs:3},
+  {name:'שוקולד',emoji:'🍫',carbsPer:'קוביה',carbs:6,abs:3},
+  {name:'גלידה',emoji:'🍦',carbsPer:'כדור',carbs:15,abs:4},
+  {name:'פיצה',emoji:'🍕',carbsPer:'פרוסה',carbs:30,abs:4},
+];
+
+// ========================
+// ONBOARDING
+// ========================
+let selectedRole = null;
+let currentStep = 0;
+
+function selectRole(btn){
+  document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedRole = btn.dataset.role;
+}
+function nextStep(n){
+  document.querySelectorAll('.splash-step').forEach(s=>s.classList.remove('active'));
+  document.getElementById('step'+n).classList.add('active');
+  currentStep = n;
+}
+async function testNS(){
+  const url = document.getElementById('inp_ns').value.trim().replace(/\/$/,'');
+  const secret = document.getElementById('inp_secret').value.trim();
+  const el = document.getElementById('ns_status');
+  if(!url){el.className='ns-status ns-err';el.textContent='❌ הזן כתובת Nightscout';return}
+  el.className='ns-status';el.textContent='⏳ בודק חיבור...';
+  try{
+    const headers = secret?{'api-secret':secret,'API-SECRET':secret}:{};
+    const r = await fetchNS(url+'/api/v1/status.json',headers);
+    if(r&&r.status==='ok'){
+      el.className='ns-status ns-ok';
+      el.textContent='✅ מחובר: '+r.name;
+    } else {
+      el.className='ns-status ns-ok';el.textContent='✅ Nightscout מחובר';
+    }
+  }catch(e){
+    el.className='ns-status ns-err';el.textContent='❌ שגיאת חיבור – בדוק כתובת';
   }
-};
+}
+async function fetchNS(url,headers={}){
+  const proxyUrl = url;
+  const res = await fetch(proxyUrl,{headers:{...headers,'Content-Type':'application/json'}});
+  return res.json();
+}
+function finishOnboarding(){
+  if(!selectedRole){showToast('בחר תפקיד','orange');return}
+  const name = document.getElementById('inp_name').value.trim();
+  if(!name){showToast('הזן שם','orange');return}
+  STATE.role = selectedRole;
+  STATE.name = name;
+  STATE.dob = document.getElementById('inp_dob').value;
+  STATE.gender = document.getElementById('inp_gender').value;
+  STATE.height = document.getElementById('inp_height').value;
+  STATE.weight = document.getElementById('inp_weight').value;
+  STATE.nsURL = document.getElementById('inp_ns').value.trim().replace(/\/$/,'');
+  STATE.nsSecret = document.getElementById('inp_secret').value.trim();
+  STATE.insulin = document.getElementById('inp_insulin').value;
+  saveState();
+  document.getElementById('splash').style.opacity='0';
+  setTimeout(()=>{document.getElementById('splash').style.display='none';initApp();},500);
+}
 
-/* ═══════════════════════════════════
-   INIT
-═══════════════════════════════════ */
-(function init() {
-  const saved = Store.get('loopie_v284');
-  if (saved && saved.name && saved.dob && saved.role) {
-    Object.assign(App, saved);
-    // Recompute SHA1 if we stored the raw secret
-    document.getElementById('onboarding').classList.add('hidden');
-    launchApp();
+// ========================
+// STATE PERSISTENCE
+// ========================
+function saveState(){
+  try{localStorage.setItem('loopie_state',JSON.stringify(STATE))}catch(e){}
+}
+function loadState(){
+  try{
+    const s=localStorage.getItem('loopie_state');
+    if(s){Object.assign(STATE,JSON.parse(s));return true}
+  }catch(e){}
+  return false;
+}
+
+// ========================
+// INIT APP
+// ========================
+function initApp(){
+  document.getElementById('app').style.display='flex';
+  applyRoleUI();
+  updateTopbar();
+  checkBirthday();
+  startNSPolling();
+  renderFoodLog();
+  updateDebt();
+  updateProfile();
+  generateInviteLink();
+  logEvent('מערכת','Loopie הופעלה ✅');
+}
+
+function applyRoleUI(){
+  const role = STATE.role;
+  const settingsBtn = document.getElementById('settingsBtn');
+  const viewerBanner = document.getElementById('viewerBanner');
+  const patientView = document.getElementById('patientView');
+  const mainContent = document.getElementById('mainContent');
+
+  if(role==='patient'){
+    mainContent.classList.add('hidden');
+    patientView.classList.remove('hidden');
+    settingsBtn.classList.add('hidden');
+  } else if(role==='viewer'){
+    viewerBanner.classList.remove('hidden');
+    settingsBtn.classList.add('hidden');
+    document.getElementById('profileTabBtn').textContent='👁️ צפייה בלבד';
   } else {
-    // Show onboarding
-    const today = new Date();
-    const maxDate = today.toISOString().split('T')[0];
-    document.getElementById('inp-dob').max = maxDate;
+    // parent / super user
+    settingsBtn.classList.remove('hidden');
+  }
+}
+
+function updateTopbar(){
+  const dot = document.getElementById('userDot');
+  const nameEl = document.getElementById('userNameTop');
+  const initial = STATE.name?STATE.name[0].toUpperCase():'?';
+  dot.textContent = initial;
+  nameEl.textContent = STATE.name||'משתמש';
+  const roleColors = {patient:'#00d97e',parent:'#3d7eff',viewer:'#f5c842'};
+  dot.style.background = roleColors[STATE.role]||'#3d7eff';
+}
+
+function checkBirthday(){
+  if(!STATE.dob||STATE.birthdayShown) return;
+  const dob = new Date(STATE.dob);
+  const today = new Date();
+  if(dob.getDate()===today.getDate()&&dob.getMonth()===today.getMonth()){
+    STATE.birthdayShown=true;saveState();
+    const overlay = document.getElementById('birthdayOverlay');
+    document.getElementById('bdayName').textContent='יום הולדת שמח, '+STATE.name+'! 🎉';
+    overlay.style.display='flex';
+  }
+}
+
+// ========================
+// NIGHTSCOUT POLLING
+// ========================
+let nsInterval = null;
+let highStuckSince = null;
+
+function startNSPolling(){
+  if(!STATE.nsURL){
+    updateDemoData();
+    return;
+  }
+  pollNS();
+  nsInterval = setInterval(pollNS,60000);
+}
+
+async function pollNS(){
+  try{
+    const headers = STATE.nsSecret?{'api-secret':STATE.nsSecret}:{};
+    const base = STATE.nsURL;
+
+    // SGV
+    const sgvData = await fetchNS(base+'/api/v1/entries/sgv.json?count=36',headers);
+    if(Array.isArray(sgvData)&&sgvData.length>0){
+      STATE.sgvHistory = sgvData.reverse();
+      const latest = sgvData[sgvData.length-1];
+      STATE.currentSGV = latest.sgv;
+      STATE.lastUpdate = new Date(latest.date);
+    }
+
+    // Device Status (IOB, COB, reservoir, basal)
+    const devData = await fetchNS(base+'/api/v1/devicestatus.json?count=1',headers);
+    if(Array.isArray(devData)&&devData.length>0){
+      const d = devData[0];
+      STATE.currentIOB = d.loop?.iob?.iob||d.openaps?.iob?.iob||0;
+      STATE.currentCOB = d.loop?.cob?.cob||d.openaps?.cob?.cob||0;
+      STATE.reservoir = d.pump?.reservoir||d.openaps?.suggested?.reservoir||null;
+      STATE.basalRate = d.pump?.extended?.CurrentBasal||null;
+    }
+
+    STATE.nsConnected = true;
+    document.getElementById('topNsDot').style.background='var(--green)';
+    document.getElementById('topNsDot').style.boxShadow='0 0 8px var(--green)';
+    updateUI();
+  }catch(e){
+    STATE.nsConnected = false;
+    document.getElementById('topNsDot').style.background='var(--red)';
+    document.getElementById('topNsDot').style.boxShadow='0 0 8px var(--red)';
+    updateDemoData();
+  }
+}
+
+function updateDemoData(){
+  // Simulate data for demo
+  const base = 130+Math.round((Math.random()-0.5)*40);
+  if(!STATE.currentSGV) STATE.currentSGV = base;
+  const delta = Math.round((Math.random()-0.5)*6);
+  STATE.currentSGV = Math.max(60,Math.min(350,STATE.currentSGV+delta));
+  STATE.currentIOB = +(Math.random()*3).toFixed(1);
+  STATE.currentCOB = Math.round(Math.random()*30);
+  STATE.reservoir = Math.round(150+Math.random()*50);
+  STATE.podAge = +(Math.random()*72).toFixed(1);
+  STATE.sensorAge = +(Math.random()*10).toFixed(1);
+  STATE.basalRate = +(0.5+Math.random()*1).toFixed(2);
+  STATE.lastUpdate = new Date();
+
+  // Fake history
+  if(STATE.sgvHistory.length===0){
+    const now = Date.now();
+    for(let i=35;i>=0;i--){
+      STATE.sgvHistory.push({
+        sgv:Math.max(70,Math.min(300,base+(Math.random()-0.5)*50)),
+        date:now-i*5*60000
+      });
+    }
+  } else {
+    STATE.sgvHistory.push({sgv:STATE.currentSGV,date:Date.now()});
+    if(STATE.sgvHistory.length>36) STATE.sgvHistory.shift();
+  }
+  updateUI();
+}
+
+function getTrend(){
+  const h = STATE.sgvHistory;
+  if(h.length<2) return {arrow:'→',val:0};
+  const last = h[h.length-1].sgv;
+  const prev = h[h.length-2].sgv;
+  const d = last-prev;
+  if(d>10) return {arrow:'↑↑',val:d};
+  if(d>3) return {arrow:'↑',val:d};
+  if(d<-10) return {arrow:'↓↓',val:d};
+  if(d<-3) return {arrow:'↓',val:d};
+  return {arrow:'→',val:d};
+}
+
+function updateUI(){
+  const sgv = STATE.currentSGV;
+  const trend = getTrend();
+  const iob = STATE.currentIOB;
+  const cob = STATE.currentCOB;
+
+  // Glucose color
+  const gEl = document.getElementById('glucoseVal');
+  gEl.textContent = sgv||'---';
+  gEl.className='glucose-val';
+  if(sgv){
+    if(sgv<70) gEl.classList.add('low');
+    else if(sgv<80) gEl.classList.add('low');
+    else if(sgv>250) gEl.classList.add('high');
+    else if(sgv>180) gEl.classList.add('high');
+    else gEl.classList.add('target');
+  }
+
+  document.getElementById('glucoseTrend').textContent = trend.arrow;
+  if(STATE.lastUpdate){
+    const t = STATE.lastUpdate;
+    document.getElementById('glucoseTime').textContent = t.getHours().toString().padStart(2,'0')+':'+t.getMinutes().toString().padStart(2,'0');
+  }
+  document.getElementById('glucoseDelta').textContent = 'Δ '+(trend.val>0?'+':'')+trend.val+' mg/dL';
+
+  // Stats
+  document.getElementById('statIOB').innerHTML = (iob||0).toFixed(1)+'<span class="stat-unit"> U</span>';
+  document.getElementById('statCOB').innerHTML = (cob||0)+'<span class="stat-unit"> ג\'</span>';
+  document.getElementById('statReservoir').innerHTML = (STATE.reservoir||'--')+'<span class="stat-unit"> U</span>';
+  document.getElementById('statPod').innerHTML = (STATE.podAge?STATE.podAge.toFixed(0):'--')+'<span class="stat-unit"> שע\'</span>';
+  document.getElementById('statSensor').innerHTML = (STATE.sensorAge?STATE.sensorAge.toFixed(1):'--')+'<span class="stat-unit"> ימים</span>';
+  document.getElementById('statBasal').innerHTML = (STATE.basalRate?STATE.basalRate.toFixed(2):'--')+'<span class="stat-unit"> U/h</span>';
+
+  // Chart
+  updateChart();
+
+  // Recommendation
+  updateRecommendation(sgv,iob,cob,trend);
+
+  // Alerts
+  updateAlerts(sgv,iob);
+
+  // Resistance
+  updateResistance(sgv,iob);
+
+  // Patient view
+  updatePatientView(sgv,trend);
+
+  // Profile
+  updateProfile();
+}
+
+function updateChart(){
+  const h = STATE.sgvHistory.slice(-36);
+  if(h.length<2) return;
+  const vals = h.map(e=>e.sgv);
+  const min = Math.max(40,Math.min(...vals)-20);
+  const max = Math.min(400,Math.max(...vals)+20);
+  const W=600,H=80;
+  const pts = vals.map((v,i)=>{
+    const x = (i/(vals.length-1))*W;
+    const y = H-((v-min)/(max-min))*H;
+    return `${x},${y}`;
+  });
+  const lineD = 'M'+pts.join(' L');
+  const areaD = 'M0,'+H+' L'+pts.join(' L')+' L'+W+','+H+' Z';
+  document.getElementById('chartLine').setAttribute('d',lineD);
+  document.getElementById('chartArea').setAttribute('d',areaD);
+  // target line
+  const ty = H-((STATE.target-min)/(max-min))*H;
+  document.getElementById('chartSVG').querySelector('.target-line').setAttribute('y1',ty);
+  document.getElementById('chartSVG').querySelector('.target-line').setAttribute('y2',ty);
+}
+
+function updateRecommendation(sgv,iob,cob,trend){
+  const icr = STATE.icr||10;
+  const isf = STATE.isf||40;
+  const target = STATE.target||110;
+  const preBolus = STATE.insulin==='novorapid'?20:STATE.insulin==='humalog'?15:10;
+
+  const correctionNeeded = sgv>target?(sgv-target)/isf:0;
+  const carbsBolus = cob/icr;
+  const totalRecommended = Math.max(0,correctionNeeded+carbsBolus-iob);
+
+  document.getElementById('recBolus').textContent = totalRecommended.toFixed(1);
+  document.getElementById('recPre').textContent = preBolus;
+  document.getElementById('recCOB').textContent = cob||0;
+  document.getElementById('recTrend').textContent = trend.arrow;
+
+  const loopyStr = sgv>target?`הזרק ${totalRecommended.toFixed(1)}U + המתן ${preBolus} דק'`:'המשך מעקב';
+  const loopStr = iob>0?`IOB ${iob.toFixed(1)}U פעיל`:'לופ בזאלי';
+  document.getElementById('recLoopyStr').textContent = loopyStr;
+  document.getElementById('recLoopStr').textContent = loopStr;
+}
+
+function updateAlerts(sgv,iob){
+  const bar = document.getElementById('alertBar');
+  bar.innerHTML='';
+
+  if(!sgv) return;
+
+  if(sgv<70){
+    addAlert(bar,'red','🚨 נמוך קריטי!',()=>openRescueModal(sgv));
+    return;
+  }
+  if(sgv<80){
+    addAlert(bar,'red','⚠️ סוכר נמוך',()=>openRescueModal(sgv));
+    return;
+  }
+  if(sgv>250){
+    addAlert(bar,'orange','🔴 סוכר גבוה מאד',()=>{});
+  } else if(sgv>180){
+    // Check if stuck
+    const stuckMins = checkIfStuck(sgv);
+    if(stuckMins>20){
+      addAlert(bar,'orange','🟠 עמידות לאינסולין',()=>openResistModal(iob,stuckMins));
+    } else {
+      addAlert(bar,'yellow','↑ סוכר גבוה – מעקב',null);
+    }
+  }
+
+  // Law of 3
+  if(sgv>130&&sgv<200&&STATE.debtCarbs>0){
+    addAlert(bar,'yellow','📋 חוק ה-3 – השלמה',()=>openLaw3Modal());
+  }
+
+  if(bar.innerHTML===''){
+    addAlert(bar,'green','✅ בטווח יעד',null);
+  }
+}
+
+function addAlert(bar,type,txt,action){
+  const div = document.createElement('div');
+  div.className='alert-pill '+type;
+  div.textContent=txt;
+  if(action) div.onclick=action;
+  bar.appendChild(div);
+}
+
+let stuckCounter = 0;
+function checkIfStuck(sgv){
+  if(sgv>180){stuckCounter++;return stuckCounter*5;}
+  stuckCounter=0;return 0;
+}
+
+function updateResistance(sgv,iob){
+  let ri=0;
+  if(sgv>180&&iob>1.5) ri=Math.min(100,((sgv-180)/2+(iob-1.5)*10));
+  STATE.resistanceIndex=ri;
+  document.getElementById('riFill').style.width=ri+'%';
+  document.getElementById('riLabel').textContent=ri<30?'נמוכה':ri<60?'בינונית':'גבוהה';
+  document.getElementById('riDesc').textContent=ri<30?'הלופ פועל כנצפה':ri<60?'ייתכן עיכוב בספיגה – מעקב':'⚠️ שקול תיקון ידני יזום';
+}
+
+function updatePatientView(sgv,trend){
+  if(STATE.role!=='patient') return;
+  const el = document.getElementById('patGlucose');
+  el.textContent=sgv||'---';
+  el.style.color=sgv<80?'var(--red)':sgv>180?'var(--orange)':'var(--green)';
+  document.getElementById('patTrend').textContent=trend.arrow;
+  if(STATE.lastUpdate){
+    const t=STATE.lastUpdate;
+    document.getElementById('patTime').textContent=t.getHours().toString().padStart(2,'0')+':'+t.getMinutes().toString().padStart(2,'0');
+  }
+
+  const preBolus=STATE.insulin==='novorapid'?20:15;
+  let instr='';
+  if(sgv<70) instr='🚨 <strong>שתה מיץ עכשיו!</strong> 150מ"ל מיץ מהר. קרא להורה.';
+  else if(sgv<80) instr='⚠️ <strong>סוכר נמוך</strong> – אכול פתיבר אחד ✋';
+  else if(sgv>250) instr='🔴 <strong>סוכר גבוה מאד</strong> – בדוק עם הורה מייד';
+  else if(sgv>180) instr='📈 סוכר גבוה – הלופ פועל. המתן '+preBolus+' דק\' ובדוק שוב.';
+  else instr='✅ <strong>הכל בסדר!</strong> סוכר בטווח יעד 😊';
+  document.getElementById('patInstruction').innerHTML=instr;
+}
+
+// ========================
+// MODALS
+// ========================
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+
+function openRescueModal(sgv){
+  document.getElementById('rescueSGV').textContent=sgv+' mg/dL';
+  const debtEl=document.getElementById('rescueDebt');
+  if(STATE.debtCarbs>0){
+    debtEl.textContent='⚠️ יש חוב פחמימות של '+STATE.debtCarbs+'ג\' – אל תרשום אינסולין!';
+  } else {
+    debtEl.textContent='';
+  }
+  openModal('rescueModal');
+  logEvent('חילוץ','פרוטוקול חילוץ הופעל – SGV '+sgv);
+}
+
+function openResistModal(iob,mins){
+  document.getElementById('resistTime').textContent=mins||35;
+  document.getElementById('resistIOB').textContent=(iob||0).toFixed(1)+'U';
+  const dose=(((STATE.currentSGV||180)-STATE.target)/STATE.isf*0.3).toFixed(1);
+  document.getElementById('resistDose').textContent=dose+'U';
+  openModal('resistModal');
+  logEvent('עמידות','מדד עמידות גבוה זוהה – IOB '+iob+'U');
+}
+
+function openLaw3Modal(){
+  const debt=STATE.debtCarbs;
+  const icr=STATE.icr||10;
+  const ins=(debt/icr).toFixed(1);
+  document.getElementById('l3carbs').textContent=debt;
+  document.getElementById('l3insulin').textContent=ins;
+  document.getElementById('l3abs').textContent=3;
+  document.getElementById('l3loopy').textContent='הזרק '+ins+'U';
+  document.getElementById('l3loop').textContent='IOB '+STATE.currentIOB+'U';
+  openModal('law3Modal');
+  logEvent('חוק ה-3','התראת השלמה: '+debt+'ג\' / '+ins+'U');
+}
+
+// ========================
+// FOOD
+// ========================
+function quickFood(name,carbs,abs){
+  document.getElementById('fm_food').value=name;
+  document.getElementById('fm_carbs').value=carbs;
+  document.getElementById('fm_abs').value=abs;
+  const ins=(carbs/(STATE.icr||10)).toFixed(1);
+  document.getElementById('fm_insulin').value=ins;
+  openModal('foodModal');
+}
+
+function filterFoodSuggest(q){
+  const drop=document.getElementById('foodSuggestDrop');
+  if(!q){drop.classList.remove('open');return}
+  const matches=FOOD_DB.filter(f=>f.name.includes(q)||q.includes(f.name));
+  if(!matches.length){drop.classList.remove('open');return}
+  drop.innerHTML=matches.map(f=>`
+    <div class="suggest-item" onclick="selectFoodItem('${f.name} ${f.emoji}',${f.carbs},${f.abs})">
+      <span class="si-emoji">${f.emoji}</span>
+      <span class="si-name">${f.name}</span>
+      <span class="si-meta">${f.carbs}ג' / ${f.abs}שע'</span>
+    </div>
+  `).join('');
+  drop.classList.add('open');
+}
+
+function selectFoodItem(name,carbs,abs){
+  document.getElementById('fm_food').value=name;
+  document.getElementById('fm_carbs').value=carbs;
+  document.getElementById('fm_abs').value=abs;
+  document.getElementById('fm_insulin').value=(carbs/(STATE.icr||10)).toFixed(1);
+  document.getElementById('foodSuggestDrop').classList.remove('open');
+}
+
+function addFoodEntry(){
+  const name=document.getElementById('fm_food').value.trim();
+  const carbs=parseFloat(document.getElementById('fm_carbs').value)||0;
+  const ins=parseFloat(document.getElementById('fm_insulin').value)||0;
+  const abs=parseFloat(document.getElementById('fm_abs').value)||3;
+
+  if(!name||!carbs){showToast('הזן מאכל וכמות פחמימות','orange');return}
+
+  const fullIns=carbs/(STATE.icr||10);
+  const debt=Math.max(0,carbs-ins*(STATE.icr||10));
+
+  const entry={
+    id:Date.now(),name,carbs,insulin:ins,abs,time:new Date(),
+    debt,done:ins*(STATE.icr||10),status:'active'
+  };
+
+  STATE.foodLog.unshift(entry);
+  if(debt>0){
+    STATE.debtCarbs+=debt;
+    STATE.debtTotal+=carbs;
+    showToast('⚠️ חוב פחמימות: '+debt.toFixed(0)+'ג\'','yellow');
+    logEvent('ארוחה',''+name+' – הוסף עם חוב '+debt.toFixed(0)+'ג\'');
+  } else {
+    logEvent('ארוחה',''+name+' – '+carbs+'ג\' / '+ins+'U');
+  }
+
+  saveState();
+  closeModal('foodModal');
+  renderFoodLog();
+  updateDebt();
+  showToast('✅ '+name+' נוסף','green');
+
+  // Schedule adaptive check
+  setTimeout(()=>checkFoodAbsorption(entry),abs*3600000);
+}
+
+function renderFoodLog(){
+  const list=document.getElementById('foodLogList');
+  if(!STATE.foodLog.length){
+    list.innerHTML='<div style="text-align:center;padding:30px;color:var(--text3);font-size:.88rem">אין ארוחות מוזנות</div>';
+    document.getElementById('foodLogCount').textContent='0 ארוחות';
+    return;
+  }
+  document.getElementById('foodLogCount').textContent=STATE.foodLog.length+' ארוחות';
+  list.innerHTML=STATE.foodLog.slice(0,10).map(e=>{
+    const t=new Date(e.time);
+    const ts=t.getHours().toString().padStart(2,'0')+':'+t.getMinutes().toString().padStart(2,'0');
+    const emoji=FOOD_DB.find(f=>e.name.includes(f.name))?.emoji||'🍽️';
+    return `<div class="food-entry">
+      <span class="fe-emoji">${emoji}</span>
+      <div class="fe-info">
+        <div class="fe-name">${e.name}</div>
+        <div class="fe-time">${ts}</div>
+      </div>
+      <span class="fe-carbs">${e.carbs}ג'</span>
+      <span class="fe-abs">${e.abs}שע'</span>
+      <div class="fe-status ${e.status==='active'?'active':''}"></div>
+    </div>`;
+  }).join('');
+}
+
+function checkFoodAbsorption(entry){
+  const sgv=STATE.currentSGV||120;
+  if(sgv>entry.abs*10+80){
+    showToast('📊 '+entry.name+': ספיגה איטית? שקול לשנות זמן','yellow');
+    logEvent('למידה אדפטיבית',''+entry.name+' – ספיגה עשויה להיות איטית');
+  }
+}
+
+function updateDebt(){
+  const carbs=STATE.debtCarbs;
+  const total=STATE.debtTotal||carbs;
+  const pct=total>0?Math.round((1-carbs/total)*100):0;
+  document.getElementById('debtCarbs').textContent=carbs.toFixed(0)+'ג\'';
+  document.getElementById('debtDone').textContent=Math.max(0,total-carbs).toFixed(0)+'ג\'';
+  document.getElementById('debtFill').style.width=pct+'%';
+  document.getElementById('debtDesc').textContent=carbs>0?`חוב פעיל: ${carbs.toFixed(0)}ג' ממתין לכיסוי`:'אין חוב פחמימות פעיל';
+}
+
+// ========================
+// OMNIBOX
+// ========================
+function onOmni(q){
+  const drop=document.getElementById('omniDrop');
+  const hint=document.getElementById('omniHint');
+  if(!q){drop.classList.remove('open');hint.textContent='הקלד מאכל לחישוב אוטומטי';return}
+
+  const matches=FOOD_DB.filter(f=>f.name.includes(q)||q.includes(f.name));
+  if(matches.length){
+    drop.innerHTML=matches.map(f=>`
+      <div class="suggest-item" onclick="fillOmni('${f.name} ${f.emoji}',${f.carbs},${f.abs})">
+        <span class="si-emoji">${f.emoji}</span>
+        <span class="si-name">${f.name}</span>
+        <span class="si-meta">${f.carbs}ג' / ${f.abs}שע'</span>
+      </div>
+    `).join('');
+    drop.classList.add('open');
+    const f=matches[0];
+    hint.textContent=`${f.name}: ${f.carbs}ג' פחמימה | ספיגה ${f.abs}שע'`;
+  } else {
+    drop.classList.remove('open');
+    hint.textContent='הקלד מאכל לחישוב אוטומטי';
+  }
+}
+
+function fillOmni(name,carbs,abs){
+  document.getElementById('omniInput').value=name;
+  document.getElementById('omniDrop').classList.remove('open');
+  const ins=(carbs/(STATE.icr||10)).toFixed(1);
+  document.getElementById('omniHint').textContent=`${name}: ${carbs}ג' → ${ins}U אינסולין | ספיגה ${abs}שע'`;
+}
+
+function calcOmni(){
+  const q=document.getElementById('omniInput').value.trim();
+  if(!q){showToast('הזן מאכל תחילה','orange');return}
+  const match=FOOD_DB.find(f=>q.includes(f.name));
+  if(match){
+    quickFood(match.name+' '+match.emoji,match.carbs,match.abs);
+  } else {
+    document.getElementById('fm_food').value=q;
+    document.getElementById('fm_carbs').value='';
+    document.getElementById('fm_abs').value=3;
+    openModal('foodModal');
+  }
+}
+
+// ========================
+// SETTINGS
+// ========================
+function loadSettingsModal(){
+  document.getElementById('set_ns').value=STATE.nsURL||'';
+  document.getElementById('set_secret').value=STATE.nsSecret||'';
+  document.getElementById('set_insulin').value=STATE.insulin||'novorapid';
+  document.getElementById('set_icr').value=STATE.icr||10;
+  document.getElementById('set_isf').value=STATE.isf||40;
+  document.getElementById('set_target').value=STATE.target||110;
+}
+
+function saveSettings(){
+  STATE.nsURL=document.getElementById('set_ns').value.trim().replace(/\/$/,'');
+  STATE.nsSecret=document.getElementById('set_secret').value.trim();
+  STATE.insulin=document.getElementById('set_insulin').value;
+  STATE.icr=parseFloat(document.getElementById('set_icr').value)||10;
+  STATE.isf=parseFloat(document.getElementById('set_isf').value)||40;
+  STATE.target=parseFloat(document.getElementById('set_target').value)||110;
+  saveState();
+  closeModal('settingsModal');
+  showToast('✅ הגדרות נשמרו','green');
+  logEvent('הגדרות','פרמטרים עודכנו');
+  if(nsInterval) clearInterval(nsInterval);
+  startNSPolling();
+}
+
+function generateInviteLink(){
+  const token=btoa(JSON.stringify({ns:STATE.nsURL,role:'viewer',name:STATE.name}));
+  const url='https://loopie.app/v?token='+token.slice(0,40)+'...';
+  document.getElementById('inviteURL').textContent=url;
+}
+
+function copyInvite(){
+  const url=document.getElementById('inviteURL').textContent;
+  navigator.clipboard.writeText(url).catch(()=>{});
+  showToast('🔗 קישור הועתק','green');
+}
+
+function shareWhatsapp(){
+  const url=document.getElementById('inviteURL').textContent;
+  const msg=encodeURIComponent('היי! מוזמן לצפות ב-Loopie של '+STATE.name+': '+url);
+  window.open('https://wa.me/?text='+msg,'_blank');
+}
+
+function logout(){
+  if(confirm('להתנתק ולמחוק נתונים מקומיים?')){
+    localStorage.removeItem('loopie_state');
+    location.reload();
+  }
+}
+
+// ========================
+// PROFILE
+// ========================
+function updateProfile(){
+  document.getElementById('profName').textContent=STATE.name||'--';
+  if(STATE.dob){
+    const d=new Date(STATE.dob);
+    document.getElementById('profDOB').textContent=d.toLocaleDateString('he-IL');
+  }
+  document.getElementById('profHeight').textContent=(STATE.height||'--')+' ס"מ';
+  document.getElementById('profWeight').textContent=(STATE.weight||'--')+' ק"ג';
+  document.getElementById('profICR').textContent=(STATE.icr||'--')+' g/U';
+  document.getElementById('profISF').textContent=(STATE.isf||'--')+' mg/U';
+  document.getElementById('profInsulin').textContent=STATE.insulin||'--';
+  document.getElementById('profTarget').textContent=(STATE.target||'--')+' mg/dL';
+  document.getElementById('profBasal').textContent=(STATE.basalRate?STATE.basalRate.toFixed(2):'--')+' U/h';
+  document.getElementById('profTDD').textContent='--';
+  document.getElementById('profPodAge').textContent=STATE.podAge?STATE.podAge.toFixed(0)+' שע\'':`--`;
+  document.getElementById('profSensorAge').textContent=STATE.sensorAge?STATE.sensorAge.toFixed(1)+' ימים':'--';
+  document.getElementById('profReservoir').textContent=(STATE.reservoir||'--')+' U';
+  document.getElementById('profLoopStatus').textContent=STATE.nsConnected?'✅ מחובר':'⏳ מחכה';
+}
+
+// ========================
+// TABS
+// ========================
+function switchTab(name,btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name==='profile') updateProfile();
+}
+
+// ========================
+// LOG
+// ========================
+function logEvent(cat,msg){
+  const entry={time:new Date(),cat,msg};
+  STATE.eventLog.unshift(entry);
+  if(STATE.eventLog.length>100) STATE.eventLog.pop();
+  const logEl=document.getElementById('eventLog');
+  if(logEl){
+    logEl.innerHTML=STATE.eventLog.slice(0,30).map(e=>{
+      const t=new Date(e.time);
+      const ts=t.getHours().toString().padStart(2,'0')+':'+t.getMinutes().toString().padStart(2,'0');
+      return `<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:.8rem">
+        <span style="font-family:var(--mono);color:var(--text3);min-width:40px">${ts}</span>
+        <span style="color:var(--accent);font-weight:500;min-width:70px">${e.cat}</span>
+        <span style="color:var(--text2)">${e.msg}</span>
+      </div>`;
+    }).join('');
+  }
+}
+
+// ========================
+// TOAST
+// ========================
+function showToast(msg,type=''){
+  const container=document.getElementById('toastContainer');
+  const t=document.createElement('div');
+  t.className='toast'+(type?' '+type:'');
+  t.textContent=msg;
+  container.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .4s';setTimeout(()=>t.remove(),400)},3000);
+}
+
+// ========================
+// BOOT
+// ========================
+(function(){
+  const loaded=loadState();
+  if(loaded&&STATE.name){
+    document.getElementById('splash').style.display='none';
+    initApp();
+  } else {
+    // Auto-demo mode fallback
+    setTimeout(()=>{
+      if(document.getElementById('splash').style.display!=='none'){
+        // still on splash
+      }
+    },500);
   }
 })();
 
-/* ═══════════════════════════════════
-   ONBOARDING
-═══════════════════════════════════ */
-function selectRole(r) {
-  App._selectedRole = r;
-  document.getElementById('role-patient').classList.toggle('selected', r === 'patient');
-  document.getElementById('role-parent').classList.toggle('selected', r === 'parent');
-  document.getElementById('btn-s1').disabled = false;
-}
-
-function goStep(n) {
-  if (n === 2 && !App._selectedRole) {
-    toast('בחר תפקיד תחילה', 'e'); return;
-  }
-  // Validate step 2 before moving forward
-  if (n === 3 && !step2Valid()) { markStep2Errors(); return; }
-
-  const prev = App._currentStep;
-  App._currentStep = n;
-  document.getElementById('ob-s' + prev).classList.remove('active');
-  document.getElementById('ob-s' + n).classList.add('active');
-  [1,2,3].forEach(i => {
-    const dot = document.getElementById('dot-' + i);
-    dot.classList.toggle('active', i === n);
-  });
-}
-
-function step2Valid() {
-  const name  = document.getElementById('inp-name').value.trim();
-  const dob   = document.getElementById('inp-dob').value;
-  const email = document.getElementById('inp-email').value.trim();
-  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  return name.length > 0 && dob.length > 0 && emailOk;
-}
-
-function markStep2Errors() {
-  const name  = document.getElementById('inp-name').value.trim();
-  const dob   = document.getElementById('inp-dob').value;
-  const email = document.getElementById('inp-email').value.trim();
-  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  document.getElementById('err-name').classList.toggle('show', !name);
-  document.getElementById('err-dob').classList.toggle('show', !dob);
-  document.getElementById('err-email').classList.toggle('show', !emailOk);
-}
-
-function validateStep2() {
-  const ok = step2Valid();
-  document.getElementById('btn-s2').disabled = !ok;
-  if (ok) {
-    // Clear errors once valid
-    ['err-name','err-dob','err-email'].forEach(id =>
-      document.getElementById(id).classList.remove('show'));
-  }
-}
-
-function finishOnboarding(skip = false) {
-  // Gather data
-  App.role    = App._selectedRole;
-  App.name    = document.getElementById('inp-name').value.trim();
-  const dobRaw = document.getElementById('inp-dob').value; // yyyy-mm-dd
-  if (dobRaw) {
-    const [y,m,d] = dobRaw.split('-').map(Number);
-    App.dob = {year:y, month:m, day:d};
-  }
-  App.email   = document.getElementById('inp-email').value.trim();
-
-  if (!skip) {
-    const nsUrl = document.getElementById('inp-ns-url').value.trim().replace(/\/$/, '');
-    const nsSecret = document.getElementById('inp-ns-secret').value.trim();
-    if (nsUrl) App.ns_url = nsUrl;
-    if (nsSecret && typeof CryptoJS !== 'undefined') {
-      App.ns_secret_sha1 = CryptoJS.SHA1(nsSecret).toString();
-    }
-  }
-
-  saveConfig();
-  document.getElementById('onboarding').classList.add('hidden');
-  launchApp();
-}
-
-/* ═══════════════════════════════════
-   SAVE / LOAD CONFIG
-═══════════════════════════════════ */
-function saveConfig() {
-  Store.set('loopie_v284', {
-    role: App.role, name: App.name, dob: App.dob, email: App.email,
-    ns_url: App.ns_url, ns_secret_sha1: App.ns_secret_sha1,
-    pusher_key: App.pusher_key, pusher_cluster: App.pusher_cluster,
-    isf: App.isf, cr: App.cr, low: App.low, high: App.high, target: App.target
-  });
-}
-
-/* ═══════════════════════════════════
-   LAUNCH APP
-═══════════════════════════════════ */
-function launchApp() {
-  document.getElementById('app').classList.remove('hidden');
-
-  // Header
-  document.getElementById('h-name').textContent  = App.name || '—';
-  document.getElementById('h-badge').textContent  = App.role === 'patient' ? 'מטופל' : 'הורה';
-
-  // Show correct view
-  document.getElementById('view-patient').classList.toggle('active', App.role === 'patient');
-  document.getElementById('view-parent').classList.toggle('active',  App.role === 'parent');
-
-  // Prefill settings fields
-  prefillSettings();
-
-  // Birthday check
-  checkBirthday();
-
-  // Init
-  if (App.role === 'parent') initChart();
-  if (App.ns_url) startNSPolling();
-  startSim();
-  addLog('Loopie v28.4 פעיל', '🚀', 'info');
-
-  // Notif permission
-  if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission();
-  }
-}
-
-/* ═══════════════════════════════════
-   BIRTHDAY
-═══════════════════════════════════ */
-function checkBirthday() {
-  if (!App.dob) return;
-  const now = new Date();
-  if (App.dob.day === now.getDate() && App.dob.month === now.getMonth() + 1) {
-    const key = `bday_${now.getFullYear()}`;
-    if (!Store.has(key)) {
-      Store.set(key, 1);
-      const age = now.getFullYear() - App.dob.year;
-      document.getElementById('bday-name').textContent = `🎂 יום הולדת שמח, ${App.name}!`;
-      document.getElementById('bday-msg').innerHTML =
-        `ברכות על ${age} שנים מלאות 🎊<br>הלופ שומר עליך היום ותמיד 💙`;
-      document.getElementById('bday-modal').classList.remove('hidden');
-    }
-  }
-}
-function closeBday() { document.getElementById('bday-modal').classList.add('hidden'); }
-
-/* ═══════════════════════════════════
-   NIGHTSCOUT
-═══════════════════════════════════ */
-let nsTimer = null;
-function startNSPolling() {
-  fetchNS();
-  if (nsTimer) clearInterval(nsTimer);
-  nsTimer = setInterval(fetchNS, 5 * 60 * 1000);
-}
-
-async function fetchNS() {
-  if (!App.ns_url) return;
-  setConnStatus('connecting');
-  try {
-    const headers = { 'Accept': 'application/json' };
-    if (App.ns_secret_sha1) headers['api-secret'] = App.ns_secret_sha1;
-
-    const [eRes, dRes] = await Promise.all([
-      fetch(`${App.ns_url}/api/v1/entries.json?count=144`, { headers }),
-      fetch(`${App.ns_url}/api/v1/devicestatus.json?count=1`, { headers })
-    ]);
-
-    if (!eRes.ok) throw new Error(`HTTP ${eRes.status}`);
-    const entries = await eRes.json();
-
-    if (entries && entries.length) {
-      App.glucose = entries.map(e => ({ t: e.date, v: e.sgv })).reverse();
-      const last  = entries[0];
-      App.sgv     = last.sgv;
-      App.trend   = last.direction || 'Flat';
-      updateGlucoseUI(last.sgv, last.direction, last.date);
-    }
-
-    if (dRes.ok) {
-      const ds = await dRes.json();
-      if (ds && ds[0]) {
-        const d    = ds[0];
-        const loop = d.loop || d.openaps || {};
-        const iob  = parseFloat(loop.iob?.iob ?? loop.enacted?.IOB ?? 0);
-        const cob  = parseFloat(loop.cob?.cob ?? loop.enacted?.COB ?? 0);
-        const basal = parseFloat(loop.enacted?.rate ?? d.pump?.extended?.TempBasalAbsoluteRate ?? 0);
-        const res  = Math.round(d.pump?.reservoir ?? d.pump?.status?.reservoir ?? 0);
-        applyPBD(iob, cob, basal, res);
-        // Device ages
-        const podAge = d.pump?.extended?.PodExpirationDateTime
-          ? Math.round((new Date(d.pump.extended.PodExpirationDateTime) - Date.now()) / 3600000) + 'h'
-          : '—';
-        document.getElementById('dev-pod').textContent    = podAge;
-        document.getElementById('dev-sensor').textContent = d.uploader?.battery ? d.uploader.battery + '%' : '—';
-      }
-    }
-
-    setConnStatus('ok');
-    document.getElementById('ns-dot').className    = 'sd-conn-dot ok';
-    document.getElementById('ns-status').textContent = 'מחובר ✓';
-
-  } catch(err) {
-    setConnStatus('err');
-    document.getElementById('ns-dot').className    = 'sd-conn-dot err';
-    document.getElementById('ns-status').textContent = 'שגיאה: ' + err.message;
-    console.warn('[NS]', err);
-  }
-}
-
-function setConnStatus(s) {
-  const dot = document.getElementById('conn-dot');
-  dot.className = 'conn-dot' + (s === 'ok' ? ' ok' : s === 'err' ? ' err' : s === 'connecting' ? ' connecting' : '');
-}
-
-/* ═══════════════════════════════════
-   PUSHER
-═══════════════════════════════════ */
-let pusherInst = null;
-function initPusher(key, cluster) {
-  if (!key || !cluster) return;
-  const existing = document.getElementById('pusher-script');
-  if (existing) { existing.remove(); }
-  const s = document.createElement('script');
-  s.id  = 'pusher-script';
-  s.src = 'https://js.pusher.com/8.2.0/pusher.min.js';
-  s.onload = () => {
-    try {
-      if (pusherInst) { pusherInst.disconnect(); }
-      pusherInst = new window.Pusher(key, { cluster });
-      const ch = pusherInst.subscribe('nightscout');
-      ch.bind('glucose', data => {
-        if (!data?.sgv) return;
-        App.sgv = data.sgv; App.trend = data.direction || 'Flat';
-        App.glucose.push({ t: Date.now(), v: data.sgv });
-        updateGlucoseUI(data.sgv, data.direction, Date.now());
-        // Alerts
-        if (data.sgv < App.low)  notify('⚠️ סוכר נמוך!', `${data.sgv} mg/dL`);
-        if (data.sgv > App.high) notify('⬆️ סוכר גבוה', `${data.sgv} mg/dL`);
-      });
-      document.getElementById('pusher-dot').className    = 'sd-conn-dot ok';
-      document.getElementById('pusher-status').textContent = 'Pusher מחובר ✓';
-      App.pusher_ok = true;
-    } catch(e) {
-      document.getElementById('pusher-dot').className    = 'sd-conn-dot err';
-      document.getElementById('pusher-status').textContent = 'שגיאת Pusher';
-    }
-  };
-  s.onerror = () => {
-    document.getElementById('pusher-dot').className = 'sd-conn-dot err';
-    document.getElementById('pusher-status').textContent = 'נכשל לטעון Pusher';
-  };
-  document.head.appendChild(s);
-}
-
-/* ═══════════════════════════════════
-   UPDATE UI
-═══════════════════════════════════ */
-function updateGlucoseUI(sgv, trend, time) {
-  const cls = sgvClass(sgv);
-  const arr = trendArrow(trend);
-
-  // Parent
-  const gcv = document.getElementById('gc-val');
-  if (gcv) { gcv.textContent = sgv; gcv.className = 'gc-val ' + cls; }
-  setTxt('gc-trend', arr);
-  const mins = Math.round((Date.now() - time) / 60000);
-  setTxt('gc-time', mins < 2 ? 'עכשיו' : `לפני ${mins} דק'`);
-
-  // Patient
-  const ptv = document.getElementById('pt-sgv');
-  if (ptv) { ptv.textContent = sgv; ptv.className = 'patient-sgv ' + cls; }
-  setTxt('pt-trend', arr);
-  setTxt('pt-meta', `${sgv} mg/dL · ${arr} · ${mins < 2 ? 'עכשיו' : 'לפני ' + mins + ' דק\''}`);
-
-  // Stats
-  updateStats();
-  checkResistance(sgv);
-  checkRule3(sgv);
-  updatePredictions(sgv, trend);
-  if (App.role === 'parent') drawChart();
-}
-
-function applyPBD(iob, cob, basal, res) {
-  App.iob = iob; App.cob = cob; App.basal = basal; App.reservoir = res;
-
-  setTxt('b-iob', iob.toFixed(1));   setTxt('badge-iob', iob.toFixed(1));
-  setTxt('b-cob', cob);
-  setTxt('p-iob', iob.toFixed(2)+'U');
-  setTxt('p-iob-sub', `~${Math.round(iob * 55)} דק' ספיגה`);
-  setTxt('p-cob', cob + 'ג\'');
-  setTxt('p-cob-sub', cob > 0 ? `~${Math.round(cob / 0.5)} דק'` : 'ללא');
-  setBar('p-iob-bar', Math.min(100, iob/6*100));
-  setBar('p-cob-bar', Math.min(100, cob/80*100));
-  setTxt('g-basal', basal.toFixed(2)+'U/h');
-  setTxt('g-res', res+'U');
-  setTxt('stat-basal', basal.toFixed(2)); // fallback
-  setTxt('dev-res', res+'U');
-  const drvEl = document.getElementById('dev-res');
-  if (drvEl) drvEl.className = 'dev-val ' + (res<30?'warn':res<10?'crit':'ok');
-}
-
-function updateStats() {
-  const last24 = App.glucose.filter(d => Date.now() - d.t < 86400000);
-  if (!last24.length) return;
-  const avg = Math.round(last24.reduce((a,d) => a+d.v, 0) / last24.length);
-  const inR = last24.filter(d => d.v >= App.low && d.v <= App.high).length;
-  const tir  = Math.round(inR / last24.length * 100);
-  setTxt('g-tir', tir+'%');
-  setTxt('g-avg', avg);
-}
-
-/* ═══════════════════════════════════
-   CHART (parent only)
-═══════════════════════════════════ */
-let cvs = null, ctx = null;
-function initChart() {
-  cvs = document.getElementById('chart');
-  if (!cvs) return;
-  ctx = cvs.getContext('2d');
-  const dpr = window.devicePixelRatio || 1;
-  cvs.width  = cvs.offsetWidth  * dpr;
-  cvs.height = cvs.offsetHeight * dpr;
-  ctx.scale(dpr, dpr);
-  drawChart();
-}
-
-function drawChart() {
-  if (!ctx || !cvs) return;
-  const W = cvs.offsetWidth, H = cvs.offsetHeight;
-  ctx.clearRect(0, 0, W, H);
-
-  const MIN = 40, MAX = 350;
-  const yOf = v => H - ((v - MIN) / (MAX - MIN)) * H;
-  const now  = Date.now();
-  const span = App.graphHours * 3600000;
-  const data = App.glucose.filter(d => now - d.t <= span);
-
-  // Zones
-  ctx.fillStyle = 'rgba(239,68,68,.06)'; ctx.fillRect(0, 0, W, yOf(App.high));
-  ctx.fillStyle = 'rgba(34,197,94,.05)'; ctx.fillRect(0, yOf(App.high), W, yOf(App.low) - yOf(App.high));
-  ctx.fillStyle = 'rgba(239,68,68,.06)'; ctx.fillRect(0, yOf(App.low), W, H - yOf(App.low));
-
-  // Zone lines
-  [App.low, App.high, App.target].forEach(v => {
-    ctx.strokeStyle = v === App.target ? 'rgba(59,130,246,.5)' : 'rgba(255,255,255,.08)';
-    ctx.setLineDash(v === App.target ? [5, 4] : []);
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, yOf(v)); ctx.lineTo(W, yOf(v));
-    ctx.stroke();
-  });
-  ctx.setLineDash([]);
-
-  if (data.length < 2) return;
-  const xOf = t => ((t - (now - span)) / span) * W;
-
-  // Fill
-  const grad = ctx.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, 'rgba(59,130,246,.25)');
-  grad.addColorStop(1, 'rgba(59,130,246,.01)');
-  ctx.beginPath();
-  ctx.moveTo(xOf(data[0].t), yOf(data[0].v));
-  for (let i = 1; i < data.length; i++) ctx.lineTo(xOf(data[i].t), yOf(data[i].v));
-  ctx.lineTo(xOf(data[data.length-1].t), H);
-  ctx.lineTo(xOf(data[0].t), H);
-  ctx.closePath(); ctx.fillStyle = grad; ctx.fill();
-
-  // Line
-  ctx.beginPath();
-  ctx.strokeStyle = '#60a5fa'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
-  ctx.moveTo(xOf(data[0].t), yOf(data[0].v));
-  for (let i = 1; i < data.length; i++) ctx.lineTo(xOf(data[i].t), yOf(data[i].v));
-  ctx.stroke();
-
-  // Out-of-range dots
-  data.forEach(d => {
-    if (d.v < App.low || d.v > App.high) {
-      ctx.beginPath();
-      ctx.arc(xOf(d.t), yOf(d.v), 3.5, 0, Math.PI*2);
-      ctx.fillStyle = d.v < App.low ? '#ef4444' : '#fbbf24';
-      ctx.fill();
-    }
-  });
-
-  // Current dot
-  const last = data[data.length-1];
-  ctx.beginPath();
-  ctx.arc(xOf(last.t), yOf(last.v), 6, 0, Math.PI*2);
-  ctx.fillStyle = sgvColor(last.v);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(255,255,255,.5)';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-}
-
-function setHours(h, btn) {
-  App.graphHours = h;
-  document.querySelectorAll('.tt').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
-  drawChart();
-}
-
-/* ═══════════════════════════════════
-   PREDICTIONS
-═══════════════════════════════════ */
-function updatePredictions(sgv, trend) {
-  const rate = {'DoubleUp':4,'SingleUp':2.5,'FortyFiveUp':1.5,'Flat':0,
-    'FortyFiveDown':-1.5,'SingleDown':-2.5,'DoubleDown':-4}[trend] || 0;
-  const preds = [15, 30, 60].map(min => {
-    const v = Math.round(sgv + rate*min - App.iob * App.isf * (min/60) * 0.6);
-    return { min, v: Math.max(40, Math.min(400, v)) };
-  });
-  document.getElementById('pred-rows').innerHTML = preds.map(p => {
-    const dir = p.v > sgv ? 'up' : p.v < sgv ? 'down' : 'flat';
-    return `<div class="pred-row">
-      <span class="pred-time">+${p.min} דק'</span>
-      <span class="pred-val ${dir}">${p.v} mg/dL</span>
-    </div>`;
-  }).join('');
-}
-
-/* ═══════════════════════════════════
-   RESISTANCE
-═══════════════════════════════════ */
-function checkResistance(sgv) {
-  if (sgv > App.high && App.iob > 0.5) {
-    App.resistMin += 5;
-    if (App.resistMin >= 45) {
-      showAlert('resist-card'); showAlert('resist-card-pr');
-    }
-  } else {
-    App.resistMin = 0;
-    hideAlert('resist-card'); hideAlert('resist-card-pr');
-  }
-}
-
-function doCorrection() {
-  if (!App.sgv) return;
-  const c = ((App.sgv - App.target) / App.isf).toFixed(1);
-  toast(`תיקון מומלץ: ${c}U – אשר עם הרופא / הלופ`, 'i');
-  addLog(`המלצת תיקון ידני ${c}U (עמידות)`, '🟠', 'warn');
-}
-
-/* ═══════════════════════════════════
-   RULE OF 3
-═══════════════════════════════════ */
-function checkRule3(sgv) {
-  if (sgv > 130 && sgv < 200 && App.cob > 0 && !App.rule3Active) {
-    App.rule3Active = true;
-    const carbs   = 15;
-    const insulin  = (carbs / App.cr).toFixed(1);
-    const microBol = (App.iob * 0.25).toFixed(2);
-    const note     = `🤖 המלצת הלופ: ${(insulin*0.8).toFixed(1)}U · IOB: ${App.iob.toFixed(1)}U · מיקרו-בולוסים: ${microBol}U`;
-    ['','‌pr'].forEach(sfx => {
-      setTxt('r3-carbs'+(sfx?'-'+sfx:''), carbs+'ג\'');
-      setTxt('r3-ins'+(sfx?'-'+sfx:''), insulin+'U');
-      setTxt('r3-time'+(sfx?'-'+sfx:''), '90 דק\'');
-      setTxt('r3-note'+(sfx?'-'+sfx:''), note);
-    });
-    setTxt('r3-carbs', carbs+'ג\''); setTxt('r3-ins', insulin+'U');
-    setTxt('r3-time', '90 דק\''); setTxt('r3-note', note);
-    setTxt('r3-carbs-pr', carbs+'ג\''); setTxt('r3-ins-pr', insulin+'U');
-    setTxt('r3-time-pr', '90 דק\''); setTxt('r3-note-pr', note);
-    showAlert('rule3-card'); showAlert('rule3-card-pr');
-    notify('⚠️ חוק ה-3', `הגיע זמן השלמת הארוחה – ${carbs}ג' פחמימות`);
-  }
-  if ((sgv <= 115 || sgv > 200) && App.rule3Active) {
-    App.rule3Active = false;
-    hideAlert('rule3-card'); hideAlert('rule3-card-pr');
-  }
-}
-
-/* ═══════════════════════════════════
-   FOOD SPLIT (חוק ה-3 phase 1)
-═══════════════════════════════════ */
-function showFoodSplit(label, totalCarbs) {
-  const now70 = Math.round(totalCarbs * 0.7);
-  const lat30 = totalCarbs - now70;
-  const insNow = (now70 / App.cr).toFixed(1);
-  const insLat = (lat30 / App.cr).toFixed(1);
-
-  ['','‌pr'].forEach(() => {}); // avoid lint warn
-
-  // Patient
-  setTxt('sp-ins-now', insNow+'U'); setTxt('sp-carbs-now', `${now70}ג' (70%)`);
-  setTxt('sp-ins-later', insLat+'U'); setTxt('sp-carbs-later', `${lat30}ג' (30%)`);
-  showAlert('split-card');
-
-  // Parent
-  setTxt('sp-ins-now-pr', insNow+'U'); setTxt('sp-carbs-now-pr', `${now70}ג' (70%)`);
-  setTxt('sp-ins-later-pr', insLat+'U'); setTxt('sp-carbs-later-pr', `${lat30}ג' (30%)`);
-  showAlert('split-card-pr');
-
-  // Start countdown
-  App.waitSec = 20 * 60;
-  if (App.waitTimer) clearInterval(App.waitTimer);
-  App.waitTimer = setInterval(() => {
-    App.waitSec--;
-    const m = Math.floor(App.waitSec / 60), s = App.waitSec % 60;
-    const str = `${m}:${String(s).padStart(2,'0')}`;
-    setTxt('wait-cd', str); setTxt('wait-cd-pr', str);
-    if (App.waitSec <= 0) {
-      clearInterval(App.waitTimer);
-      setTxt('wait-cd', '✅'); setTxt('wait-cd-pr', '✅');
-      notify('⏰ Loopie', `זמן לאכול את שאר הארוחה! ${lat30}ג' פחמימות`);
-      addLog(`תזכורת: השלם ${lat30}ג' פחמימות`, '⏰', 'info');
-    }
-  }, 1000);
-
-  addLog(`ארוחה: ${label} | עכשיו ${insNow}U / אחרי 20 דק' ${insLat}U`, '🍽️', 'info');
-}
-
-/* ═══════════════════════════════════
-   OMNIBOX
-═══════════════════════════════════ */
-const FOODS = [
-  {n:'פיתה לבנה',       c100:53}, {n:'לחם לבן',         c100:49},
-  {n:'לחם שיפון',       c100:41}, {n:'אורז לבן מבושל',  c100:28},
-  {n:'ספגטי מבושל',     c100:25}, {n:'תפוח אדמה מבושל', c100:17},
-  {n:'פיצה (פרוסה)',    c100:30}, {n:'קורנפלקס',        c100:83},
-  {n:'שוקולד מריר 70%', c100:46}, {n:'שוקולד חלב',       c100:56},
-  {n:'בנאנה',           c100:21}, {n:'תפוח',             c100:14},
-  {n:'ענבים',           c100:18}, {n:'אבטיח',            c100:8},
-  {n:'יוגורט 3%',       c100:4},  {n:'חלב 3%',           c100:5},
-  {n:'מיץ תפוזים',      c100:10}, {n:'קולה',             c100:11},
-  {n:'ביסלי',           c100:60}, {n:'דייסה (שיבולת שועל)', c100:12},
-  {n:'בורקס גבינה',     c100:35}, {n:'חומוס',            c100:14},
-  {n:'פלאפל (כדור)',    c100:27}, {n:'שניצל פנוי',       c100:12},
-];
-
-function omniSearch(val, suffix) {
-  const resEl = document.getElementById('omni-res-' + suffix);
-  if (!val || val.length < 1) { resEl.classList.remove('open'); return; }
-
-  const m = val.match(/^(.+?)\s*(\d+(?:\.\d+)?)?$/);
-  const q = (m ? m[1] : val).trim().toLowerCase();
-  const g = m && m[2] ? parseFloat(m[2]) : null;
-
-  const matches = FOODS.filter(f =>
-    f.n.toLowerCase().includes(q) || q.split(' ').some(w => f.n.toLowerCase().includes(w))
-  ).slice(0, 7);
-
-  if (!matches.length) { resEl.classList.remove('open'); return; }
-
-  resEl.innerHTML = matches.map(f => {
-    const carbs = g ? Math.round(f.c100 * g / 100) : null;
-    const carbsStr = carbs !== null ? `${carbs}ג' פחמ'` : `${f.c100}/100ג'`;
-    const gStr = g ? ` ${g}ג'` : '';
-    return `<div class="omni-item" onclick="pickFood('${f.n}${gStr}',${g||100},${f.c100},'${suffix}')">
-      <span class="fn">${f.n}${gStr}</span>
-      <span class="fc">${carbsStr}</span>
-    </div>`;
-  }).join('');
-  resEl.classList.add('open');
-}
-
-function omniKey(e, suffix) {
-  if (e.key === 'Escape') {
-    document.getElementById('omni-res-' + suffix).classList.remove('open');
-    document.getElementById('omni-' + suffix).value = '';
-  }
-}
-
-function pickFood(label, grams, per100, suffix) {
-  const carbs = Math.round(per100 * grams / 100);
-  document.getElementById('omni-res-' + suffix).classList.remove('open');
-  document.getElementById('omni-' + suffix).value = '';
-  showFoodSplit(label, carbs);
-}
-
-// Close omni on outside click
-document.addEventListener('click', e => {
-  if (!e.target.closest('.omnibox-wrap')) {
-    document.querySelectorAll('.omni-results').forEach(r => r.classList.remove('open'));
-  }
-});
-
-/* ═══════════════════════════════════
-   SIMULATION
-═══════════════════════════════════ */
-function startSim() {
-  // Seed from master prompt: 00:35, SGV 216, 0.2U bolus + 0.6U basal
-  let sgv = 216, iob = 0.8, cob = 45;
-  App.sgv = sgv;
-
-  const tick = () => {
-    if (App.ns_ok) return; // real data wins
-    const insulinDrop = -(iob * 0.9 + 0.6 * 0.12);
-    const carbRise    = cob > 0 ? cob * 0.025 : 0;
-    const noise       = (Math.random() - 0.5) * 4;
-    sgv  = Math.max(55, Math.min(400, sgv + insulinDrop + carbRise + noise));
-    iob  = Math.max(0, iob  - 0.06);
-    cob  = Math.max(0, cob  - 1.8);
-    const t = Date.now();
-    App.glucose.push({ t, v: Math.round(sgv) });
-    if (App.glucose.length > 300) App.glucose.shift();
-    App.sgv = Math.round(sgv);
-    const dir = insulinDrop + carbRise + noise > 1 ? 'SingleUp'
-              : insulinDrop + carbRise + noise < -1 ? 'SingleDown' : 'Flat';
-    updateGlucoseUI(Math.round(sgv), dir, t);
-    applyPBD(+iob.toFixed(2), Math.round(cob), 0.6, App.reservoir || 180);
-    if (App.role === 'parent') drawChart();
-  };
-
-  tick(); // immediate
-  if (App.simInterval) clearInterval(App.simInterval);
-  App.simInterval = setInterval(tick, 5 * 60 * 1000); // every 5 min
-  // Fast demo ticks (every 15s) for visual feedback
-  setInterval(() => { if (!App.ns_ok && App.role === 'parent') drawChart(); }, 15000);
-}
-
-/* ═══════════════════════════════════
-   SETTINGS
-═══════════════════════════════════ */
-function openSettings() {
-  document.getElementById('settings-backdrop').classList.add('open');
-  document.getElementById('settings-drawer').classList.add('open');
-}
-function closeSettings() {
-  document.getElementById('settings-backdrop').classList.remove('open');
-  document.getElementById('settings-drawer').classList.remove('open');
-}
-function sdTab(id, btn) {
-  document.querySelectorAll('.sd-tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.sd-section').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('sd-' + id).classList.add('active');
-}
-
-function saveNS() {
-  const url    = document.getElementById('c-ns-url').value.trim().replace(/\/$/, '');
-  const secret = document.getElementById('c-ns-secret').value.trim();
-  App.ns_url = url;
-  if (secret && typeof CryptoJS !== 'undefined') {
-    App.ns_secret_sha1 = CryptoJS.SHA1(secret).toString();
-  }
-  saveConfig();
-  toast('הגדרות NS נשמרו', 's');
-  if (url) startNSPolling();
-}
-
-function savePusher() {
-  App.pusher_key     = document.getElementById('c-pk').value.trim();
-  App.pusher_cluster = document.getElementById('c-pc').value.trim();
-  saveConfig();
-  if (App.pusher_key && App.pusher_cluster) {
-    initPusher(App.pusher_key, App.pusher_cluster);
-    toast('מחבר ל-Pusher...', 'i');
-  } else {
-    toast('הזן App Key ו-Cluster', 'e');
-  }
-}
-
-function saveGCloud() {
-  const secret = document.getElementById('c-gc-secret').value.trim();
-  if (!secret) { toast('הזן API Secret', 'e'); return; }
-  let hashed = '';
-  if (typeof CryptoJS !== 'undefined') {
-    hashed = CryptoJS.SHA1(secret).toString();
-    document.getElementById('gc-status-row').style.display  = 'flex';
-    document.getElementById('gc-status-text').textContent   = `SHA1: ${hashed.slice(0,16)}...`;
-    Store.set('loopie_gcloud_sha1', hashed);
-    toast('SHA1 הוצפן ונשמר', 's');
-  } else {
-    toast('CryptoJS לא נטען', 'e');
-  }
-}
-
-function saveTherapy() {
-  App.isf    = +document.getElementById('c-isf').value    || 50;
-  App.cr     = +document.getElementById('c-cr').value     || 10;
-  App.low    = +document.getElementById('c-low').value    || 70;
-  App.high   = +document.getElementById('c-high').value   || 180;
-  App.target = +document.getElementById('c-target').value || 110;
-  saveConfig();
-  toast('פרמטרים נשמרו', 's');
-  addLog(`ISF=${App.isf} CR=${App.cr} Low=${App.low} High=${App.high}`, '⚙️', 'info');
-}
-
-function saveProfile() {
-  App.name  = document.getElementById('c-name').value.trim();
-  App.email = document.getElementById('c-email').value.trim();
-  const dob = document.getElementById('c-dob').value;
-  if (dob) { const [y,m,d] = dob.split('-').map(Number); App.dob = {year:y,month:m,day:d}; }
-  saveConfig();
-  document.getElementById('h-name').textContent = App.name;
-  toast('פרופיל עודכן', 's');
-}
-
-function prefillSettings() {
-  document.getElementById('c-ns-url').value     = App.ns_url || '';
-  document.getElementById('c-pk').value         = App.pusher_key || '';
-  document.getElementById('c-pc').value         = App.pusher_cluster || '';
-  document.getElementById('c-isf').value        = App.isf;
-  document.getElementById('c-cr').value         = App.cr;
-  document.getElementById('c-low').value        = App.low;
-  document.getElementById('c-high').value       = App.high;
-  document.getElementById('c-target').value     = App.target;
-  document.getElementById('c-name').value       = App.name || '';
-  document.getElementById('c-email').value      = App.email || '';
-  if (App.dob) {
-    const pad = n => String(n).padStart(2,'0');
-    document.getElementById('c-dob').value = `${App.dob.year}-${pad(App.dob.month)}-${pad(App.dob.day)}`;
-  }
-}
-
-/* ═══════════════════════════════════
-   ALERT HELPERS
-═══════════════════════════════════ */
-function showAlert(id) { const el = document.getElementById(id); if(el) el.classList.add('show'); }
-function hideAlert(id) { const el = document.getElementById(id); if(el) el.classList.remove('show'); }
-function closeAlert(id) { hideAlert(id); }
-
-/* ═══════════════════════════════════
-   LOG
-═══════════════════════════════════ */
-function addLog(msg, icon='•', type='info') {
-  const logIds = App.role === 'patient' ? ['log-pt'] : ['log-pr', 'log-pt'];
-  const now = new Date();
-  const t = now.toLocaleTimeString('he-IL', { hour:'2-digit', minute:'2-digit' });
-  logIds.forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const div = document.createElement('div');
-    div.className = 'log-entry';
-    div.innerHTML = `<span class="log-icon">${icon}</span>
-      <span class="log-desc">${msg}</span>
-      <span class="log-time">${t}</span>`;
-    el.insertBefore(div, el.firstChild);
-    if (el.children.length > 15) el.removeChild(el.lastChild);
-  });
-}
-
-/* ═══════════════════════════════════
-   TOAST
-═══════════════════════════════════ */
-function toast(msg, type='i') {
-  const c = document.getElementById('toasts');
-  const el = document.createElement('div');
-  el.className = 'toast ' + type;
-  el.textContent = msg;
-  c.appendChild(el);
-  setTimeout(() => {
-    el.style.transition = 'opacity .4s';
-    el.style.opacity = '0';
-    setTimeout(() => el.remove(), 400);
-  }, 3200);
-}
-
-/* ═══════════════════════════════════
-   WEB NOTIFICATION
-═══════════════════════════════════ */
-function notify(title, body) {
-  if ('Notification' in window && Notification.permission === 'granted') {
-    try { new Notification(title, { body }); } catch {}
-  } else {
-    toast(`${title}: ${body}`, 'i');
-  }
-}
-
-/* ═══════════════════════════════════
-   TINY HELPERS
-═══════════════════════════════════ */
-function setTxt(id, val) { const el=document.getElementById(id); if(el) el.textContent=val; }
-function setBar(id, pct) { const el=document.getElementById(id); if(el) el.style.width=pct+'%'; }
-
-function sgvColor(v) {
-  if (v < App.low) return '#ef4444';
-  if (v <= App.high) return '#22c55e';
-  if (v <= 250) return '#fbbf24';
-  return '#ef4444';
-}
-function sgvClass(v) {
-  if (v < App.low) return 'low';
-  if (v <= App.high) return 'ok';
-  if (v <= 250) return 'high';
-  return 'vhigh';
-}
-function trendArrow(t) {
-  return { DoubleUp:'↑↑', SingleUp:'↑', FortyFiveUp:'↗',
-    Flat:'→', FortyFiveDown:'↘', SingleDown:'↓', DoubleDown:'↓↓',
-    'NOT COMPUTABLE':'?', 'RATE OUT OF RANGE':'⚡' }[t] || '→';
-}
-
-// Resize chart on window resize
-window.addEventListener('resize', () => {
-  if (App.role === 'parent' && cvs) {
-    const dpr = window.devicePixelRatio || 1;
-    cvs.width  = cvs.offsetWidth  * dpr;
-    cvs.height = cvs.offsetHeight * dpr;
-    if (ctx) ctx.scale(dpr, dpr);
-    drawChart();
-  }
-});
+// Simulate data refresh for demo (when no NS)
+setInterval(()=>{
+  if(!STATE.nsConnected&&STATE.name){updateDemoData();}
+},10000);
 </script>
 </body>
 </html>
