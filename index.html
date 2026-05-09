@@ -1289,18 +1289,26 @@ function updateUI(){
   if(S.lastUpdate){const t=S.lastUpdate;set('sgv-time',pad(t.getHours())+':'+pad(t.getMinutes()));}
   set('sgv-delta','Δ '+(tr.val>0?'+':'')+tr.val+' mg/dL');
   set('s-iob',(iob||0).toFixed(2)+'<span class="sbox-u"> U</span>',true);
-  set('s-cob',(cob||0)+'<span class="sbox-u"> ג'</span>',true);
+  set('s-cob',(cob||0)+'<span class=\"sbox-u\"> ג\'</span>',true);
   set('s-res',(S.reservoir!=null?S.reservoir:'--')+'<span class="sbox-u"> U</span>',true);
   // Pod age & expiry from NS
   const podAgeH=S.podInstalledAt?Math.round((Date.now()-new Date(S.podInstalledAt).getTime())/3600000):null;
   const podExpH=S.podExpiry?Math.round((new Date(S.podExpiry).getTime()-Date.now())/3600000):null;
-  const podBadge=podExpH!=null?(podExpH<=12?'<span class="exp-crit">⚠️'+podExpH+'שע'</span>':podExpH<=36?'<span class="exp-warn">⏳'+Math.round(podExpH)+'שע'</span>':'<span class="exp-ok">✓'+Math.round(podExpH)+'שע'</span>'):'';
-  set('s-pod',podAgeH!=null?podAgeH+'שע' '+podBadge:'ממתין...',true);
+  const podBadge=podExpH!=null
+    ?(podExpH<=12?`<span class="exp-crit">⚠️${podExpH}שע'</span>`
+      :podExpH<=36?`<span class="exp-warn">⏳${Math.round(podExpH)}שע'</span>`
+      :`<span class="exp-ok">✓${Math.round(podExpH)}שע'</span>`)
+    :'';
+  set('s-pod',podAgeH!=null?`${podAgeH}שע' ${podBadge}`:'ממתין...',true);
   // Sensor age & expiry from NS
   const senAgeD=S.sensorInstalledAt?Math.floor((Date.now()-new Date(S.sensorInstalledAt).getTime())/(24*3600000)):null;
   const senExpH=S.sensorExpiry?Math.round((new Date(S.sensorExpiry).getTime()-Date.now())/3600000):null;
-  const senBadge=senExpH!=null?(senExpH<=12?'<span class="exp-crit">⚠️'+senExpH+'שע'</span>':senExpH<=48?'<span class="exp-warn">⏳'+Math.round(senExpH/24)+'ימ'</span>':'<span class="exp-ok">✓'+Math.round(senExpH/24)+'ימ'</span>'):'';
-  set('s-sensor',senAgeD!=null?senAgeD+'ימ' '+senBadge:'ממתין...',true);
+  const senBadge=senExpH!=null
+    ?(senExpH<=12?`<span class="exp-crit">⚠️${senExpH}שע'</span>`
+      :senExpH<=48?`<span class="exp-warn">⏳${Math.round(senExpH/24)}ימ'</span>`
+      :`<span class="exp-ok">✓${Math.round(senExpH/24)}ימ'</span>`)
+    :'';
+  set('s-sensor',senAgeD!=null?`${senAgeD}ימ' ${senBadge}`:'ממתין...',true);
   set('s-basal',S.basalRate?S.basalRate.toFixed(2)+'<span class="sbox-u"> U/h</span>':'ממתין...',true);
   set('s-insulin-display',S.insulinFromNS?insulinLabel(S.insulin):'ממתין...');
 
@@ -1462,13 +1470,13 @@ function updateProfile(){
   set('pf-target',S.target?(S.target+' mg/dL'):'ממתין...');
   set('pf-basal',S.basalRate?S.basalRate.toFixed(2)+' U/h':'ממתין...');
   set('pf-ins-type',S.insulinFromNS?insulinLabel(S.insulin):'ממתין...');
-  set('pf-dia',S.dia?S.dia+' שע'':'ממתין...');
-  set('pf-prebolus',insulinPreBolus(S.insulin)+' דק'');
+  set('pf-dia',S.dia?S.dia+` שע'`:'ממתין...');
+  set('pf-prebolus',insulinPreBolus(S.insulin)+` דק'`);
   set('pf-loop',(S.loopStatus&&S.nsConnected)?('✅ '+S.loopStatus):(S.nsConnected?'✅ Active':'❌ לא מחובר'));
 
   // 🔒 Live IOB/COB
   set('pf-iob-live',S.nsConnected?S.currentIOB.toFixed(2)+' U':'ממתין...');
-  set('pf-cob-live',S.nsConnected?S.currentCOB+' ג'':'ממתין...');
+  set('pf-cob-live',S.nsConnected?S.currentCOB+` ג'`:'ממתין...');
   set('pf-eventual',S.loopEventualBG?S.loopEventualBG+' mg/dL':'ממתין...');
 
   // 🔒 ISF schedule
@@ -1496,7 +1504,7 @@ function updateProfile(){
   const sync=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val;};
   sync('s-insulin', S.insulinFromNS?insulinLabel(S.insulin):'ממתין מ-NS...');
   sync('s-insulin-type', S.insulinFromNS?insulinLabel(S.insulin):'ממתין מ-NS...');
-  sync('s-dia', S.dia?S.dia+' שע'':'ממתין...');
+  sync('s-dia', S.dia?S.dia+` שע'`:'ממתין...');
   sync('s-basal-ns', S.basalRate?S.basalRate.toFixed(2)+' U/h':'ממתין...');
   sync('s-icr', S.icr?S.icr+' g/U':'ממתין...');
   sync('s-isf', S.isf?S.isf+' mg/U':'ממתין...');
@@ -1715,7 +1723,7 @@ function loadSettings(){
   document.getElementById('s-isf').value=S.isf?S.isf+' mg/U':'נטען מ-NS...';
   document.getElementById('s-target').value=S.target?S.target+' mg/dL':'נטען מ-NS...';
   document.getElementById('s-insulin-type').value=insulinLabel(S.insulin)||(S.insulinFromNS||'נטען מ-NS...');
-  document.getElementById('s-dia').value=S.dia?S.dia+' שע'':'נטען מ-NS...';
+  document.getElementById('s-dia').value=S.dia?S.dia+` שע'`:'נטען מ-NS...';
   document.getElementById('s-basal-ns').value=S.basalRate?S.basalRate.toFixed(2)+' U/h':'נטען מ-NS...';
   generateLinks();
 }
