@@ -514,13 +514,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
       <div class="ns-msg ns-wait" id="sns-msg"></div>
       <div class="fl">API Secret / Token</div>
       <input class="fi" id="s-secret" type="password" placeholder="api secret"/>
-      <div class="fl">סוג אינסולין</div>
-      <select class="fsel" id="s-insulin">
-        <option value="novorapid">Novorapid (20 דק' Pre-bolus)</option>
-        <option value="humalog">Humalog (15 דק')</option>
-        <option value="fiasp">Fiasp (10 דק')</option>
-        <option value="lyumjev">Lyumjev (5 דק')</option>
-      </select>
+      <div class="fl">סוג אינסולין <span style="font-family:var(--mono);font-size:.65rem;color:var(--text3)">🔒 מ-NS</span></div>
+      <input class="fi" id="s-insulin" disabled placeholder="נטען מ-Nightscout..."/>
       <div class="fl">Pusher App Key (אופציונלי)</div>
       <input class="fi" id="s-pusher-key" placeholder="pusher app key"/>
       <div class="fl">Pusher Cluster</div>
@@ -543,6 +538,12 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
       <input class="fi" id="s-isf" disabled/>
       <div class="fl">יעד סוכר (mg/dL) <span style="font-family:var(--mono);font-size:.65rem;color:var(--text3)">🔒 מ-NS</span></div>
       <input class="fi" id="s-target" disabled/>
+      <div class="fl">סוג אינסולין <span style="font-family:var(--mono);font-size:.65rem;color:var(--text3)">🔒 מ-NS</span></div>
+      <input class="fi" id="s-insulin-type" disabled placeholder="נטען מ-Nightscout..."/>
+      <div class="fl">DIA – משך פעילות (שע') <span style="font-family:var(--mono);font-size:.65rem;color:var(--text3)">🔒 מ-NS</span></div>
+      <input class="fi" id="s-dia" disabled/>
+      <div class="fl">בזאלי נוכחי (U/h) <span style="font-family:var(--mono);font-size:.65rem;color:var(--text3)">🔒 מ-NS</span></div>
+      <input class="fi" id="s-basal-ns" disabled/>
     </div>
 
     <div class="su-panel" id="sp-links">
@@ -592,13 +593,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
       <div class="ns-msg ns-wait" id="setup-msg"></div>
       <div class="fl">API Secret / Token</div>
       <input class="fi" id="setup-secret" type="password" placeholder="api secret"/>
-      <div class="fl">סוג אינסולין</div>
-      <select class="fsel" id="setup-insulin">
-        <option value="novorapid">Novorapid (20 דק' Pre-bolus)</option>
-        <option value="humalog">Humalog (15 דק')</option>
-        <option value="fiasp">Fiasp (10 דק')</option>
-        <option value="lyumjev">Lyumjev (5 דק')</option>
-      </select>
+      <div class="fl">סוג אינסולין <span style="font-family:var(--mono);font-size:.65rem;color:var(--text3)">🔒 יימשך מ-NS לאחר חיבור</span></div>
+      <input class="fi" id="setup-insulin" disabled placeholder="יטען אוטומטית מ-Nightscout"/>
       <div class="fl">Pusher App Key (אופציונלי)</div>
       <input class="fi" id="setup-pusher-key" placeholder="pusher app key"/>
       <div class="fl">Pusher Cluster</div>
@@ -697,6 +693,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
           <div class="sbox"><div class="sbox-lbl">פוד</div><div class="sbox-val" id="s-pod">--<span class="sbox-u"> שע'</span></div></div>
           <div class="sbox"><div class="sbox-lbl">סנסור</div><div class="sbox-val" id="s-sensor">--<span class="sbox-u"> ימ'</span></div></div>
           <div class="sbox"><div class="sbox-lbl">בזאלי</div><div class="sbox-val" id="s-basal">--<span class="sbox-u"> U/h</span></div></div>
+          <div class="sbox"><div class="sbox-lbl">אינסולין 🔒</div><div class="sbox-val" id="s-insulin-display" style="font-size:.85rem">--</div></div>
         </div>
       </div>
 
@@ -798,32 +795,64 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
 
     <!-- PROFILE TAB -->
     <div class="tab-panel" id="pt-profile">
+
       <div class="panel" style="margin-bottom:12px">
         <div class="pnl-title">👤 פרופיל מטופל</div>
         <div class="prof-grid">
           <div class="pfi"><div class="pfi-lbl">שם</div><div class="pfi-val" id="pf-name">--</div></div>
           <div class="pfi"><div class="pfi-lbl">תאריך לידה</div><div class="pfi-val" id="pf-dob">--</div></div>
-          <div class="pfi"><div class="pfi-lbl">גובה</div><div class="pfi-val" id="pf-h">-- ס"מ</div></div>
-          <div class="pfi"><div class="pfi-lbl">משקל</div><div class="pfi-val" id="pf-w">-- ק"ג</div></div>
+          <div class="pfi"><div class="pfi-lbl">גובה</div><div class="pfi-val" id="pf-h">--</div></div>
+          <div class="pfi"><div class="pfi-lbl">משקל</div><div class="pfi-val" id="pf-w">--</div></div>
         </div>
       </div>
+
       <div class="panel" style="margin-bottom:12px">
-        <div class="pnl-title">💉 פרמטרים רפואיים <b>🔒 מ-NS</b></div>
+        <div class="pnl-title">💉 אינסולין &amp; מינון <b>🔒 מ-NS בלבד</b></div>
         <div class="prof-grid">
-          <div class="pfi"><div class="pfi-lbl">ICR</div><div class="pfi-val" id="pf-icr">--</div><div class="pfi-lock">🔒 Nightscout</div></div>
-          <div class="pfi"><div class="pfi-lbl">ISF</div><div class="pfi-val" id="pf-isf">--</div><div class="pfi-lock">🔒 Nightscout</div></div>
-          <div class="pfi"><div class="pfi-lbl">יעד סוכר</div><div class="pfi-val" id="pf-target">--</div><div class="pfi-lock">🔒 Nightscout</div></div>
-          <div class="pfi"><div class="pfi-lbl">בזאלי</div><div class="pfi-val" id="pf-basal">--</div><div class="pfi-lock">🔒 Nightscout</div></div>
-          <div class="pfi"><div class="pfi-lbl">אינסולין</div><div class="pfi-val" id="pf-ins-type">--</div></div>
-          <div class="pfi"><div class="pfi-lbl">Loop Status</div><div class="pfi-val" id="pf-loop">--</div></div>
+          <div class="pfi"><div class="pfi-lbl">סוג אינסולין</div><div class="pfi-val" id="pf-ins-type">ממתין...</div><div class="pfi-lock">🔒 NS Profile</div></div>
+          <div class="pfi"><div class="pfi-lbl">DIA – משך פעילות</div><div class="pfi-val" id="pf-dia">ממתין...</div><div class="pfi-lock">🔒 NS Profile</div></div>
+          <div class="pfi"><div class="pfi-lbl">ICR עכשיו</div><div class="pfi-val" id="pf-icr">ממתין...</div><div class="pfi-lock">🔒 NS Profile</div></div>
+          <div class="pfi"><div class="pfi-lbl">ISF עכשיו</div><div class="pfi-val" id="pf-isf">ממתין...</div><div class="pfi-lock">🔒 NS Profile</div></div>
+          <div class="pfi"><div class="pfi-lbl">יעד סוכר</div><div class="pfi-val" id="pf-target">ממתין...</div><div class="pfi-lock">🔒 NS Profile</div></div>
+          <div class="pfi"><div class="pfi-lbl">בזאלי נוכחי</div><div class="pfi-val" id="pf-basal">ממתין...</div><div class="pfi-lock">🔒 NS Profile</div></div>
+          <div class="pfi"><div class="pfi-lbl">Pre-bolus</div><div class="pfi-val" id="pf-prebolus">--</div></div>
+          <div class="pfi"><div class="pfi-lbl">Loop Status</div><div class="pfi-val" id="pf-loop">ממתין...</div><div class="pfi-lock">🔒 NS Live</div></div>
         </div>
       </div>
-      <div class="panel">
-        <div class="pnl-title">📡 מצב מכשירים</div>
+
+      <div class="panel" style="margin-bottom:12px">
+        <div class="pnl-title">📋 לוחות זמנים <b>🔒 מ-NS בלבד</b></div>
+        <div style="margin-bottom:10px">
+          <div class="pfi-lbl" style="margin-bottom:4px">ISF לפי שעות</div>
+          <div style="font-family:var(--mono);font-size:.7rem;color:var(--text2);background:var(--bg3);border-radius:var(--r);padding:9px 11px;line-height:1.8;word-break:break-all" id="pf-isf-sched">ממתין...</div>
+        </div>
+        <div style="margin-bottom:10px">
+          <div class="pfi-lbl" style="margin-bottom:4px">ICR לפי שעות</div>
+          <div style="font-family:var(--mono);font-size:.7rem;color:var(--text2);background:var(--bg3);border-radius:var(--r);padding:9px 11px;line-height:1.8;word-break:break-all" id="pf-icr-sched">ממתין...</div>
+        </div>
+        <div>
+          <div class="pfi-lbl" style="margin-bottom:4px">בזאלי לפי שעות</div>
+          <div style="font-family:var(--mono);font-size:.7rem;color:var(--text2);background:var(--bg3);border-radius:var(--r);padding:9px 11px;line-height:1.8;word-break:break-all" id="pf-basal-sched">ממתין...</div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:12px">
+        <div class="pnl-title">🩸 נתונים חיים <b>🔒 Loop Live</b></div>
         <div class="prof-grid">
-          <div class="pfi"><div class="pfi-lbl">גיל פוד</div><div class="pfi-val" id="pf-pod">--</div></div>
-          <div class="pfi"><div class="pfi-lbl">גיל סנסור</div><div class="pfi-val" id="pf-sensor">--</div></div>
-          <div class="pfi"><div class="pfi-lbl">מאגר</div><div class="pfi-val" id="pf-res">--</div></div>
+          <div class="pfi"><div class="pfi-lbl">IOB</div><div class="pfi-val" id="pf-iob-live">ממתין...</div><div class="pfi-lock">🔒 NS Live</div></div>
+          <div class="pfi"><div class="pfi-lbl">COB</div><div class="pfi-val" id="pf-cob-live">ממתין...</div><div class="pfi-lock">🔒 NS Live</div></div>
+          <div class="pfi"><div class="pfi-lbl">תחזית סוכר</div><div class="pfi-val" id="pf-eventual">ממתין...</div><div class="pfi-lock">🔒 NS Live</div></div>
+          <div class="pfi"><div class="pfi-lbl">מאגר אינסולין</div><div class="pfi-val" id="pf-res">ממתין...</div><div class="pfi-lock">🔒 NS Live</div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="pnl-title">📡 מכשירים <b>🔒 מ-NS בלבד</b></div>
+        <div class="prof-grid">
+          <div class="pfi"><div class="pfi-lbl">גיל פוד</div><div class="pfi-val" id="pf-pod">ממתין...</div><div class="pfi-lock">🔒 NS</div></div>
+          <div class="pfi"><div class="pfi-lbl">תוקף פוד</div><div class="pfi-val" id="pf-pod-exp">--</div><div class="pfi-lock">🔒 NS</div></div>
+          <div class="pfi"><div class="pfi-lbl">גיל סנסור</div><div class="pfi-val" id="pf-sensor">ממתין...</div><div class="pfi-lock">🔒 NS</div></div>
+          <div class="pfi"><div class="pfi-lbl">תוקף סנסור</div><div class="pfi-val" id="pf-sensor-exp">--</div><div class="pfi-lock">🔒 NS</div></div>
           <div class="pfi"><div class="pfi-lbl">NS מחובר</div><div class="pfi-val" id="pf-ns">--</div></div>
         </div>
       </div>
@@ -922,8 +951,16 @@ let S={
   eventLog:[],
   sgvHistory:[],
   currentSGV:null,currentIOB:0,currentCOB:0,
-  reservoir:null,podAge:null,sensorAge:null,
-  nsConnected:false,lastUpdate:null,
+  reservoir:null,
+  nsConnected:false,lastUpdate:null,insulinFromNS:'',dia:4,
+  // ISF schedule (all slots from NS)
+  isfSchedule:[],icrSchedule:[],basalSchedule:[],targetSchedule:[],
+  // Device ages (from NS treatments)
+  podInstalledAt:null,sensorInstalledAt:null,
+  podExpiry:null,sensorExpiry:null,
+  // Loop live data
+  loopStatus:'',loopPredicted:null,loopEventualBG:null,
+  activeInsulinModel:'',
   stuckCounter:0,bdayShown:false,
   linkToken:null,
 };
@@ -1047,51 +1084,132 @@ function startPolling(){
 async function poll(){
   setNSStatus('wait','מתחבר...');
   try{
-    const h=S.nsSecret?{'api-secret':S.nsSecret}:{};
     const base=S.nsURL;
-    // SGV
-    const sgvR=await nsGet(base+'/api/v1/entries/sgv.json?count=36',h);
+    const now=new Date();
+    const secOfDay=now.getHours()*3600+now.getMinutes()*60+now.getSeconds();
+
+    // ── 1. SGV history (3h = 36 entries × 5min) ──────────────────────────
+    const sgvR=await nsGet(base+'/api/v1/entries/sgv.json?count=36');
     if(Array.isArray(sgvR)&&sgvR.length){
       S.sgvHistory=sgvR.slice().reverse();
       const latest=S.sgvHistory[S.sgvHistory.length-1];
       S.currentSGV=latest.sgv;
       S.lastUpdate=new Date(latest.date);
     }
-    // Device status
-    const devR=await nsGet(base+'/api/v1/devicestatus.json?count=1',h);
+
+    // ── 2. Device status — IOB, COB, reservoir, basal, loop prediction ───
+    const devR=await nsGet(base+'/api/v1/devicestatus.json?count=1');
     if(Array.isArray(devR)&&devR.length){
       const d=devR[0];
-      S.currentIOB=+(d.loop?.iob?.iob||d.openaps?.iob?.iob||0);
-      S.currentCOB=+(d.loop?.cob?.cob||d.openaps?.cob?.cob||0);
-      S.reservoir=d.pump?.reservoir||null;
-      S.basalRate=d.pump?.extended?.CurrentBasal||null;
+      // IOB — try loop > openaps > pump
+      S.currentIOB=+(d.loop?.iob?.iob ?? d.openaps?.iob?.iob ?? d.pump?.iob?.iob ?? 0);
+      // COB — try loop > openaps
+      S.currentCOB=+(d.loop?.cob?.cob ?? d.openaps?.cob?.cob ?? 0);
+      // Reservoir
+      S.reservoir=d.pump?.reservoir ?? d.loop?.reservoir ?? null;
+      // Basal rate (actual running rate)
+      S.basalRate=d.pump?.extended?.CurrentBasal ?? d.loop?.basalRate ?? null;
+      // Loop status & predictions
+      S.loopStatus=d.loop?.failureReason??
+        (d.loop?.enacted?'Enacted':d.loop?.recommended?'Recommended':'Active');
+      S.loopPredicted=d.loop?.predicted?.values??null;
+      S.loopEventualBG=d.loop?.predicted?.eventualBG??null;
+      // Insulin model from loop device status
+      if(d.loop?.insulinModel) S.activeInsulinModel=d.loop.insulinModel;
+      // Pod/Pump age from pump extended
+      if(d.pump?.extended){
+        const ext=d.pump.extended;
+        if(ext.PodActivationDate) S.podInstalledAt=new Date(ext.PodActivationDate);
+        else if(ext.StartDate) S.podInstalledAt=new Date(ext.StartDate);
+        if(ext.PodExpirationDate) S.podExpiry=new Date(ext.PodExpirationDate);
+      }
+      // Sensor age from uploader/sensor fields
+      if(d.uploader?.battery!==undefined) S.uploaderBattery=d.uploader.battery;
     }
-    // Profile (ICR, ISF, target) – from NS profile
-    const profR=await nsGet(base+'/api/v1/profile.json',h);
-    if(profR&&profR.store){
-      const pDef=profR.defaultProfile?profR.store[profR.defaultProfile]:Object.values(profR.store)[0];
+
+    // ── 3. Profile — all schedules + DIA + insulin type ──────────────────
+    const profR=await nsGet(base+'/api/v1/profile.json');
+    if(profR){
+      const profObj=Array.isArray(profR)?profR[0]:profR;
+      const store=profObj?.store||null;
+      const pDef=store
+        ?(profObj.defaultProfile&&store[profObj.defaultProfile]
+          ?store[profObj.defaultProfile]
+          :Object.values(store)[0])
+        :profObj;
       if(pDef){
-        const now=new Date();const h2=now.getHours()*3600+now.getMinutes()*60+now.getSeconds();
-        S.icr=getScheduleVal(pDef.carbratio,h2)||S.icr;
-        S.isf=getScheduleVal(pDef.sens,h2)||S.isf;
-        const lowTgt=getScheduleVal(pDef.target_low,h2);
-        const highTgt=getScheduleVal(pDef.target_high,h2);
+        // Store full schedules for display
+        S.icrSchedule=Array.isArray(pDef.carbratio)?pDef.carbratio:[];
+        S.isfSchedule=Array.isArray(pDef.sens)?pDef.sens:[];
+        S.basalSchedule=Array.isArray(pDef.basal)?pDef.basal:[];
+        S.targetSchedule=Array.isArray(pDef.target_low)
+          ?pDef.target_low.map((t,i)=>({
+              time:t.time,timeAsSeconds:t.timeAsSeconds,
+              low:t.value,high:(pDef.target_high?.[i]?.value??t.value)
+            }))
+          :[];
+        // Current-time values
+        S.icr=getScheduleVal(pDef.carbratio,secOfDay)||S.icr;
+        S.isf=getScheduleVal(pDef.sens,secOfDay)||S.isf;
+        const lowTgt=getScheduleVal(pDef.target_low,secOfDay);
+        const highTgt=getScheduleVal(pDef.target_high,secOfDay);
         if(lowTgt&&highTgt) S.target=Math.round((lowTgt+highTgt)/2);
-        S.basalRate=S.basalRate||getScheduleVal(pDef.basal,h2);
+        if(!S.basalRate) S.basalRate=getScheduleVal(pDef.basal,secOfDay);
+        S.dia=+(pDef.dia||pDef.Duration||4);
+        // Insulin type
+        const rawIns=pDef.insulinType||pDef.insulin||pDef.insulintype||S.activeInsulinModel||'';
+        if(rawIns){S.insulinFromNS=normalizeInsulinName(rawIns);S.insulin=S.insulinFromNS;}
       }
     }
+
+    // ── 4. Pod & Sensor install dates from NS treatments ─────────────────
+    try{
+      const trtR=await nsGet(base+'/api/v1/treatments.json?count=20&eventType=Site+Change');
+      if(Array.isArray(trtR)&&trtR.length){
+        const latest=trtR[0];
+        S.podInstalledAt=S.podInstalledAt||new Date(latest.created_at||latest.timestamp);
+        // Pod valid 72h
+        if(S.podInstalledAt&&!S.podExpiry){
+          S.podExpiry=new Date(S.podInstalledAt.getTime()+72*3600000);
+        }
+      }
+    }catch(e2){}
+    try{
+      const senR=await nsGet(base+'/api/v1/treatments.json?count=5&eventType=Sensor+Change');
+      if(Array.isArray(senR)&&senR.length){
+        S.sensorInstalledAt=new Date(senR[0].created_at||senR[0].timestamp);
+        // Sensor valid 10 days
+        if(!S.sensorExpiry) S.sensorExpiry=new Date(S.sensorInstalledAt.getTime()+10*24*3600000);
+      }
+    }catch(e3){}
+
     S.nsConnected=true;
     setNSStatus('on','מחובר');
     save();
     updateUI();
   }catch(e){
     S.nsConnected=false;
-    setNSStatus('off','שגיאת חיבור');
-    // NO DEMO DATA – just display "ממתין לחיבור"
+    setNSStatus('off','שגיאת חיבור: '+e.message);
     clearDisplay();
   }
 }
 
+function normalizeInsulinName(raw){
+  const r=(raw||'').toLowerCase().trim();
+  if(r.includes('novorapid')||r.includes('aspart')||r.includes('novo')) return 'novorapid';
+  if(r.includes('humalog')||r.includes('lispro')) return 'humalog';
+  if(r.includes('fiasp')) return 'fiasp';
+  if(r.includes('lyumjev')||r.includes('lium')) return 'lyumjev';
+  if(r.includes('apidra')||r.includes('glulisine')) return 'apidra';
+  return raw; // keep original string if unknown
+}
+function insulinLabel(key){
+  const map={novorapid:'Novorapid',humalog:'Humalog',fiasp:'Fiasp',lyumjev:'Lyumjev',apidra:'Apidra'};
+  return map[key]||key||'--';
+}
+function insulinPreBolus(key){
+  return key==='novorapid'?20:key==='humalog'?15:key==='fiasp'?10:key==='lyumjev'?5:15;
+}
 function getScheduleVal(arr,secOfDay){
   if(!Array.isArray(arr)||!arr.length) return null;
   const sorted=[...arr].sort((a,b)=>a.timeAsSeconds-b.timeAsSeconds);
@@ -1100,9 +1218,12 @@ function getScheduleVal(arr,secOfDay){
   return +val;
 }
 
-async function nsGet(url,headers={}){
-  const r=await fetch(url,{headers:{...headers,'Content-Type':'application/json'}});
-  if(!r.ok) throw new Error(r.status);
+async function nsGet(url){
+  // ✅ CORS Fix: api_secret as URL query param (not header) — same method that works
+  const sep=url.includes('?')?'&':'?';
+  const fullUrl=S.nsSecret?url+sep+'api_secret='+encodeURIComponent(S.nsSecret):url;
+  const r=await fetch(fullUrl,{method:'GET',mode:'cors',headers:{'Accept':'application/json'}});
+  if(!r.ok) throw new Error('HTTP '+r.status);
   return r.json();
 }
 
@@ -1117,14 +1238,21 @@ function setNSStatus(state,txt){
 }
 
 function clearDisplay(){
-  // Show "ממתין לחיבור" everywhere, no fake data
+  const waiting='<span style="color:var(--text3)">ממתין...</span>';
   document.getElementById('sgv-val')?.classList.replace('range','wait');
   document.getElementById('sgv-val')&&(document.getElementById('sgv-val').textContent='---');
-  ['s-iob','s-cob','s-res','s-pod','s-sensor','s-basal'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<span style="color:var(--text3)">ממתין...</span>';});
+  ['s-iob','s-cob','s-res','s-pod','s-sensor','s-basal','s-insulin-display'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.innerHTML=waiting;
+  });
   ['rec-bolus','rec-pre','rec-cob','rec-trend'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent='--';});
   document.getElementById('rec-loopie-str')&&(document.getElementById('rec-loopie-str').textContent='ממתין לחיבור...');
   document.getElementById('rec-loop-str')&&(document.getElementById('rec-loop-str').textContent='--');
-  // Patient
+  ['pf-icr','pf-isf','pf-target','pf-basal','pf-ins-type','pf-dia',
+   'pf-iob-live','pf-cob-live','pf-eventual','pf-res',
+   'pf-pod','pf-pod-exp','pf-sensor','pf-sensor-exp',
+   'pf-isf-sched','pf-icr-sched','pf-basal-sched','pf-loop'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.textContent='ממתין...';
+  });
   const pat=document.getElementById('pat-instr');
   if(pat){pat.className='pat-instr';pat.textContent='⏳ ממתין לנתוני Nightscout...';}
   document.getElementById('pat-sgv')&&(document.getElementById('pat-sgv').textContent='---');
@@ -1160,12 +1288,21 @@ function updateUI(){
   set('sgv-trend',tr.arrow);
   if(S.lastUpdate){const t=S.lastUpdate;set('sgv-time',pad(t.getHours())+':'+pad(t.getMinutes()));}
   set('sgv-delta','Δ '+(tr.val>0?'+':'')+tr.val+' mg/dL');
-  set('s-iob',(iob||0).toFixed(1)+'<span class="sbox-u"> U</span>',true);
-  set('s-cob',(cob||0)+'<span class="sbox-u"> ג\'</span>',true);
-  set('s-res',(S.reservoir||'--')+'<span class="sbox-u"> U</span>',true);
-  set('s-pod',S.podAge?Math.round(S.podAge)+'<span class="sbox-u"> שע\'</span>':'--',true);
-  set('s-sensor',S.sensorAge?S.sensorAge.toFixed(1)+'<span class="sbox-u"> ימ\'</span>':'--',true);
-  set('s-basal',S.basalRate?S.basalRate.toFixed(2)+'<span class="sbox-u"> U/h</span>':'--',true);
+  set('s-iob',(iob||0).toFixed(2)+'<span class="sbox-u"> U</span>',true);
+  set('s-cob',(cob||0)+'<span class="sbox-u"> ג'</span>',true);
+  set('s-res',(S.reservoir!=null?S.reservoir:'--')+'<span class="sbox-u"> U</span>',true);
+  // Pod age & expiry from NS
+  const podAgeH=S.podInstalledAt?Math.round((Date.now()-new Date(S.podInstalledAt).getTime())/3600000):null;
+  const podExpH=S.podExpiry?Math.round((new Date(S.podExpiry).getTime()-Date.now())/3600000):null;
+  const podBadge=podExpH!=null?(podExpH<=12?'<span class="exp-crit">⚠️'+podExpH+'שע'</span>':podExpH<=36?'<span class="exp-warn">⏳'+Math.round(podExpH)+'שע'</span>':'<span class="exp-ok">✓'+Math.round(podExpH)+'שע'</span>'):'';
+  set('s-pod',podAgeH!=null?podAgeH+'שע' '+podBadge:'ממתין...',true);
+  // Sensor age & expiry from NS
+  const senAgeD=S.sensorInstalledAt?Math.floor((Date.now()-new Date(S.sensorInstalledAt).getTime())/(24*3600000)):null;
+  const senExpH=S.sensorExpiry?Math.round((new Date(S.sensorExpiry).getTime()-Date.now())/3600000):null;
+  const senBadge=senExpH!=null?(senExpH<=12?'<span class="exp-crit">⚠️'+senExpH+'שע'</span>':senExpH<=48?'<span class="exp-warn">⏳'+Math.round(senExpH/24)+'ימ'</span>':'<span class="exp-ok">✓'+Math.round(senExpH/24)+'ימ'</span>'):'';
+  set('s-sensor',senAgeD!=null?senAgeD+'ימ' '+senBadge:'ממתין...',true);
+  set('s-basal',S.basalRate?S.basalRate.toFixed(2)+'<span class="sbox-u"> U/h</span>':'ממתין...',true);
+  set('s-insulin-display',S.insulinFromNS?insulinLabel(S.insulin):'ממתין...');
 
   updateChart();
   updateRecommendation(sgv,iob,cob,tr);
@@ -1213,7 +1350,7 @@ function updateChart(){
 
 function updateRecommendation(sgv,iob,cob,tr){
   const icr=S.icr||10;const isf=S.isf||40;const target=S.target||110;
-  const pre=S.insulin==='novorapid'?20:S.insulin==='humalog'?15:S.insulin==='fiasp'?10:5;
+  const pre=insulinPreBolus(S.insulin);
   const corr=sgv>target?(sgv-target)/isf:0;
   const carbBolus=cob/icr;
   const total=Math.max(0,corr+carbBolus-iob);
@@ -1277,7 +1414,7 @@ function updatePatientView(sgv,tr){
   if(el){el.textContent=sgv||'---';el.style.color=sgvClass(sgv)==='low'?'var(--red)':sgvClass(sgv)==='high'||sgvClass(sgv)==='vhigh'?'var(--orange)':'var(--green)';}
   set('pat-trend',tr.arrow);
   if(S.lastUpdate){const t=S.lastUpdate;set('pat-time',pad(t.getHours())+':'+pad(t.getMinutes()));}
-  const pre=S.insulin==='novorapid'?20:15;
+  const pre=insulinPreBolus(S.insulin);
   const instr=document.getElementById('pat-instr');
   if(!instr)return;
   if(sgv<70){instr.className='pat-instr urgent';instr.innerHTML='🚨 <strong>שתה מיץ עכשיו!</strong> 150מ"ל מיץ. קרא להורה מיידית!';}
@@ -1291,21 +1428,81 @@ function updatePatientView(sgv,tr){
   if(hint) hint.textContent=S.debtCarbs>0?`⚡ יש השלמה ממתינה: ${S.debtCarbs.toFixed(0)}ג'`:'';
 }
 
+function ageDHM(dateObj){
+  if(!dateObj) return null;
+  const ms=Date.now()-new Date(dateObj).getTime();
+  if(ms<0) return null;
+  const h=Math.floor(ms/3600000);
+  const d=Math.floor(h/24); const hh=h%24;
+  return d>0?`${d}ימ' ${hh}שע'`:`${h}שע'`;
+}
+function expiryStr(dateObj){
+  if(!dateObj) return null;
+  const ms=new Date(dateObj).getTime()-Date.now();
+  if(ms<0) return '⚠️ פג תוקף';
+  const h=Math.ceil(ms/3600000);
+  const d=Math.floor(h/24); const hh=h%24;
+  return d>0?`עוד ${d}ימ' ${hh}שע'`:`עוד ${h}שע'`;
+}
+function fmtSchedule(arr,unit){
+  if(!arr||!arr.length) return '--';
+  return arr.map(s=>`${s.time}: ${(+s.value).toFixed(s.value%1?1:0)}${unit}`).join(' · ');
+}
+
 function updateProfile(){
+  // Personal
   set('pf-name',S.patName||'--');
   if(S.dob){try{const d=new Date(S.dob);set('pf-dob',d.toLocaleDateString('he-IL'));}catch(e){set('pf-dob',S.dob);}}
   set('pf-h',(S.height||'--')+' ס"מ');
   set('pf-w',(S.weight||'--')+' ק"ג');
-  set('pf-icr',(S.icr||'--')+' g/U');
-  set('pf-isf',(S.isf||'--')+' mg/U');
-  set('pf-target',(S.target||'--')+' mg/dL');
-  set('pf-basal',S.basalRate?S.basalRate.toFixed(2)+' U/h':'--');
-  set('pf-ins-type',S.insulin||'--');
-  set('pf-loop',S.nsConnected?'✅ מחובר':'❌ לא מחובר');
-  set('pf-pod',S.podAge?Math.round(S.podAge)+' שע\'':'--');
-  set('pf-sensor',S.sensorAge?S.sensorAge.toFixed(1)+' ימים':'--');
-  set('pf-res',S.reservoir?S.reservoir+' U':'--');
-  set('pf-ns',S.nsConnected?'✅ '+S.nsURL:'❌ לא מחובר');
+
+  // 🔒 Medical params from NS
+  set('pf-icr',S.icr?(S.icr+' g/U'):'ממתין...');
+  set('pf-isf',S.isf?(S.isf+' mg/U'):'ממתין...');
+  set('pf-target',S.target?(S.target+' mg/dL'):'ממתין...');
+  set('pf-basal',S.basalRate?S.basalRate.toFixed(2)+' U/h':'ממתין...');
+  set('pf-ins-type',S.insulinFromNS?insulinLabel(S.insulin):'ממתין...');
+  set('pf-dia',S.dia?S.dia+' שע'':'ממתין...');
+  set('pf-prebolus',insulinPreBolus(S.insulin)+' דק'');
+  set('pf-loop',(S.loopStatus&&S.nsConnected)?('✅ '+S.loopStatus):(S.nsConnected?'✅ Active':'❌ לא מחובר'));
+
+  // 🔒 Live IOB/COB
+  set('pf-iob-live',S.nsConnected?S.currentIOB.toFixed(2)+' U':'ממתין...');
+  set('pf-cob-live',S.nsConnected?S.currentCOB+' ג'':'ממתין...');
+  set('pf-eventual',S.loopEventualBG?S.loopEventualBG+' mg/dL':'ממתין...');
+
+  // 🔒 ISF schedule
+  set('pf-isf-sched',fmtSchedule(S.isfSchedule,'mg/U'));
+  // 🔒 ICR schedule
+  set('pf-icr-sched',fmtSchedule(S.icrSchedule,'g/U'));
+  // 🔒 Basal schedule
+  set('pf-basal-sched',fmtSchedule(S.basalSchedule,'U/h'));
+
+  // 🔒 Devices
+  const podAge=ageDHM(S.podInstalledAt);
+  const podExp=expiryStr(S.podExpiry);
+  set('pf-pod',podAge?podAge:'ממתין...');
+  set('pf-pod-exp',podExp?podExp:'--');
+
+  const senAge=ageDHM(S.sensorInstalledAt);
+  const senExp=expiryStr(S.sensorExpiry);
+  set('pf-sensor',senAge?senAge:'ממתין...');
+  set('pf-sensor-exp',senExp?senExp:'--');
+
+  set('pf-res',S.reservoir!=null?S.reservoir+' U':'ממתין...');
+  set('pf-ns',S.nsConnected?'✅ מחובר':'❌ לא מחובר');
+
+  // Sync all disabled fields in settings modal
+  const sync=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val;};
+  sync('s-insulin', S.insulinFromNS?insulinLabel(S.insulin):'ממתין מ-NS...');
+  sync('s-insulin-type', S.insulinFromNS?insulinLabel(S.insulin):'ממתין מ-NS...');
+  sync('s-dia', S.dia?S.dia+' שע'':'ממתין...');
+  sync('s-basal-ns', S.basalRate?S.basalRate.toFixed(2)+' U/h':'ממתין...');
+  sync('s-icr', S.icr?S.icr+' g/U':'ממתין...');
+  sync('s-isf', S.isf?S.isf+' mg/U':'ממתין...');
+  sync('s-target', S.target?S.target+' mg/dL':'ממתין...');
+  const siSetup=document.getElementById('setup-insulin');
+  if(siSetup) siSetup.value=S.insulinFromNS?insulinLabel(S.insulin):'ייטען מ-NS...';
 }
 
 // ═══════════════════════════════════════════
@@ -1318,10 +1515,13 @@ async function testNS(nsId,secretId,msgId){
   if(!url){msg.className='ns-msg ns-err';msg.textContent='❌ הזן כתובת';return;}
   msg.className='ns-msg ns-wait';msg.textContent='⏳ בודק...';
   try{
-    const h=secret?{'api-secret':secret}:{};
-    const r=await nsGet(url+'/api/v1/status.json',h);
+    // ✅ CORS Fix: api_secret as URL query param (not header)
+    const fullUrl=secret?url+'/api/v1/status.json?api_secret='+encodeURIComponent(secret):url+'/api/v1/status.json';
+    const r=await fetch(fullUrl,{method:'GET',mode:'cors',headers:{'Accept':'application/json'}});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const data=await r.json();
     msg.className='ns-msg ns-ok';
-    msg.textContent='✅ מחובר'+(r.name?' – '+r.name:'');
+    msg.textContent='✅ מחובר'+(data.name?' – '+data.name:'');
   }catch(e){
     msg.className='ns-msg ns-err';msg.textContent='❌ שגיאת חיבור – בדוק כתובת ו-Secret';
   }
@@ -1486,7 +1686,7 @@ function finishSetup(){
   if(!ns){toast('הזן כתובת Nightscout','o');return;}
   S.nsURL=ns;
   S.nsSecret=document.getElementById('setup-secret')?.value.trim()||'';
-  S.insulin=document.getElementById('setup-insulin')?.value||'novorapid';
+  // insulin type will be fetched from NS after first poll
   S.pusherKey=document.getElementById('setup-pusher-key')?.value.trim()||'';
   S.pusherCluster=document.getElementById('setup-pusher-cluster')?.value.trim()||'eu';
   S.patName=document.getElementById('setup-patname')?.value.trim()||'';
@@ -1503,23 +1703,27 @@ function finishSetup(){
 function loadSettings(){
   document.getElementById('s-ns').value=S.nsURL||'';
   document.getElementById('s-secret').value=S.nsSecret||'';
-  document.getElementById('s-insulin').value=S.insulin||'novorapid';
   document.getElementById('s-pusher-key').value=S.pusherKey||'';
   document.getElementById('s-pusher-cluster').value=S.pusherCluster||'eu';
   document.getElementById('s-patname').value=S.patName||'';
   document.getElementById('s-dob').value=S.dob||'';
   document.getElementById('s-height').value=S.height||'';
   document.getElementById('s-weight').value=S.weight||'';
-  document.getElementById('s-icr').value=S.icr||'';
-  document.getElementById('s-isf').value=S.isf||'';
-  document.getElementById('s-target').value=S.target||'';
+  // 🔒 Read-only from NS
+  document.getElementById('s-insulin').value=insulinLabel(S.insulin)||(S.insulinFromNS?S.insulinFromNS:'נטען מ-NS...');
+  document.getElementById('s-icr').value=S.icr?S.icr+' g/U':'נטען מ-NS...';
+  document.getElementById('s-isf').value=S.isf?S.isf+' mg/U':'נטען מ-NS...';
+  document.getElementById('s-target').value=S.target?S.target+' mg/dL':'נטען מ-NS...';
+  document.getElementById('s-insulin-type').value=insulinLabel(S.insulin)||(S.insulinFromNS||'נטען מ-NS...');
+  document.getElementById('s-dia').value=S.dia?S.dia+' שע'':'נטען מ-NS...';
+  document.getElementById('s-basal-ns').value=S.basalRate?S.basalRate.toFixed(2)+' U/h':'נטען מ-NS...';
   generateLinks();
 }
 
 function saveSettings(){
   S.nsURL=document.getElementById('s-ns')?.value.trim().replace(/\/$/,'')||S.nsURL;
   S.nsSecret=document.getElementById('s-secret')?.value.trim()||S.nsSecret;
-  S.insulin=document.getElementById('s-insulin')?.value||S.insulin;
+  // S.insulin is read-only from NS — not saved from UI
   S.pusherKey=document.getElementById('s-pusher-key')?.value.trim()||S.pusherKey;
   S.pusherCluster=document.getElementById('s-pusher-cluster')?.value.trim()||S.pusherCluster;
   S.patName=document.getElementById('s-patname')?.value.trim()||S.patName;
