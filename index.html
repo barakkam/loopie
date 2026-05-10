@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Loopie v31.1 - Nightscout</title>
+    <title>Loopie v31.1 - Ultra Connect</title>
     <style>
         :root {
             --bg: #0e0e12; --card: #16161e; --border: #2a2a38; --blue: #3b82f6;
@@ -12,28 +12,26 @@
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 32px; width: 100%; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
-        .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 32px; width: 100%; max-width: 440px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+        .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
         .logo-icon { width: 36px; height: 36px; background: var(--blue); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
-        .logo h1 { font-size: 22px; font-weight: 700; }
-        .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
-        label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 500; text-transform: uppercase; }
-        input { width: 100%; padding: 11px 14px; background: #0a0a10; border: 1px solid var(--border); color: var(--text); border-radius: 10px; font-size: 14px; outline: none; transition: 0.2s; margin-bottom: 16px; }
+        label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        input { width: 100%; padding: 12px; background: #0a0a10; border: 1px solid var(--border); color: var(--text); border-radius: 10px; font-size: 14px; outline: none; margin-bottom: 16px; transition: 0.2s; }
         input:focus { border-color: var(--blue); }
         .omnibox { border: 1px solid var(--blue); color: var(--green); font-family: var(--mono); }
         .btn { width: 100%; padding: 12px; background: var(--blue); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; margin-top: 4px; }
-        .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--muted); margin-top: 10px; font-size: 13px; }
         .status { font-size: 13px; padding: 10px; border-radius: 8px; margin-bottom: 16px; display: none; }
         .status.show { display: block; }
         .status.error { background: rgba(244,63,94,0.1); color: var(--red); border: 1px solid var(--red); }
-        .status.info { background: rgba(59,130,246,0.1); color: var(--blue); border: 1px solid var(--blue); }
-        .bg-display { text-align: center; padding: 24px 0; border: 1px solid var(--border); border-radius: 14px; background: #0a0a10; margin-bottom: 16px; }
-        .bg-value { font-size: 64px; font-weight: 800; color: var(--green); transition: 0.4s; }
+        .bg-display { text-align: center; padding: 20px 0; border: 1px solid var(--border); border-radius: 14px; background: #0a0a10; margin-bottom: 16px; }
+        .bg-value { font-size: 64px; font-weight: 800; color: var(--green); }
         .bg-value.low { color: var(--red); }
         .bg-value.high { color: var(--amber); }
-        .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-        .stat-card { background: #0a0a10; border: 1px solid var(--border); border-radius: 12px; padding: 12px; text-align: center; }
-        .omnibox-response { background: rgba(59,130,246,0.07); border: 1px solid var(--blue-dim); border-radius: 10px; padding: 12px; font-size: 13px; margin-bottom: 12px; display: none; line-height: 1.5; min-height: 40px; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+        .stat-box { background: #0a0a10; border: 1px solid var(--border); border-radius: 12px; padding: 12px; text-align: center; }
+        .stat-val { font-weight: 700; font-size: 16px; display: block; }
+        .stat-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; }
+        .response-box { background: rgba(59,130,246,0.08); border-right: 3px solid var(--blue); border-radius: 8px; padding: 12px; font-size: 13px; margin-bottom: 12px; display: none; line-height: 1.6; }
         .hidden { display: none !important; }
         .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid transparent; border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -41,60 +39,52 @@
 </head>
 <body>
 
-<!-- מסך כניסה -->
 <div id="login-screen" class="card">
-    <div class="logo"><div class="logo-icon">💉</div><h1>Loopie</h1></div>
-    <p class="subtitle">התחברות ל-Nightscout</p>
+    <div class="logo"><div class="logo-icon">💉</div><h1>Loopie Ultra</h1></div>
     <div id="login-status" class="status"></div>
-    <label>כתובת שרת</label>
+    <label>כתובת Nightscout</label>
     <input type="text" id="nsUrl" placeholder="https://herokuapp.com">
     <label>API Secret</label>
     <input type="password" id="apiSecret" placeholder="••••••••">
-    <button class="btn" id="loginBtn" onclick="testConnection()">כניסה למערכת</button>
+    <button class="btn" id="loginBtn" onclick="connect()">התחבר למערכת</button>
 </div>
 
-<!-- מסך ראשי -->
 <div id="main-screen" class="card hidden">
-    <div class="logo" style="margin-bottom:20px">
-        <div class="logo-icon" style="width:28px;height:28px;font-size:14px">💉</div>
-        <span id="ns-badge" style="font-weight:700">Loopie</span>
+    <div class="logo" style="margin-bottom:15px">
+        <div class="logo-icon" style="width:28px;height:28px;font-size:14px">♾️</div>
+        <span id="badge-name" style="font-weight:700">Loopie Active</span>
     </div>
+    
     <div class="bg-display">
         <div class="bg-value" id="current-bg">--</div>
-        <div style="font-size:14px; color:var(--muted)" id="trend-label">טוען...</div>
-        <div id="last-update" style="font-size:11px; color:var(--muted); margin-top:8px"></div>
+        <div id="trend-label" style="font-size:14px; color:var(--muted)">טוען...</div>
     </div>
-    <div class="stats-row">
-        <div class="stat-card">
-            <div style="font-size:11px; color:var(--muted)">שינוי</div>
-            <div id="stat-delta" style="font-weight:700">--</div>
-        </div>
-        <div class="stat-card">
-            <div style="font-size:11px; color:var(--muted)">סטטוס</div>
-            <div id="stat-range" style="font-weight:700; font-size:13px">--</div>
-        </div>
+
+    <div class="stats-grid">
+        <div class="stat-box"><span class="stat-lbl">IOB</span><span id="stat-iob" class="stat-val">0.0</span></div>
+        <div class="stat-box"><span class="stat-lbl">בזאלי</span><span id="stat-basal" class="stat-val">0.0</span></div>
     </div>
-    <div id="omnibox-response" class="omnibox-response"></div>
-    <input type="text" id="omnibox" class="omnibox" placeholder="שאל: מה המצב?" onkeydown="if(event.key==='Enter') askOmnibox()">
-    <button class="btn" onclick="fetchData()">רענן נתונים</button>
-    <button class="btn btn-secondary" onclick="location.reload()">התנתקות</button>
+
+    <div id="omni-res" class="response-box"></div>
+    <input type="text" id="omnibox" class="omnibox" placeholder="שאל: מה המצב? / מה אכלתי? / גיל ציוד" onkeydown="if(event.key==='Enter') askOmnibox()">
+    
+    <button class="btn" onclick="fetchData()">רענן הכל</button>
+    <button class="btn" style="background:transparent; border:1px solid var(--border); color:var(--muted); margin-top:8px" onclick="location.reload()">התנתקות</button>
 </div>
 
 <script>
-const TREND_MAP = { 1:"↑↑", 2:"↑", 3:"↗", 4:"→", 5:"↘", 6:"↓", 7:"↓↓" };
+let nsData = { iob: 0, basal: 0, insulin: "--", sensor: "--", pod: "--", hist: "--", meal: "אין" };
 let refreshTimer = null;
 
-async function testConnection() {
+async function connect() {
     const url = document.getElementById('nsUrl').value.trim().replace(/\/$/, "");
     const secret = document.getElementById('apiSecret').value.trim();
     const btn = document.getElementById('loginBtn');
-    const status = document.getElementById('login-status');
+    if (!url || !secret) return;
 
-    if (!url || !secret) { showStatus("מלא את כל השדות", "error"); return; }
-    
     btn.disabled = true;
-    btn.innerHTML = 'מתחבר... <span class="spinner"></span>';
-    
+    btn.innerHTML = '<span class="spinner"></span> מתחבר...';
+
     try {
         const res = await fetch(`${url}/api/v1/status.json?api_secret=${secret}`);
         if (!res.ok) throw new Error();
@@ -103,75 +93,69 @@ async function testConnection() {
         fetchData();
         refreshTimer = setInterval(fetchData, 60000);
     } catch (e) {
-        showStatus("חיבור נכשל. בדוק כתובת וסיסמה", "error");
-        btn.disabled = false; btn.innerText = "כניסה למערכת";
+        document.getElementById('login-status').innerText = "שגיאת חיבור";
+        document.getElementById('login-status').className = "status show error";
+        btn.disabled = false; btn.innerText = "התחבר למערכת";
     }
 }
 
 async function fetchData() {
     const url = document.getElementById('nsUrl').value.trim().replace(/\/$/, "");
     const secret = document.getElementById('apiSecret').value.trim();
+    const headers = { 'api-secret': secret };
+
     try {
-        const res = await fetch(`${url}/api/v1/entries.json?count=2&api_secret=${secret}`);
-        const data = await res.json();
-        if(!data.length) return;
+        // 1. נתוני Pebble (BG, IOB, Trend)
+        const pRes = await fetch(`${url}/pebble`, { headers });
+        const p = await pRes.json();
+        const latest = p.bgs[0];
+        nsData.iob = latest.iob || 0;
+        document.getElementById('current-bg').innerText = latest.sgv;
+        document.getElementById('current-bg').className = 'bg-value' + (latest.sgv < 70 ? ' low' : latest.sgv > 180 ? ' high' : '');
+        document.getElementById('trend-label').innerText = latest.direction;
+        document.getElementById('stat-iob').innerText = nsData.iob;
 
-        const latest = data[0];
-        const bg = latest.sgv;
-        const bgEl = document.getElementById('current-bg');
-        
-        bgEl.textContent = bg;
-        bgEl.className = 'bg-value' + (bg < 70 ? ' low' : bg > 180 ? ' high' : '');
-        
-        document.getElementById('trend-label').textContent = (TREND_MAP[latest.trend] || "→") + " " + (latest.direction || "");
-        document.getElementById('last-update').textContent = "עדכון: " + new Date(latest.dateString).toLocaleTimeString('he-IL');
-        
-        if(data[1]) {
-            const delta = bg - data[1].sgv;
-            document.getElementById('stat-delta').textContent = (delta >= 0 ? "+" : "") + delta + " mg/dL";
+        // 2. נתוני Device Status (גיל ציוד ואינסולין)
+        const dRes = await fetch(`${url}/api/v1/devicestatus.json?count=1`, { headers });
+        const d = await dRes.json();
+        if(d[0]) {
+            nsData.insulin = d[0].pump?.insulin?.type || "Humalog/Novo";
+            nsData.sensor = d[0].sage || "לא ידוע";
+            nsData.pod = d[0].cage || "לא ידוע";
+            nsData.basal = d[0].pump?.basal?.rate || 0;
+            document.getElementById('stat-basal').innerText = nsData.basal;
         }
-        
-        const rangeEl = document.getElementById('stat-range');
-        if(bg < 70) { rangeEl.textContent = "נמוך ↓"; rangeEl.style.color = "var(--red)"; }
-        else if(bg > 180) { rangeEl.textContent = "גבוה ↑"; rangeEl.style.color = "var(--amber)"; }
-        else { rangeEl.textContent = "תקין ✓"; rangeEl.style.color = "var(--green)"; }
 
-    } catch (e) { console.error("Refresh failed"); }
+        // 3. היסטוריה לפני 3 שעות
+        const threeHrs = Date.now() - (3 * 3600000);
+        const hRes = await fetch(`${url}/api/v1/entries.json?find[date][$gte]=${threeHrs}&count=1`, { headers });
+        const h = await hRes.json();
+        nsData.hist = h[0]?.sgv || "--";
+
+        // 4. ארוחה אחרונה
+        const tRes = await fetch(`${url}/api/v1/treatments.json?find[carbs][$gt]=0&count=1`, { headers });
+        const t = await tRes.json();
+        if(t[0]) nsData.meal = `${t[0].notes || 'ארוחה'} (${t[0].carbs}g) ב-${new Date(t[0].created_at).toLocaleTimeString('he-IL')}`;
+
+    } catch (e) { console.error("Update failed"); }
 }
 
 function askOmnibox() {
     const input = document.getElementById('omnibox');
-    const resp = document.getElementById('omnibox-response');
-    const q = input.value.trim();
+    const resp = document.getElementById('omni-res');
+    const q = input.value.trim().toLowerCase();
     if (!q) return;
 
-    resp.style.display = 'none';
-    const bg = document.getElementById('current-bg').textContent;
-    const trend = document.getElementById('trend-label').textContent;
-    const delta = document.getElementById('stat-delta').textContent;
-    const range = document.getElementById('stat-range').textContent;
+    let ans = "";
+    if (q.includes("iob") || q.includes("פעיל")) ans = `אינסולין פעיל: ${nsData.iob} U.`;
+    else if (q.includes("ציוד") || q.includes("חיישן") || q.includes("גיל")) ans = `חיישן: ${nsData.sensor} | פוד: ${nsData.pod} | סוג: ${nsData.insulin}`;
+    else if (q.includes("בזאלי")) ans = `קצב בזאלי נוכחי: ${nsData.basal} U/hr.`;
+    else if (q.includes("3 שעות")) ans = `לפני 3 שעות הסוכר היה ${nsData.hist} mg/dL.`;
+    else if (q.includes("אכלתי") || q.includes("מאכל")) ans = `ארוחה אחרונה: ${nsData.meal}`;
+    else if (q.includes("מצב") || q.includes("מה קורה")) ans = `סוכר: ${document.getElementById('current-bg').innerText}. IOB: ${nsData.iob}. בזאלי: ${nsData.basal}.`;
+    else ans = "לא הבנתי. נסה: 'מה אכלתי?', 'גיל ציוד', או 'כמה היה לפני 3 שעות?'.";
 
-    let answer = "";
-    if (/מצב|מה קורה|איך|status/i.test(q)) {
-        answer = `הסוכר כרגע ${bg}. מגמה: ${trend} (${delta}). סטטוס: ${range}.`;
-    } else if (/נמוך|גבוה|טווח/i.test(q)) {
-        answer = `מצב הטווח: ${range} (ערך: ${bg})`;
-    } else if (/רענן|עדכן/i.test(q)) {
-        fetchData(); answer = "מרענן נתונים...";
-    } else {
-        answer = "נסה לשאול: 'מה המצב?' או 'מה המגמה?'.";
-    }
-
-    setTimeout(() => {
-        resp.textContent = answer;
-        resp.style.display = 'block';
-        input.value = '';
-    }, 100);
-}
-
-function showStatus(msg, type) {
-    const el = document.getElementById('login-status');
-    el.textContent = msg; el.className = `status show ${type}`;
+    resp.innerText = ans; resp.style.display = 'block'; input.value = '';
 }
 </script>
 </body>
