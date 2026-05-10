@@ -73,85 +73,60 @@
 </div>
 
 <script>
-let nsData = { iob: 0, basal: 0, insulin: "--", sensor: "--", pod: "--", hist: "--", meal: "אין", lastBolus: 0, cob: 0 };
+let nsData = { iob: 0, basal: 0, insulin: "--", sensorAge: null, podAge: null, hist: "--", meal: "אין" };
 let refreshTimer = null;
 
-function nsUrl() {
-    return document.getElementById('nsUrl').value.trim().replace(/\/$/, "");
-}
-
-function nsSecret() {
-    return encodeURIComponent(document.getElementById('apiSecret').value.trim());
-}
-
-function nsGet(path) {
+function nsUrl() { return document.getElementById('nsUrl').value.trim().replace(/\/$/, ""); }
+function nsSecret() { return document.getElementById('apiSecret').value.trim(); }
+function nsGet(path) { 
     const sep = path.includes('?') ? '&' : '?';
-    return fetch(nsUrl() + path + sep + 'api_secret=' + nsSecret(), { mode: 'cors' });
+    return fetch(nsUrl() + path + sep + 'api_secret=' + nsSecret(), { mode: 'cors' }); 
 }
 
 async function connect() {
     const btn = document.getElementById('loginBtn');
-    const statusEl = document.getElementById('login-status');
-
-    if (!nsUrl() || !document.getElementById('apiSecret').value.trim()) return;
-
+    if (!nsUrl() || !nsSecret()) return;
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span> מתחבר...';
-    statusEl.className = 'status';
-
     try {
         const res = await nsGet('/api/v1/status.json');
-        if (!res.ok) throw new Error('HTTP ' + res.status);
+        if (!res.ok) throw new Error();
         document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('main-screen').classList.remove('hidden');
         fetchData();
         refreshTimer = setInterval(fetchData, 60000);
     } catch (e) {
-        statusEl.innerText = "שגיאת חיבור: וודא שכתובת ה-NS והסיסמה נכונים";
-        statusEl.className = "status show error";
-        btn.disabled = false;
-        btn.innerText = "התחבר למערכת";
+        btn.disabled = false; btn.innerText = "שגיאת חיבור";
     }
 }
 
 async function fetchData() {
     try {
-        // 1. נתוני סוכר ו-IOB (מ-Pebble)
         const pRes = await nsGet('/pebble');
-        if (pRes.ok) {
-            const p = await pRes.json();
-            const latest = p.bgs[0];
-            document.getElementById('current-bg').innerText = latest.sgv;
-            document.getElementById('stat-iob').innerText = latest.iob || "0.0";
-            document.getElementById('trend-label').innerText = latest.direction || "Flat";
-            nsData.cob = latest.cob || 0;
-        }
-        // 2. תיקון בזאלי וגיל ציוד (מ-DeviceStatus)
+        const p = await pRes.json();
+        const latest = p.bgs[0];
+        document.getElementById('current-bg').innerText = latest.sgv;
+        document.getElementById('current-bg').className = 'bg-value' + (latest.sgv < 70 ? ' low' : latest.sgv > 180 ? ' high' : '');
+        document.getElementById('trend-label').innerText = latest.direction;
+        document.getElementById('stat-iob').innerText = latest.iob || "0.0";
+        nsData.iob = latest.iob || 0;
+
         const dRes = await nsGet('/api/v1/devicestatus.json?count=1');
-        if (dRes.ok) {
-            const d = await dRes.json();
-            const status = d[0];
-            if (status && status.pump) {
-                nsData.basal = status.pump.basal ? status.pump.basal.rate : 0.25;
-                document.getElementById('stat-basal').innerText = nsData.basal;
-                nsData.insulin = (status.pump.insulin && status.pump.insulin.type) || "Humalog/Novo";
-            }
-            if (status) {
-                nsData.sensor = status.sage || "לא ידוע";
-                nsData.pod = status.cage || "לא ידוע";
-            }
+        const d = await dRes.json();
+        if (d[0] && d[0].pump) {
+            nsData.basal = d[0].pump.basal.rate;
+            document.getElementById('stat-basal').innerText = nsData.basal;
         }
-        // 3. ארוחות והזרקות (Treatments)
-        const tRes = await nsGet('/api/v1/treatments.json?find[carbs][$gt]=0&count=5');
-        if (tRes.ok) {
-            const treatments = await tRes.json();
-            if (treatments.length > 0) {
-                const t = treatments[0];
-                const time = new Date(t.created_at).toLocaleTimeString('he-IL', {hour: '2-digit', minute:'2-digit'});
-                nsData.meal = (t.notes || 'ארוחה רשומה') + ' 🍽️ (' + t.carbs + 'g 🍞) ב-' + time + '. הזרקה: ' + (t.insulin || 0) + 'U 💉';
-            }
-        }
-    } catch (e) { console.error("Update failed:", e); }
+
+        const tRes = await nsGet('/api/v1/treatments.json?find[eventType][$in]=Sensor Change,Pod Change,Site Change&count=2');
+        const treats = await tRes.json();
+        treats.forEach(t => {
+            const diffHours = (Date.now() - new Date(t.created_at).getTime()) / 3600000;
+            if (t.eventType.includes("Sensor")) nsData.sensorAge = diffHours;
+            if (t.eventType.includes("Pod") || t.eventType.includes("Site")) nsData.podAge = diffHours;
+        });
+
+    } catch (e) { console.error("Update error", e); }
 }
 
 async function askOmnibox() {
@@ -159,25 +134,50 @@ async function askOmnibox() {
     const resp = document.getElementById('omni-res');
     const q = input.value.trim().toLowerCase();
     if (!q) return;
+
     resp.style.display = 'block';
+    resp.innerText = "סורק נתונים... 🔍";
     let ans = "";
-    if (q.includes("אכלתי") || q.includes("אוכל") || q.includes("מאכל") || q.includes("cob")) {
-        ans = "📊 פחמימות פעילות (COB): " + nsData.cob + "g. 🍴 " + nsData.meal;
-    }
-    else if (q.includes("בזאלי") || q.includes("basal")) {
-        ans = "💧 קצב בזאלי נוכחי: " + nsData.basal + " U/hr.";
-    }
-    else if (q.includes("חיישן") || q.includes("פוד") || q.includes("גיל")) {
-        ans = "📟 גיל חיישן: " + nsData.sensor + " | גיל פוד: " + nsData.pod + " | אינסולין: " + nsData.insulin;
-    }
-    else if (q.includes("מצב") || q.includes("מה קורה")) {
-        ans = "✅ סוכר: " + document.getElementById('current-bg').innerText + " | IOB: " + document.getElementById('stat-iob').innerText + " | COB: " + nsData.cob + "g";
-    }
-    else {
-        ans = "🤔 נסה לשאול: 'מה אכלתי?', 'כמה COB יש לי?' או 'מה הבזאלי?'.";
-    }
-    resp.innerText = ans;
-    input.value = '';
+
+    try {
+        const timeMatch = q.match(/(\d+)/);
+        const hoursRequested = timeMatch ? parseInt(timeMatch[0]) : null;
+
+        if (hoursRequested && (q.includes("הוזרק") || q.includes("אכלתי") || q.includes("אוכל"))) {
+            const targetTime = Date.now() - (hoursRequested * 3600000);
+            const from = new Date(targetTime - 1800000).toISOString();
+            const to   = new Date(targetTime + 1800000).toISOString();
+            const res = await nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + from + '&find[created_at][$lte]=' + to);
+            const data = await res.json();
+            if (data.length > 0) {
+                ans = data.map(t => '🕒 ב-' + new Date(t.created_at).toLocaleTimeString('he-IL') + ': הוזרק ' + (t.insulin || 0) + 'U על ' + (t.carbs || 0) + 'g פחמימות (' + (t.notes || 'ללא תיאור') + ')').join('<br>');
+            } else { ans = 'לא מצאתי רישום בדיוק לפני ' + hoursRequested + ' שעות.'; }
+        }
+        else if (q.includes("חיישן") || q.includes("פוד") || q.includes("החלפה") || q.includes("זמן נותר")) {
+            const sensorLeft = nsData.sensorAge ? Math.max(0, 240 - nsData.sensorAge).toFixed(1) : "לא ידוע";
+            const podLeft    = nsData.podAge    ? Math.max(0, 72  - nsData.podAge).toFixed(1)    : "לא ידוע";
+            ans = '⏳ חיישן: נותרו כ-' + sensorLeft + ' שעות.<br>⏳ פוד: נותרו כ-' + podLeft + ' שעות.';
+        }
+        else if (hoursRequested && q.includes("בזאלי")) {
+            const targetTime = Date.now() - (hoursRequested * 3600000);
+            const from = new Date(targetTime - 600000).toISOString();
+            const res = await nsGet('/api/v1/devicestatus.json?find[created_at][$gte]=' + from + '&count=1');
+            const d = await res.json();
+            ans = d[0] ? '💧 לפני ' + hoursRequested + ' שעות הבזאלי היה: ' + d[0].pump.basal.rate + ' U/hr.' : 'לא מצאתי נתון בזאלי לזמן זה.';
+        }
+        else if (q.includes("סיכום") || q.includes("כמה הזרקתי היום")) {
+            const today = new Date().setHours(0,0,0,0);
+            const res = await nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + new Date(today).toISOString());
+            const data = await res.json();
+            const totalInsulin = data.reduce((sum, t) => sum + (t.insulin || 0), 0).toFixed(2);
+            const totalCarbs   = data.reduce((sum, t) => sum + (t.carbs   || 0), 0);
+            ans = '📅 סיכום מהבוקר:<br>💉 סך אינסולין: ' + totalInsulin + 'U<br>🍞 סך פחמימות: ' + totalCarbs + 'g';
+        }
+        else { ans = "נסה לשאול: 'מה אכלתי לפני 4 שעות?', 'כמה זמן נותר לחיישן?' או 'סיכום היום'."; }
+
+    } catch (e) { ans = "שגיאה בשליפת נתונים. וודא שההיסטוריה מלאה ב-NS."; }
+
+    resp.innerHTML = ans; input.value = '';
 }
 </script>
 </body>
