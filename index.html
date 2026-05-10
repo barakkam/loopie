@@ -162,8 +162,7 @@ async function askOmnibox() {
     resp.style.display = 'block';
     let ans = "";
     if (q.includes("אכלתי") || q.includes("אוכל") || q.includes("מאכל") || q.includes("cob")) {
-        ans = "📊 פחמימות פעילות (COB): " + nsData.cob + "g.
-🍴 " + nsData.meal;
+        ans = "📊 פחמימות פעילות (COB): " + nsData.cob + "g. 🍴 " + nsData.meal;
     }
     else if (q.includes("בזאלי") || q.includes("basal")) {
         ans = "💧 קצב בזאלי נוכחי: " + nsData.basal + " U/hr.";
