@@ -2,63 +2,116 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>Loopie v31.1 - NS Connector</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loopie v31.1 - Secure NS</title>
     <style>
         :root {
             --bg: #121212; --card: #1a1a1a; --blue: #2563ff; 
-            --green: #0fba74; --text: #f0f0f8; --mono: 'JetBrains Mono', monospace;
+            --green: #0fba74; --red: #e03050; --text: #f0f0f8; --mono: 'JetBrains Mono', monospace;
         }
-        body { background: var(--bg); color: var(--text); font-family: sans-serif; display: flex; justify-content: center; padding: 20px; }
-        .card { background: var(--card); padding: 25px; border-radius: 15px; width: 400px; border: 1px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .omnibox { width: 100%; padding: 12px; background: #000; border: 1px solid var(--blue); color: var(--green); border-radius: 8px; font-family: var(--mono); outline: none; margin-bottom: 15px; }
-        .status-box { text-align: center; margin: 20px 0; padding: 15px; background: #222; border-radius: 10px; }
-        .bg-val { font-size: 3rem; font-weight: bold; color: var(--blue); }
-        .info { font-size: 0.9rem; color: #888; margin-top: 5px; }
-        button { width: 100%; padding: 12px; background: var(--blue); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: var(--card); padding: 30px; border-radius: 15px; width: 380px; border: 1px solid #333; box-shadow: 0 10px 40px rgba(0,0,0,0.6); text-align: center; }
+        input { width: 100%; padding: 12px; background: #000; border: 1px solid #444; color: #fff; border-radius: 8px; margin-bottom: 15px; outline: none; box-sizing: border-box; }
+        input:focus { border-color: var(--blue); }
+        .omnibox { border: 1px solid var(--blue); color: var(--green); font-family: var(--mono); }
+        button { width: 100%; padding: 12px; background: var(--blue); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        .status-msg { font-size: 0.85rem; margin-bottom: 15px; min-height: 20px; }
+        .success { color: var(--green); }
+        .error { color: var(--red); }
+        .hidden { display: none; }
+        .bg-val { font-size: 3.5rem; font-weight: bold; color: var(--blue); margin: 10px 0; }
+        .trend { font-size: 1.5rem; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h2>Loopie Omnibox</h2>
+<!-- מסך כניסה -->
+<div id="login-screen" class="card">
+    <h2 style="margin-bottom: 10px;">Loopie Connect</h2>
+    <p style="color: #888; font-size: 0.9rem; margin-bottom: 20px;">התחברות ל-Nightscout</p>
     
-    <input type="text" id="nsUrl" class="omnibox" placeholder="כתובת NS (למשל: https://herokuapp.com)">
-    <input type="text" id="command" class="omnibox" placeholder="פקודה או שאלה (למשל: סוכר?)">
+    <div id="login-status" class="status-msg"></div>
     
-    <div class="status-box" id="display">
-        <div class="bg-val">--</div>
-        <div class="info">הזן כתובת ולחץ על התחבר</div>
+    <input type="text" id="nsUrl" placeholder="כתובת שרת (HTTPS)">
+    <input type="password" id="apiSecret" placeholder="API Secret">
+    
+    <button onclick="testConnection()">התחבר למערכת</button>
+</div>
+
+<!-- מסך אומניבוקס (מוסתר בהתחלה) -->
+<div id="main-screen" class="card hidden">
+    <h3 id="user-greeting" style="margin-bottom: 20px; color: var(--blue);">Omnibox Active</h3>
+    
+    <div id="data-display">
+        <div class="bg-val" id="current-bg">--</div>
+        <div class="trend" id="current-trend">--</div>
+        <div style="font-size: 0.8rem; color: #666;" id="last-update">מעדכן...</div>
     </div>
+
+    <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
     
-    <button onclick="updateNS()">התחבר ומשוך נתונים</button>
+    <input type="text" id="omnibox" class="omnibox" placeholder="שאל שאלה (למשל: מה המצב?)">
+    <button onclick="fetchData()" style="background: transparent; border: 1px solid var(--blue); color: var(--blue);">רענן נתונים</button>
 </div>
 
 <script>
-    async function updateNS() {
-        let url = document.getElementById('nsUrl').value.replace(/\/$/, "");
-        const display = document.getElementById('display');
-        
-        if (!url) { alert("נא להזין כתובת שרת"); return; }
+    // פונקציית עזר להצפנת ה-Secret (SHA-1) במידה וצריך (Nightscout מקבל גם טקסט רגיל ב-Header בד"כ)
+    async function testConnection() {
+        const url = document.getElementById('nsUrl').value.replace(/\/$/, "");
+        const secret = document.getElementById('apiSecret').value;
+        const status = document.getElementById('login-status');
+
+        if (!url || !secret) {
+            status.className = "status-msg error";
+            status.innerText = "נא למלא את כל השדות";
+            return;
+        }
+
+        status.className = "status-msg";
+        status.innerText = "בודק חיבור...";
 
         try {
-            // שליפת נתונים מ-API של Nightscout
-            const response = await fetch(`${url}/api/v1/entries.json?count=1`);
+            const response = await fetch(`${url}/api/v1/status.json`, {
+                headers: { 'api-secret': secret }
+            });
+
+            if (response.ok) {
+                status.className = "status-msg success";
+                status.innerText = "החיבור הצליח! נכנס...";
+                
+                setTimeout(() => {
+                    document.getElementById('login-screen').classList.add('hidden');
+                    document.getElementById('main-screen').classList.remove('hidden');
+                    fetchData(); // טעינה ראשונית של נתונים
+                }, 1000);
+            } else {
+                throw new Error("מפתח שגוי או שרת לא זמין");
+            }
+        } catch (err) {
+            status.className = "status-msg error";
+            status.innerText = "חיבור נכשל: " + err.message;
+        }
+    }
+
+    async function fetchData() {
+        const url = document.getElementById('nsUrl').value.replace(/\/$/, "");
+        const secret = document.getElementById('apiSecret').value;
+
+        try {
+            const response = await fetch(`${url}/api/v1/entries.json?count=1`, {
+                headers: { 'api-secret': secret }
+            });
             const data = await response.json();
             
             if (data.length > 0) {
                 const entry = data[0];
-                const bg = entry.sgv;
-                const date = new Date(entry.dateString).toLocaleTimeString('he-IL');
-                const trend = getTrendIcon(entry.trend);
-                
-                display.innerHTML = `
-                    <div class="bg-val">${bg}</div>
-                    <div style="font-size: 1.5rem">${trend}</div>
-                    <div class="info">עודכן ב: ${date}</div>
-                `;
+                document.getElementById('current-bg').innerText = entry.sgv;
+                document.getElementById('current-trend').innerText = getTrendIcon(entry.trend);
+                document.getElementById('last-update').innerText = "עודכן ב: " + new Date(entry.dateString).toLocaleTimeString('he-IL');
             }
         } catch (err) {
-            display.innerHTML = '<div class="info" style="color:red">שגיאה בחיבור לשרת</div>';
+            console.error("שגיאה במשיכת נתונים");
         }
     }
 
