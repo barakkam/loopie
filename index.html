@@ -74,7 +74,7 @@
 
 <script>
 let nsData = { iob: 0, basal: "0.0", currentSgv: 0, delta: 0 };
-let fullHistory = { entries: [], treatments: [], devStatus: {} };
+let fullHistory = { entries: [], treatments: [], devStatus: {}, profile: null };
 let refreshTimer = null;
 
 function nsUrl() { return document.getElementById('nsUrl').value.trim().replace(/\/$/, ""); }
@@ -89,17 +89,19 @@ const safeGet = function(obj, path, fallback) {
     return path.split('.').reduce(function(acc, part) { return acc && acc[part]; }, obj) || fallback;
 };
 
-// תחזית סוכר פשוטה לפי דלתא + IOB decay
+function isEventType(t, keywords) {
+    const ev = (t.eventType || t.type || t.notes || '').toLowerCase();
+    return keywords.some(function(k) { return ev.includes(k.toLowerCase()); });
+}
+
 function predictBG(hoursAhead) {
     const sgv = nsData.currentSgv;
     if (!sgv) return null;
-    const delta = nsData.delta || 0;          // שינוי ב-5 דקות האחרונות
-    const iob   = parseFloat(nsData.iob) || 0;
-    // קצב שינוי לשעה לפי מגמה + פירוק IOB (ממוצע 50 mg/dL לכל יחידה)
-    const trendPerHour = delta * 12;           // delta הוא ל-5 דק', כפול 12 = שעה
-    const iobEffect    = iob * 40 * hoursAhead; // IOB מוריד בממוצע 40 mg/dL לשעה ביחידה
-    const predicted    = Math.round(sgv + (trendPerHour * hoursAhead) - iobEffect);
-    return Math.max(40, Math.min(400, predicted));
+    const delta      = nsData.delta || 0;
+    const iob        = parseFloat(nsData.iob) || 0;
+    const trendPerHr = delta * 12;
+    const iobEffect  = iob * 40 * hoursAhead;
+    return Math.max(40, Math.min(400, Math.round(sgv + (trendPerHr * hoursAhead) - iobEffect)));
 }
 
 function bgStatus(sgv) {
@@ -108,6 +110,34 @@ function bgStatus(sgv) {
     if (sgv > 250) return " ⚠️ גבוה מאוד!";
     if (sgv > 180) return " ↑ גבוה";
     return " ✅ בטווח";
+}
+
+function timeAgo(dateStr) {
+    const h = (Date.now() - new Date(dateStr).getTime()) / (1000*60*60);
+    return h < 24 ? h.toFixed(1) + " שעות" : (h/24).toFixed(1) + " ימים";
+}
+
+// מציא ערך פרופיל (בזאלי/ISF/CR) לפי שעה נתונה
+function profileValueAt(arr, hour) {
+    if (!arr || !arr.length) return null;
+    // מיון לפי time (HH:MM)
+    var sorted = arr.slice().sort(function(a,b){ return a.time > b.time ? 1 : -1; });
+    var val = sorted[0].value;
+    for (var i = 0; i < sorted.length; i++) {
+        var t = sorted[i].time || "00:00";
+        var h = parseInt(t.split(':')[0]);
+        if (h <= hour) val = sorted[i].value;
+    }
+    return val;
+}
+
+// בניית טבלת לוח שעות מלא מהפרופיל
+function buildScheduleTable(arr, unit) {
+    if (!arr || !arr.length) return "אין נתונים.";
+    var sorted = arr.slice().sort(function(a,b){ return a.time > b.time ? 1 : -1; });
+    return sorted.map(function(e) {
+        return "• " + (e.time || "00:00") + " — <b>" + e.value + "</b> " + unit;
+    }).join("<br>");
 }
 
 async function connect() {
@@ -130,48 +160,79 @@ async function connect() {
 
 async function fetchData() {
     try {
-        const [entRes, devRes] = await Promise.all([
-            nsGet('/api/v1/entries.json?count=2'),  // 2 קריאות לחישוב דלתא
-            nsGet('/api/v1/devicestatus.json?count=1')
+        const [entRes, devRes, profRes] = await Promise.all([
+            nsGet('/api/v1/entries.json?count=2'),
+            nsGet('/api/v1/devicestatus.json?count=1'),
+            nsGet('/api/v1/profile.json')
         ]);
 
+        // סוכר נוכחי + דלתא
         if (entRes.ok) {
             const entData = await entRes.json();
             const entries = Array.isArray(entData) ? entData : [entData];
             const entry   = entries[0];
             const prev    = entries[1];
-
             if (entry && entry.sgv) {
                 const sgv = entry.sgv;
                 nsData.currentSgv = sgv;
                 nsData.delta = prev ? (sgv - prev.sgv) : 0;
-
                 const bgEl = document.getElementById('current-bg');
                 bgEl.innerText = sgv;
                 bgEl.className = 'bg-value' + (sgv < 70 ? ' low' : sgv > 180 ? ' high' : '');
-
                 const trendMap = { 1:'↑↑', 2:'↑', 3:'↗', 4:'→', 5:'↘', 6:'↓', 7:'↓↓' };
                 document.getElementById('trend-label').innerText = entry.direction || trendMap[entry.trend] || '→';
             }
         }
 
+        // DeviceStatus — IOB + בזאלי בפועל
         if (devRes.ok) {
             const devData = await devRes.json();
             const dev = Array.isArray(devData) ? devData[0] : devData;
             if (dev) {
-                const iob = safeGet(dev, 'openaps.iob.iob',
-                            safeGet(dev, 'loop.iob.iob',
-                            safeGet(dev, 'pump.iob', 0)));
-                const iobDisplay = parseFloat(iob) ? parseFloat(iob).toFixed(2) : "0.00";
+                console.log("DeviceStatus keys:", JSON.stringify(Object.keys(dev)));
+
+                // IOB — מחפש במספר מיקומים
+                var iobRaw = safeGet(dev, 'openaps.iob.iob',
+                             safeGet(dev, 'loop.iob.iob',
+                             safeGet(dev, 'openaps.suggested.IOB',
+                             safeGet(dev, 'pump.iob.bolusiob', 0))));
+                var iobDisplay = parseFloat(iobRaw) ? parseFloat(iobRaw).toFixed(2) : "0.00";
                 document.getElementById('stat-iob').innerText = iobDisplay;
                 nsData.iob = iobDisplay;
 
-                const basal = safeGet(dev, 'openaps.enacted.rate',
-                              safeGet(dev, 'pump.basal.rate',
-                              safeGet(dev, 'loop.recommendedTempBasal.rate', "0.0")));
-                document.getElementById('stat-basal').innerText = basal;
-                nsData.basal = basal;
+                // בזאלי בפועל — TBR שרץ עכשיו
+                var basalRaw = safeGet(dev, 'openaps.enacted.rate',
+                               safeGet(dev, 'openaps.suggested.rate',
+                               safeGet(dev, 'pump.extended.TBRRate',
+                               safeGet(dev, 'pump.basal.rate', null))));
+                var basalDisplay = basalRaw !== null && basalRaw !== "--" ? basalRaw : "0.0";
+                document.getElementById('stat-basal').innerText = basalDisplay;
+                nsData.basal = basalDisplay;
                 fullHistory.devStatus = dev;
+            }
+        }
+
+        // פרופיל — בזאלי/ISF/CR לפי שעות
+        if (profRes.ok) {
+            const profData = await profRes.json();
+            var prof = Array.isArray(profData) ? profData[0] : profData;
+            // מנסה למצוא את ה-store הפעיל
+            if (prof && prof.store) {
+                var storeName = prof.defaultProfile || Object.keys(prof.store)[0];
+                var store = prof.store[storeName];
+                fullHistory.profile = store;
+                console.log("Profile store:", storeName, "keys:", JSON.stringify(Object.keys(store)));
+
+                // בזאלי נוכחי לפי פרופיל
+                var nowHour = new Date().getHours();
+                var basalNow = profileValueAt(store.basal, nowHour);
+                if (basalNow && (nsData.basal === "0.0" || nsData.basal === "--")) {
+                    document.getElementById('stat-basal').innerText = basalNow;
+                    nsData.basal = basalNow;
+                }
+            } else if (prof) {
+                // פרופיל ישיר ללא store
+                fullHistory.profile = prof;
             }
         }
 
@@ -181,13 +242,13 @@ async function fetchData() {
 
 async function loadHistory() {
     try {
-        const dayAgo   = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-        const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+        const dayAgo         = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const threeMonthsAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
 
         const [ent, treat, equipTreat] = await Promise.all([
             nsGet('/api/v1/entries.json?find[dateString][$gte]=' + dayAgo + '&count=500').then(function(r){ return r.json(); }).catch(function(){ return []; }),
             nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + dayAgo + '&count=200').then(function(r){ return r.json(); }).catch(function(){ return []; }),
-            nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + monthAgo + '&find[eventType][$in]=Sensor%20Change,Pod%20Change,Site%20Change&count=10').then(function(r){ return r.json(); }).catch(function(){ return []; })
+            nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + threeMonthsAgo + '&count=500').then(function(r){ return r.json(); }).catch(function(){ return []; })
         ]);
 
         const allTreat = treat.concat(equipTreat.filter(function(e) {
@@ -195,6 +256,10 @@ async function loadHistory() {
         }));
         fullHistory.entries    = ent;
         fullHistory.treatments = allTreat;
+
+        const types = {};
+        allTreat.forEach(function(t) { if (t.eventType) types[t.eventType] = (types[t.eventType]||0)+1; });
+        console.log("Treatment eventTypes:", JSON.stringify(types));
     } catch (e) { console.error("loadHistory error:", e); }
 }
 
@@ -208,68 +273,164 @@ async function askOmnibox() {
     resp.style.display = 'block';
     resp.innerHTML = "מנתח... 🧠";
 
-    let answer = "";
-    const tr  = fullHistory.treatments || [];
-    const ent = fullHistory.entries    || [];
+    var answer = "";
+    var tr  = fullHistory.treatments || [];
+    var ent = fullHistory.entries    || [];
+    var prof = fullHistory.profile;
 
-    // תחזית סוכר — "עוד שעה" / "עוד X שעות"
+    // תחזית סוכר
     if (ql.includes("עוד") || ql.includes("תחזית") || ql.includes("יהיה")) {
-        const numMatch = ql.match(/(\d+(?:\.\d+)?)/);
-        const hours = numMatch ? parseFloat(numMatch[1]) : 1;
-        const pred  = predictBG(hours);
+        var numMatch = ql.match(/(\d+(?:\.\d+)?)/);
+        var hours = numMatch ? parseFloat(numMatch[1]) : 1;
+        var pred  = predictBG(hours);
         if (pred) {
-            const label = hours === 1 ? "עוד שעה" : "עוד " + hours + " שעות";
+            var label = hours === 1 ? "עוד שעה" : "עוד " + hours + " שעות";
             answer = "📈 תחזית " + label + ":<br>" +
                 "<b style='font-size:1.4em'>" + pred + " mg/dL</b>" + bgStatus(pred) + "<br>" +
-                "<small style='color:#888'>מבוסס על מגמה נוכחית (" + (nsData.delta >= 0 ? "+" : "") + nsData.delta + " ב-5 דק') + IOB " + nsData.iob + "U</small>";
+                "<small style='color:#888'>מגמה: " + (nsData.delta >= 0 ? "+" : "") + nsData.delta +
+                " ב-5 דק' | IOB: " + nsData.iob + "U</small>";
         } else { answer = "אין מספיק נתונים לתחזית. נסה לרענן."; }
+    }
+
+    // בזאלי — כעת + לוח שעות
+    else if (ql.includes("בזאלי") || ql.includes("basal")) {
+        var nowH = new Date().getHours();
+        answer = "💧 <b>בזאלי בפועל כעת: " + nsData.basal + " U/hr</b><br><br>";
+        if (prof && prof.basal) {
+            var basalNow = profileValueAt(prof.basal, nowH);
+            answer += "📋 בזאלי פרופיל כעת (" + nowH + ":00): <b>" + basalNow + " U/hr</b><br><br>";
+            answer += "<b>לוח בזאלי יומי:</b><br>" + buildScheduleTable(prof.basal, "U/hr");
+        } else {
+            answer += "לא נמצא פרופיל בזאלי. בדוק שפלאגין ה-Profile מופעל ב-NS.";
+        }
+    }
+
+    // ISF — יחס תיקון
+    else if (ql.includes("isf") || ql.includes("תיקון") || ql.includes("רגישות")) {
+        if (prof && (prof.sens || prof.sensitivity || prof.isfProfile)) {
+            var isfArr = prof.sens || prof.sensitivity || prof.isfProfile;
+            var nowH2  = new Date().getHours();
+            var isfNow = profileValueAt(Array.isArray(isfArr) ? isfArr : null, nowH2);
+            answer = "🎯 <b>ISF (יחס תיקון)</b><br>";
+            answer += "כעת (" + nowH2 + ":00): <b>" + (isfNow || isfArr) + " mg/dL לכל יחידה</b><br><br>";
+            if (Array.isArray(isfArr) && isfArr.length > 1) {
+                answer += "<b>לוח ISF יומי:</b><br>" + buildScheduleTable(isfArr, "mg/dL/U");
+            }
+        } else {
+            answer = "לא נמצא ISF בפרופיל. בדוק שפלאגין ה-Profile מופעל ב-NS.";
+        }
+    }
+
+    // CR — יחס פחמימה/אינסולין
+    else if (ql.includes("cr") || ql.includes("פחמימה") || ql.includes("יחס") || ql.includes("carb")) {
+        if (prof && (prof.carbratio || prof.carbRatio || prof.ic)) {
+            var crArr  = prof.carbratio || prof.carbRatio || prof.ic;
+            var nowH3  = new Date().getHours();
+            var crNow  = profileValueAt(Array.isArray(crArr) ? crArr : null, nowH3);
+            answer = "🍞 <b>CR (יחס פחמימה/אינסולין)</b><br>";
+            answer += "כעת (" + nowH3 + ":00): <b>" + (crNow || crArr) + " g לכל יחידה</b><br><br>";
+            if (Array.isArray(crArr) && crArr.length > 1) {
+                answer += "<b>לוח CR יומי:</b><br>" + buildScheduleTable(crArr, "g/U");
+            }
+        } else {
+            answer = "לא נמצא CR בפרופיל. בדוק שפלאגין ה-Profile מופעל ב-NS.";
+        }
+    }
+
+    // פרופיל מלא
+    else if (ql.includes("פרופיל") || ql.includes("profile") || ql.includes("הגדרות")) {
+        if (prof) {
+            var nowH4  = new Date().getHours();
+            var basalV = profileValueAt(prof.basal, nowH4) || nsData.basal;
+            var crArr2 = prof.carbratio || prof.carbRatio || prof.ic;
+            var isfArr2= prof.sens || prof.sensitivity;
+            var crV    = profileValueAt(Array.isArray(crArr2) ? crArr2 : null, nowH4) || crArr2;
+            var isfV   = profileValueAt(Array.isArray(isfArr2) ? isfArr2 : null, nowH4) || isfArr2;
+            answer = "📋 <b>פרופיל נוכחי (" + nowH4 + ":00):</b><br>" +
+                "• בזאלי: <b>" + basalV + " U/hr</b><br>" +
+                "• CR (פחמימה/אינסולין): <b>" + (crV || '--') + " g/U</b><br>" +
+                "• ISF (תיקון): <b>" + (isfV || '--') + " mg/dL/U</b><br>" +
+                "• יחידת סוכר: " + (prof.units || 'mg/dL') + "<br><br>" +
+                "שאל 'בזאלי', 'ISF', 'CR' לקבלת לוח שעות מלא.";
+        } else {
+            answer = "לא נמצא פרופיל. בדוק שפלאגין ה-Profile מופעל ב-NS.";
+        }
     }
 
     // IOB
     else if (ql.includes("iob") || ql.includes("פעיל") || ql.includes("אינסולין")) {
-        answer = "האינסולין הפעיל (IOB): <b>" + nsData.iob + " יחידות</b>.";
+        answer = "💉 האינסולין הפעיל (IOB): <b>" + nsData.iob + " יחידות</b>.";
     }
 
-    // ארוחות — עם שם, אימוג'י, אינסולין ושעה
-    else if (ql.includes("אכלתי") || ql.includes("אוכל") || ql.includes("פחמימות") || ql.includes("cob") || ql.includes("ארוחה") || ql.includes("הזרק")) {
-        const meals = tr.filter(function(t) { return t.carbs > 0 || t.insulin > 0; }).slice(0, 8);
+    // ציוד — חיפוש ב-3 חודשים עם keywords רחבות
+    else if (ql.includes("חיישן") || ql.includes("סנסור") || ql.includes("פוד") || ql.includes("משאבה") ||
+             ql.includes("גיל") || ql.includes("ציוד") || ql.includes("החלפ")) {
+
+        var sensorKeywords = ['sensor', 'cgm', 'dexcom', 'libre', 'חיישן', 'סנסור', 'sensor change'];
+        var podKeywords    = ['pod', 'site', 'cannula', 'pump change', 'infusion', 'reservoir', 'omnipod', 'פוד', 'משאבה'];
+        var sensor = tr.find(function(t) { return isEventType(t, sensorKeywords); });
+        var pod    = tr.find(function(t) { return isEventType(t, podKeywords); });
+
+        answer = "<b>📟 מצב ציוד:</b><br><br>";
+        if (sensor) {
+            var sAgeH   = (Date.now() - new Date(sensor.created_at)) / (1000*60*60);
+            var sLeftH  = Math.max(0, 240 - sAgeH);
+            var sChanged = new Date(sensor.created_at).toLocaleString('he-IL', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+            var sReplace = new Date(new Date(sensor.created_at).getTime() + 240*3600000).toLocaleString('he-IL', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+            answer += "📡 <b>חיישן</b> (" + (sensor.eventType||'') + "):<br>" +
+                "• הוחלף: " + sChanged + " (לפני " + timeAgo(sensor.created_at) + ")<br>" +
+                "• נותרו: ~" + sLeftH.toFixed(0) + " שעות<br>" +
+                "• החלפה הבאה: " + sReplace + "<br><br>";
+        } else {
+            answer += "📡 חיישן: לא נמצאה החלפה ב-3 חודשים האחרונים.<br><br>";
+        }
+
+        if (pod) {
+            var pAgeH   = (Date.now() - new Date(pod.created_at)) / (1000*60*60);
+            var pLeftH  = Math.max(0, 72 - pAgeH);
+            var pChanged = new Date(pod.created_at).toLocaleString('he-IL', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+            var pReplace = new Date(new Date(pod.created_at).getTime() + 72*3600000).toLocaleString('he-IL', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+            answer += "💊 <b>פוד/משאבה</b> (" + (pod.eventType||'') + "):<br>" +
+                "• הוחלף: " + pChanged + " (לפני " + timeAgo(pod.created_at) + ")<br>" +
+                "• נותרו: ~" + pLeftH.toFixed(0) + " שעות<br>" +
+                "• החלפה הבאה: " + pReplace;
+        } else {
+            answer += "💊 פוד/משאבה: לא נמצאה החלפה ב-3 חודשים האחרונים.";
+        }
+
+        // אם לא נמצא כלום — הצג eventTypes קיימים לדיאגנוז
+        if (!sensor && !pod && tr.length > 0) {
+            var types2 = {};
+            tr.forEach(function(t) { if (t.eventType) types2[t.eventType] = true; });
+            answer += "<br><br><small style='color:#888'>סוגי אירועים קיימים ב-NS: " + Object.keys(types2).slice(0,15).join(", ") + "</small>";
+        }
+    }
+
+    // ארוחות
+    else if (ql.includes("אכלתי") || ql.includes("אוכל") || ql.includes("cob") || ql.includes("ארוחה") || ql.includes("הזרק")) {
+        var meals = tr.filter(function(t) { return t.carbs > 0 || t.insulin > 0; }).slice(0, 8);
         if (meals.length) {
             answer = "<b>רישומי טיפולים היום:</b><br>";
             answer += meals.map(function(m) {
-                const time    = new Date(m.created_at).toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit'});
-                const name    = m.notes || m.eventType || 'ארוחה';
-                const carbStr = m.carbs  ? m.carbs + "g 🍞" : "";
-                const insStr  = m.insulin ? m.insulin + "U 💉" : "";
-                const parts   = [carbStr, insStr].filter(Boolean).join(" + ");
+                var time     = new Date(m.created_at).toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit'});
+                var name     = m.notes || m.eventType || 'ארוחה';
+                var carbStr  = m.carbs  ? m.carbs  + "g 🍞" : "";
+                var insStr   = m.insulin ? m.insulin + "U 💉" : "";
+                var parts    = [carbStr, insStr].filter(Boolean).join(" + ");
                 return "• <b>" + time + "</b> — " + name + (parts ? " (" + parts + ")" : "");
             }).join("<br>");
         } else { answer = "לא מצאתי רישומי טיפולים ב-24 השעות האחרונות."; }
     }
 
-    // ציוד
-    else if (ql.includes("חיישן") || ql.includes("פוד") || ql.includes("גיל") || ql.includes("ציוד") || ql.includes("החלפ")) {
-        const sensor = tr.find(function(t) { return t.eventType === "Sensor Change"; });
-        const pod    = tr.find(function(t) { return t.eventType === "Pod Change" || t.eventType === "Site Change"; });
-        answer = "<b>מצב ציוד:</b><br>";
-        if (sensor) {
-            const ageH = (Date.now() - new Date(sensor.created_at)) / (1000*60*60);
-            answer += "• חיישן: הוחלף לפני " + (ageH/24).toFixed(1) + " ימים. נותרו ~" + Math.max(0, 240-ageH).toFixed(0) + " שעות.<br>";
-        } else { answer += "• חיישן: לא נמצאה החלפה ב-30 הימים האחרונים.<br>"; }
-        if (pod) {
-            const ageH = (Date.now() - new Date(pod.created_at)) / (1000*60*60);
-            answer += "• פוד: הוחלף לפני " + ageH.toFixed(1) + " שעות. נותרו ~" + Math.max(0, 72-ageH).toFixed(0) + " שעות.";
-        } else { answer += "• פוד: לא נמצאה החלפה ב-30 הימים האחרונים."; }
-    }
-
-    // TIR / מאזן
+    // TIR
     else if (ql.includes("איך") || ql.includes("מצב") || ql.includes("מאוזן") || ql.includes("tir") || ql.includes("טווח")) {
         if (ent.length > 10) {
-            const inRange = ent.filter(function(e) { return e.sgv >= 70 && e.sgv <= 180; }).length;
-            const tir  = (inRange / ent.length * 100).toFixed(0);
-            const avg  = (ent.reduce(function(a,b){ return a + b.sgv; }, 0) / ent.length).toFixed(0);
-            const low  = ent.filter(function(e){ return e.sgv < 70; }).length;
-            const high = ent.filter(function(e){ return e.sgv > 180; }).length;
-            answer = "ניתוח 24 שעות אחרונות:<br>" +
+            var inRange = ent.filter(function(e) { return e.sgv >= 70 && e.sgv <= 180; }).length;
+            var tir     = (inRange / ent.length * 100).toFixed(0);
+            var avg     = (ent.reduce(function(a,b){ return a + b.sgv; }, 0) / ent.length).toFixed(0);
+            var low     = ent.filter(function(e){ return e.sgv < 70; }).length;
+            var high    = ent.filter(function(e){ return e.sgv > 180; }).length;
+            answer = "📊 ניתוח 24 שעות אחרונות:<br>" +
                 "• TIR: <b>" + tir + "%</b><br>" +
                 "• ממוצע: " + avg + " mg/dL<br>" +
                 "• נמוך מ-70: " + low + " קריאות<br>" +
@@ -278,13 +439,8 @@ async function askOmnibox() {
         } else { answer = "אין מספיק נתוני היסטוריה. לחץ 'רענן הכל' ונסה שוב."; }
     }
 
-    // בזאלי
-    else if (ql.includes("בזאלי") || ql.includes("basal")) {
-        answer = "קצב בזאלי נוכחי: <b>" + nsData.basal + " U/hr</b>.";
-    }
-
     else {
-        answer = "נסה: 'כמה אהיה עוד שעה?', 'עוד 2 שעות?', 'מה אכלתי?', 'כמה הוזרק היום?', 'גיל חיישן ופוד', 'איך הייתי היום?'.";
+        answer = "נסה: 'כמה אהיה עוד שעה?', 'בזאלי', 'ISF', 'CR', 'פרופיל', 'מה אכלתי?', 'גיל חיישן ופוד', 'איך הייתי היום?'.";
     }
 
     resp.innerHTML = answer;
