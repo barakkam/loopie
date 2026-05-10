@@ -3,521 +3,176 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Loopie - Nightscout</title>
+    <title>Loopie v31.1 - Nightscout</title>
     <style>
         :root {
-            --bg: #0e0e12;
-            --card: #16161e;
-            --border: #2a2a38;
-            --blue: #3b82f6;
-            --blue-dim: #1d3a6e;
-            --green: #10b981;
-            --red: #f43f5e;
-            --amber: #f59e0b;
-            --text: #e8e8f0;
-            --muted: #6b6b80;
-            --mono: 'Courier New', monospace;
+            --bg: #0e0e12; --card: #16161e; --border: #2a2a38; --blue: #3b82f6;
+            --blue-dim: #1d3a6e; --green: #10b981; --red: #f43f5e; --amber: #f59e0b;
+            --text: #e8e8f0; --muted: #6b6b80; --mono: 'Courier New', monospace;
         }
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        body {
-            background: var(--bg);
-            color: var(--text);
-            font-family: 'Segoe UI', Tahoma, sans-serif;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 32px;
-            width: 100%;
-            max-width: 400px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 8px;
-        }
-
-        .logo-icon {
-            width: 36px;
-            height: 36px;
-            background: var(--blue);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-        }
-
-        .logo h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
-
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 32px; width: 100%; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+        .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .logo-icon { width: 36px; height: 36px; background: var(--blue); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        .logo h1 { font-size: 22px; font-weight: 700; }
         .subtitle { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
-
-        .field { margin-bottom: 16px; }
-
-        label {
-            display: block;
-            font-size: 12px;
-            color: var(--muted);
-            margin-bottom: 6px;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        input {
-            width: 100%;
-            padding: 11px 14px;
-            background: #0a0a10;
-            border: 1px solid var(--border);
-            color: var(--text);
-            border-radius: 10px;
-            font-size: 14px;
-            outline: none;
-            transition: border-color 0.2s;
-            direction: ltr;
-        }
-
+        label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 500; text-transform: uppercase; }
+        input { width: 100%; padding: 11px 14px; background: #0a0a10; border: 1px solid var(--border); color: var(--text); border-radius: 10px; font-size: 14px; outline: none; transition: 0.2s; margin-bottom: 16px; }
         input:focus { border-color: var(--blue); }
-        input::placeholder { color: var(--muted); }
-
-        .btn {
-            width: 100%;
-            padding: 12px;
-            background: var(--blue);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 15px;
-            transition: opacity 0.2s, transform 0.1s;
-            margin-top: 4px;
-        }
-
-        .btn:hover { opacity: 0.88; transform: translateY(-1px); }
-        .btn:active { transform: translateY(0); }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
-        .btn-secondary {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--muted);
-            font-size: 13px;
-            padding: 9px;
-            margin-top: 10px;
-        }
-
-        .btn-secondary:hover { border-color: var(--blue); color: var(--blue); opacity: 1; }
-
-        .status {
-            font-size: 13px;
-            padding: 10px 14px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            display: none;
-        }
-
+        .omnibox { border: 1px solid var(--blue); color: var(--green); font-family: var(--mono); }
+        .btn { width: 100%; padding: 12px; background: var(--blue); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; margin-top: 4px; }
+        .btn-secondary { background: transparent; border: 1px solid var(--border); color: var(--muted); margin-top: 10px; font-size: 13px; }
+        .status { font-size: 13px; padding: 10px; border-radius: 8px; margin-bottom: 16px; display: none; }
         .status.show { display: block; }
-        .status.error { background: rgba(244,63,94,0.12); color: var(--red); border: 1px solid rgba(244,63,94,0.25); }
-        .status.success { background: rgba(16,185,129,0.12); color: var(--green); border: 1px solid rgba(16,185,129,0.25); }
-        .status.info { background: rgba(59,130,246,0.12); color: var(--blue); border: 1px solid rgba(59,130,246,0.25); }
-
-        .hidden { display: none !important; }
-
-        /* --- Main Screen --- */
-        .header-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 24px;
-        }
-
-        .ns-tag {
-            font-size: 11px;
-            background: var(--blue-dim);
-            color: var(--blue);
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-weight: 600;
-        }
-
-        .bg-display {
-            text-align: center;
-            padding: 24px 0 20px;
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            background: #0a0a10;
-            margin-bottom: 16px;
-        }
-
-        .bg-value {
-            font-size: 64px;
-            font-weight: 800;
-            line-height: 1;
-            color: var(--green);
-            letter-spacing: -2px;
-            transition: color 0.4s;
-        }
-
+        .status.error { background: rgba(244,63,94,0.1); color: var(--red); border: 1px solid var(--red); }
+        .status.info { background: rgba(59,130,246,0.1); color: var(--blue); border: 1px solid var(--blue); }
+        .bg-display { text-align: center; padding: 24px 0; border: 1px solid var(--border); border-radius: 14px; background: #0a0a10; margin-bottom: 16px; }
+        .bg-value { font-size: 64px; font-weight: 800; color: var(--green); transition: 0.4s; }
         .bg-value.low { color: var(--red); }
         .bg-value.high { color: var(--amber); }
-
-        .trend-row {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            margin-top: 8px;
-        }
-
-        .trend-icon { font-size: 22px; }
-        .trend-text { font-size: 14px; color: var(--muted); }
-
-        .timestamp {
-            font-size: 12px;
-            color: var(--muted);
-            margin-top: 10px;
-            font-family: var(--mono);
-        }
-
-        .stats-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 16px;
-        }
-
-        .stat-card {
-            background: #0a0a10;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 14px;
-        }
-
-        .stat-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
-        .stat-value { font-size: 20px; font-weight: 700; color: var(--text); }
-
-        .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
-
-        .omnibox-wrap { position: relative; margin-bottom: 12px; }
-
-        .omnibox {
-            background: #0a0a10;
-            border: 1px solid var(--blue);
-            color: var(--green);
-            font-family: var(--mono);
-            font-size: 13px;
-            padding-left: 36px;
-        }
-
-        .omnibox-icon {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--blue);
-            font-size: 14px;
-            pointer-events: none;
-        }
-
-        .omnibox-response {
-            background: rgba(59,130,246,0.07);
-            border: 1px solid var(--blue-dim);
-            border-radius: 10px;
-            padding: 12px 14px;
-            font-size: 13px;
-            color: var(--text);
-            line-height: 1.6;
-            margin-bottom: 12px;
-            display: none;
-        }
-
-        .spinner {
-            display: inline-block;
-            width: 12px; height: 12px;
-            border: 2px solid transparent;
-            border-top-color: white;
-            border-radius: 50%;
-            animation: spin 0.7s linear infinite;
-            margin-left: 6px;
-            vertical-align: middle;
-        }
-
+        .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+        .stat-card { background: #0a0a10; border: 1px solid var(--border); border-radius: 12px; padding: 12px; text-align: center; }
+        .omnibox-response { background: rgba(59,130,246,0.07); border: 1px solid var(--blue-dim); border-radius: 10px; padding: 12px; font-size: 13px; margin-bottom: 12px; display: none; line-height: 1.5; min-height: 40px; }
+        .hidden { display: none !important; }
+        .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid transparent; border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-
-        .logout-link {
-            text-align: center;
-            margin-top: 16px;
-        }
-
-        .logout-link a {
-            font-size: 12px;
-            color: var(--muted);
-            cursor: pointer;
-            text-decoration: underline;
-        }
-
-        .logout-link a:hover { color: var(--red); }
     </style>
 </head>
 <body>
 
 <!-- מסך כניסה -->
 <div id="login-screen" class="card">
-    <div class="logo">
-        <div class="logo-icon">💉</div>
-        <h1>Loopie</h1>
-    </div>
-    <p class="subtitle">התחברות לשרת Nightscout שלך</p>
-
+    <div class="logo"><div class="logo-icon">💉</div><h1>Loopie</h1></div>
+    <p class="subtitle">התחברות ל-Nightscout</p>
     <div id="login-status" class="status"></div>
-
-    <div class="field">
-        <label>כתובת שרת NS</label>
-        <input type="url" id="nsUrl" placeholder="https://yoursite.herokuapp.com" autocomplete="url" />
-    </div>
-
-    <div class="field">
-        <label>API Secret</label>
-        <input type="password" id="apiSecret" placeholder="••••••••••••" autocomplete="current-password" />
-    </div>
-
+    <label>כתובת שרת</label>
+    <input type="text" id="nsUrl" placeholder="https://herokuapp.com">
+    <label>API Secret</label>
+    <input type="password" id="apiSecret" placeholder="••••••••">
     <button class="btn" id="loginBtn" onclick="testConnection()">כניסה למערכת</button>
 </div>
 
 <!-- מסך ראשי -->
 <div id="main-screen" class="card hidden">
-    <div class="header-row">
-        <div class="logo" style="margin-bottom:0">
-            <div class="logo-icon" style="width:28px;height:28px;font-size:14px">💉</div>
-            <span style="font-weight:700;font-size:16px">Loopie</span>
-        </div>
-        <span class="ns-tag" id="ns-badge">NS מחובר</span>
+    <div class="logo" style="margin-bottom:20px">
+        <div class="logo-icon" style="width:28px;height:28px;font-size:14px">💉</div>
+        <span id="ns-badge" style="font-weight:700">Loopie</span>
     </div>
-
     <div class="bg-display">
         <div class="bg-value" id="current-bg">--</div>
-        <div class="trend-row">
-            <span class="trend-icon" id="current-trend">⟳</span>
-            <span class="trend-text" id="trend-label">טוען...</span>
-        </div>
-        <div class="timestamp" id="last-update">מתחבר לשרת...</div>
+        <div style="font-size:14px; color:var(--muted)" id="trend-label">טוען...</div>
+        <div id="last-update" style="font-size:11px; color:var(--muted); margin-top:8px"></div>
     </div>
-
     <div class="stats-row">
         <div class="stat-card">
-            <div class="stat-label">מדד אחרון</div>
-            <div class="stat-value" id="stat-delta">--</div>
+            <div style="font-size:11px; color:var(--muted)">שינוי</div>
+            <div id="stat-delta" style="font-weight:700">--</div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">רמת הסוכר</div>
-            <div class="stat-value" id="stat-range" style="font-size:13px;padding-top:4px">--</div>
+            <div style="font-size:11px; color:var(--muted)">סטטוס</div>
+            <div id="stat-range" style="font-weight:700; font-size:13px">--</div>
         </div>
     </div>
-
-    <hr class="divider">
-
-    <div class="omnibox-wrap">
-        <span class="omnibox-icon">⌘</span>
-        <input type="text" id="omnibox" class="omnibox" placeholder="שאל שאלה על הנתונים..." onkeydown="if(event.key==='Enter') askOmnibox()" />
-    </div>
-    <div class="omnibox-response" id="omnibox-response"></div>
-
+    <div id="omnibox-response" class="omnibox-response"></div>
+    <input type="text" id="omnibox" class="omnibox" placeholder="שאל: מה המצב?" onkeydown="if(event.key==='Enter') askOmnibox()">
     <button class="btn" onclick="fetchData()">רענן נתונים</button>
-    <button class="btn btn-secondary" onclick="logout()">התנתקות</button>
+    <button class="btn btn-secondary" onclick="location.reload()">התנתקות</button>
 </div>
 
 <script>
-const TREND_MAP = {
-    1: { icon: "↑↑", label: "עלייה חדה" },
-    2: { icon: "↑",  label: "עולה" },
-    3: { icon: "↗",  label: "עולה מעט" },
-    4: { icon: "→",  label: "יציב" },
-    5: { icon: "↘",  label: "יורד מעט" },
-    6: { icon: "↓",  label: "יורד" },
-    7: { icon: "↓↓", label: "ירידה חדה" }
-};
-
+const TREND_MAP = { 1:"↑↑", 2:"↑", 3:"↗", 4:"→", 5:"↘", 6:"↓", 7:"↓↓" };
 let refreshTimer = null;
-
-function showStatus(msg, type) {
-    const el = document.getElementById('login-status');
-    el.textContent = msg;
-    el.className = `status show ${type}`;
-}
-
-function hideStatus() {
-    document.getElementById('login-status').className = 'status';
-}
-
-function buildNsUrl(endpoint) {
-    const url = document.getElementById('nsUrl').value.trim().replace(/\/$/, "");
-    const secret = document.getElementById('apiSecret').value.trim();
-    const sep = endpoint.includes('?') ? '&' : '?';
-    return url + endpoint + sep + 'api_secret=' + encodeURIComponent(secret);
-}
-
-async function fetchNS(endpoint) {
-    const res = await fetch(buildNsUrl(endpoint), {
-        method: 'GET', mode: 'cors',
-        headers: { 'Accept': 'application/json' }
-    });
-    if (!res.ok) throw new Error('שגיאת שרת (' + res.status + ')');
-    return await res.json();
-}
 
 async function testConnection() {
     const url = document.getElementById('nsUrl').value.trim().replace(/\/$/, "");
     const secret = document.getElementById('apiSecret').value.trim();
     const btn = document.getElementById('loginBtn');
+    const status = document.getElementById('login-status');
 
-    if (!url || !secret) {
-        showStatus("נא למלא את כל השדות", "error");
-        return;
-    }
-
-    if (!url.startsWith("https://")) {
-        showStatus("הכתובת חייבת להתחיל ב-https://", "error");
-        return;
-    }
-
+    if (!url || !secret) { showStatus("מלא את כל השדות", "error"); return; }
+    
     btn.disabled = true;
     btn.innerHTML = 'מתחבר... <span class="spinner"></span>';
-    showStatus("בודק חיבור לשרת...", "info");
-
+    
     try {
-        const data = await fetchNS('/api/v1/status.json');
-        const name = (data.settings && data.settings.customTitle) || data.name || "Nightscout";
-
-        showStatus('חיבור הצליח ל-' + name + ' ✓', "success");
-
-        setTimeout(() => {
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('main-screen').classList.remove('hidden');
-            document.getElementById('ns-badge').textContent = name;
-            fetchData();
-            refreshTimer = setInterval(fetchData, 60000);
-        }, 900);
-
-    } catch (err) {
-        showStatus("חיבור נכשל: " + err.message, "error");
-        btn.disabled = false;
-        btn.textContent = 'כניסה למערכת';
+        const res = await fetch(`${url}/api/v1/status.json?api_secret=${secret}`);
+        if (!res.ok) throw new Error();
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('main-screen').classList.remove('hidden');
+        fetchData();
+        refreshTimer = setInterval(fetchData, 60000);
+    } catch (e) {
+        showStatus("חיבור נכשל. בדוק כתובת וסיסמה", "error");
+        btn.disabled = false; btn.innerText = "כניסה למערכת";
     }
 }
 
 async function fetchData() {
-    document.getElementById('last-update').textContent = "מרענן...";
-
+    const url = document.getElementById('nsUrl').value.trim().replace(/\/$/, "");
+    const secret = document.getElementById('apiSecret').value.trim();
     try {
-        const entries = await fetchNS('/api/v1/entries.json?count=3');
+        const res = await fetch(`${url}/api/v1/entries.json?count=2&api_secret=${secret}`);
+        const data = await res.json();
+        if(!data.length) return;
 
-        if (!entries || entries.length === 0) {
-            document.getElementById('last-update').textContent = "אין נתונים זמינים";
-            return;
-        }
-
-        const latest = entries[0];
-        const sgv = latest.sgv;
+        const latest = data[0];
+        const bg = latest.sgv;
         const bgEl = document.getElementById('current-bg');
-        bgEl.textContent = sgv;
-        bgEl.className = 'bg-value' + (sgv < 70 ? ' low' : sgv > 180 ? ' high' : '');
-
-        const trendInfo = TREND_MAP[latest.trend] || { icon: "↔", label: "לא ידוע" };
-        document.getElementById('current-trend').textContent = trendInfo.icon;
-        document.getElementById('trend-label').textContent = trendInfo.label;
-
-        const d = new Date(latest.dateString || latest.date);
-        document.getElementById('last-update').textContent =
-            "עדכון אחרון: " + d.toLocaleTimeString('he-IL');
-
-        // דלתא
-        if (entries.length > 1) {
-            const delta = sgv - entries[1].sgv;
-            document.getElementById('stat-delta').textContent =
-                (delta >= 0 ? "+" : "") + delta + " mg/dL";
+        
+        bgEl.textContent = bg;
+        bgEl.className = 'bg-value' + (bg < 70 ? ' low' : bg > 180 ? ' high' : '');
+        
+        document.getElementById('trend-label').textContent = (TREND_MAP[latest.trend] || "→") + " " + (latest.direction || "");
+        document.getElementById('last-update').textContent = "עדכון: " + new Date(latest.dateString).toLocaleTimeString('he-IL');
+        
+        if(data[1]) {
+            const delta = bg - data[1].sgv;
+            document.getElementById('stat-delta').textContent = (delta >= 0 ? "+" : "") + delta + " mg/dL";
         }
-
-        // טווח
-        let rangeLabel = "תקין ✓";
-        let rangeColor = "var(--green)";
-        if (sgv < 54) { rangeLabel = "נמוך מאוד ⚠"; rangeColor = "var(--red)"; }
-        else if (sgv < 70) { rangeLabel = "נמוך ↓"; rangeColor = "var(--red)"; }
-        else if (sgv > 250) { rangeLabel = "גבוה מאוד ⚠"; rangeColor = "var(--amber)"; }
-        else if (sgv > 180) { rangeLabel = "גבוה ↑"; rangeColor = "var(--amber)"; }
-
+        
         const rangeEl = document.getElementById('stat-range');
-        rangeEl.textContent = rangeLabel;
-        rangeEl.style.color = rangeColor;
+        if(bg < 70) { rangeEl.textContent = "נמוך ↓"; rangeEl.style.color = "var(--red)"; }
+        else if(bg > 180) { rangeEl.textContent = "גבוה ↑"; rangeEl.style.color = "var(--amber)"; }
+        else { rangeEl.textContent = "תקין ✓"; rangeEl.style.color = "var(--green)"; }
 
-    } catch (err) {
-        document.getElementById('last-update').textContent = "שגיאה: " + err.message;
-    }
+    } catch (e) { console.error("Refresh failed"); }
 }
 
 function askOmnibox() {
-    const q = document.getElementById('omnibox').value.trim();
+    const input = document.getElementById('omnibox');
+    const resp = document.getElementById('omnibox-response');
+    const q = input.value.trim();
     if (!q) return;
 
-    const bgVal = parseInt(document.getElementById('current-bg').textContent) || null;
+    resp.style.display = 'none';
+    const bg = document.getElementById('current-bg').textContent;
     const trend = document.getElementById('trend-label').textContent;
     const delta = document.getElementById('stat-delta').textContent;
     const range = document.getElementById('stat-range').textContent;
 
     let answer = "";
-
-    if (/מצב|status|מה קורה|איך/i.test(q)) {
-        answer = bgVal
-            ? `רמת הסוכר כרגע ${bgVal} mg/dL, מגמה: ${trend}, שינוי: ${delta}. ${range}`
-            : "אין נתונים זמינים כרגע.";
-    } else if (/נמוך|hypo|היפו/i.test(q)) {
-        answer = bgVal && bgVal < 70
-            ? `⚠️ כן! רמת הסוכר ${bgVal} — מתחת לטווח התקין.`
-            : `לא, הרמה כרגע ${bgVal} mg/dL — בטווח תקין.`;
-    } else if (/גבוה|high|היפר/i.test(q)) {
-        answer = bgVal && bgVal > 180
-            ? `⚠️ כן, רמת הסוכר ${bgVal} — מעל הטווח התקין.`
-            : `לא, הרמה כרגע ${bgVal} mg/dL — בטווח תקין.`;
-    } else if (/עולה|יורד|מגמה|טרנד/i.test(q)) {
-        answer = `המגמה הנוכחית: ${trend} (${delta})`;
-    } else if (/רענן|עדכן|refresh/i.test(q)) {
-        fetchData();
-        answer = "מרענן נתונים...";
+    if (/מצב|מה קורה|איך|status/i.test(q)) {
+        answer = `הסוכר כרגע ${bg}. מגמה: ${trend} (${delta}). סטטוס: ${range}.`;
+    } else if (/נמוך|גבוה|טווח/i.test(q)) {
+        answer = `מצב הטווח: ${range} (ערך: ${bg})`;
+    } else if (/רענן|עדכן/i.test(q)) {
+        fetchData(); answer = "מרענן נתונים...";
     } else {
-        answer = `לא הצלחתי להבין את השאלה. נסה: "מה המצב?", "האם גבוה?", "מה המגמה?"`;
+        answer = "נסה לשאול: 'מה המצב?' או 'מה המגמה?'.";
     }
 
-    const resp = document.getElementById('omnibox-response');
-    resp.textContent = answer;
-    resp.style.display = 'block';
-    document.getElementById('omnibox').value = '';
+    setTimeout(() => {
+        resp.textContent = answer;
+        resp.style.display = 'block';
+        input.value = '';
+    }, 100);
 }
 
-function logout() {
-    clearInterval(refreshTimer);
-    document.getElementById('main-screen').classList.add('hidden');
-    document.getElementById('login-screen').classList.remove('hidden');
-    document.getElementById('nsUrl').value = '';
-    document.getElementById('apiSecret').value = '';
-    document.getElementById('current-bg').textContent = '--';
-    document.getElementById('current-trend').textContent = '⟳';
-    document.getElementById('trend-label').textContent = 'טוען...';
-    document.getElementById('last-update').textContent = 'מתחבר לשרת...';
-    hideStatus();
+function showStatus(msg, type) {
+    const el = document.getElementById('login-status');
+    el.textContent = msg; el.className = `status show ${type}`;
 }
 </script>
-
 </body>
 </html>
