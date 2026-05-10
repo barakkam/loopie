@@ -73,7 +73,7 @@
 </div>
 
 <script>
-let nsData = { iob: 0, basal: "0.0" };
+let nsData = { iob: 0, basal: "0.0", currentSgv: 0, delta: 0 };
 let fullHistory = { entries: [], treatments: [], devStatus: {} };
 let refreshTimer = null;
 
@@ -88,6 +88,27 @@ const safeGet = function(obj, path, fallback) {
     if (fallback === undefined) fallback = "--";
     return path.split('.').reduce(function(acc, part) { return acc && acc[part]; }, obj) || fallback;
 };
+
+// תחזית סוכר פשוטה לפי דלתא + IOB decay
+function predictBG(hoursAhead) {
+    const sgv = nsData.currentSgv;
+    if (!sgv) return null;
+    const delta = nsData.delta || 0;          // שינוי ב-5 דקות האחרונות
+    const iob   = parseFloat(nsData.iob) || 0;
+    // קצב שינוי לשעה לפי מגמה + פירוק IOB (ממוצע 50 mg/dL לכל יחידה)
+    const trendPerHour = delta * 12;           // delta הוא ל-5 דק', כפול 12 = שעה
+    const iobEffect    = iob * 40 * hoursAhead; // IOB מוריד בממוצע 40 mg/dL לשעה ביחידה
+    const predicted    = Math.round(sgv + (trendPerHour * hoursAhead) - iobEffect);
+    return Math.max(40, Math.min(400, predicted));
+}
+
+function bgStatus(sgv) {
+    if (!sgv) return "";
+    if (sgv < 70)  return " ⚠️ נמוך!";
+    if (sgv > 250) return " ⚠️ גבוה מאוד!";
+    if (sgv > 180) return " ↑ גבוה";
+    return " ✅ בטווח";
+}
 
 async function connect() {
     const btn = document.getElementById('loginBtn');
@@ -109,26 +130,28 @@ async function connect() {
 
 async function fetchData() {
     try {
-        // 1. ערך סוכר נוכחי — entries/current.json אמין יותר מ-pebble
         const [entRes, devRes] = await Promise.all([
-            nsGet('/api/v1/entries/current.json'),
+            nsGet('/api/v1/entries.json?count=2'),  // 2 קריאות לחישוב דלתא
             nsGet('/api/v1/devicestatus.json?count=1')
         ]);
 
         if (entRes.ok) {
             const entData = await entRes.json();
-            // יכול להחזיר אובייקט בודד או מערך
-            const entry = Array.isArray(entData) ? entData[0] : entData;
+            const entries = Array.isArray(entData) ? entData : [entData];
+            const entry   = entries[0];
+            const prev    = entries[1];
+
             if (entry && entry.sgv) {
                 const sgv = entry.sgv;
+                nsData.currentSgv = sgv;
+                nsData.delta = prev ? (sgv - prev.sgv) : 0;
+
                 const bgEl = document.getElementById('current-bg');
                 bgEl.innerText = sgv;
                 bgEl.className = 'bg-value' + (sgv < 70 ? ' low' : sgv > 180 ? ' high' : '');
 
-                // כיוון מגמה — direction או trend (מספר)
                 const trendMap = { 1:'↑↑', 2:'↑', 3:'↗', 4:'→', 5:'↘', 6:'↓', 7:'↓↓' };
-                const dir = entry.direction || trendMap[entry.trend] || '→';
-                document.getElementById('trend-label').innerText = dir;
+                document.getElementById('trend-label').innerText = entry.direction || trendMap[entry.trend] || '→';
             }
         }
 
@@ -136,7 +159,6 @@ async function fetchData() {
             const devData = await devRes.json();
             const dev = Array.isArray(devData) ? devData[0] : devData;
             if (dev) {
-                // IOB — יכול להיות בכמה מקומות
                 const iob = safeGet(dev, 'openaps.iob.iob',
                             safeGet(dev, 'loop.iob.iob',
                             safeGet(dev, 'pump.iob', 0)));
@@ -144,20 +166,16 @@ async function fetchData() {
                 document.getElementById('stat-iob').innerText = iobDisplay;
                 nsData.iob = iobDisplay;
 
-                // בזאלי — יכול להיות בכמה מקומות
                 const basal = safeGet(dev, 'openaps.enacted.rate',
                               safeGet(dev, 'pump.basal.rate',
                               safeGet(dev, 'loop.recommendedTempBasal.rate', "0.0")));
                 document.getElementById('stat-basal').innerText = basal;
                 nsData.basal = basal;
-
                 fullHistory.devStatus = dev;
             }
         }
 
-        // 2. מאגר רחב לאומניבוקס (ברקע, לא חוסם את התצוגה)
         loadHistory();
-
     } catch (e) { console.error("fetchData error:", e); }
 }
 
@@ -183,7 +201,8 @@ async function loadHistory() {
 async function askOmnibox() {
     const input = document.getElementById('omnibox');
     const resp  = document.getElementById('omni-res');
-    const q     = input.value.trim().toLowerCase();
+    const q     = input.value.trim();
+    const ql    = q.toLowerCase();
     if (!q) return;
 
     resp.style.display = 'block';
@@ -193,23 +212,42 @@ async function askOmnibox() {
     const tr  = fullHistory.treatments || [];
     const ent = fullHistory.entries    || [];
 
+    // תחזית סוכר — "עוד שעה" / "עוד X שעות"
+    if (ql.includes("עוד") || ql.includes("תחזית") || ql.includes("יהיה")) {
+        const numMatch = ql.match(/(\d+(?:\.\d+)?)/);
+        const hours = numMatch ? parseFloat(numMatch[1]) : 1;
+        const pred  = predictBG(hours);
+        if (pred) {
+            const label = hours === 1 ? "עוד שעה" : "עוד " + hours + " שעות";
+            answer = "📈 תחזית " + label + ":<br>" +
+                "<b style='font-size:1.4em'>" + pred + " mg/dL</b>" + bgStatus(pred) + "<br>" +
+                "<small style='color:#888'>מבוסס על מגמה נוכחית (" + (nsData.delta >= 0 ? "+" : "") + nsData.delta + " ב-5 דק') + IOB " + nsData.iob + "U</small>";
+        } else { answer = "אין מספיק נתונים לתחזית. נסה לרענן."; }
+    }
+
     // IOB
-    if (q.includes("iob") || q.includes("פעיל") || q.includes("אינסולין")) {
-        answer = "האינסולין הפעיל (IOB): " + nsData.iob + " יחידות.";
+    else if (ql.includes("iob") || ql.includes("פעיל") || ql.includes("אינסולין")) {
+        answer = "האינסולין הפעיל (IOB): <b>" + nsData.iob + " יחידות</b>.";
     }
-    // ארוחות / COB
-    else if (q.includes("אכלתי") || q.includes("אוכל") || q.includes("פחמימות") || q.includes("cob") || q.includes("ארוחה")) {
-        const meals = tr.filter(function(t) { return t.carbs > 0; }).slice(0, 5);
+
+    // ארוחות — עם שם, אימוג'י, אינסולין ושעה
+    else if (ql.includes("אכלתי") || ql.includes("אוכל") || ql.includes("פחמימות") || ql.includes("cob") || ql.includes("ארוחה") || ql.includes("הזרק")) {
+        const meals = tr.filter(function(t) { return t.carbs > 0 || t.insulin > 0; }).slice(0, 8);
         if (meals.length) {
-            answer = "<b>ארוחות אחרונות:</b><br>" +
-                meals.map(function(m) {
-                    return "• " + new Date(m.created_at).toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit'}) +
-                        ": " + (m.notes || 'ארוחה') + " (" + m.carbs + "g" + (m.insulin ? ", " + m.insulin + "U" : "") + ")";
-                }).join("<br>");
-        } else { answer = "לא מצאתי רישומי פחמימות ב-24 השעות האחרונות."; }
+            answer = "<b>רישומי טיפולים היום:</b><br>";
+            answer += meals.map(function(m) {
+                const time    = new Date(m.created_at).toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit'});
+                const name    = m.notes || m.eventType || 'ארוחה';
+                const carbStr = m.carbs  ? m.carbs + "g 🍞" : "";
+                const insStr  = m.insulin ? m.insulin + "U 💉" : "";
+                const parts   = [carbStr, insStr].filter(Boolean).join(" + ");
+                return "• <b>" + time + "</b> — " + name + (parts ? " (" + parts + ")" : "");
+            }).join("<br>");
+        } else { answer = "לא מצאתי רישומי טיפולים ב-24 השעות האחרונות."; }
     }
-    // ציוד — מחפש ב-30 יום
-    else if (q.includes("חיישן") || q.includes("פוד") || q.includes("גיל") || q.includes("ציוד") || q.includes("החלפ")) {
+
+    // ציוד
+    else if (ql.includes("חיישן") || ql.includes("פוד") || ql.includes("גיל") || ql.includes("ציוד") || ql.includes("החלפ")) {
         const sensor = tr.find(function(t) { return t.eventType === "Sensor Change"; });
         const pod    = tr.find(function(t) { return t.eventType === "Pod Change" || t.eventType === "Site Change"; });
         answer = "<b>מצב ציוד:</b><br>";
@@ -222,8 +260,9 @@ async function askOmnibox() {
             answer += "• פוד: הוחלף לפני " + ageH.toFixed(1) + " שעות. נותרו ~" + Math.max(0, 72-ageH).toFixed(0) + " שעות.";
         } else { answer += "• פוד: לא נמצאה החלפה ב-30 הימים האחרונים."; }
     }
+
     // TIR / מאזן
-    else if (q.includes("איך") || q.includes("מצב") || q.includes("מאוזן") || q.includes("tir") || q.includes("טווח")) {
+    else if (ql.includes("איך") || ql.includes("מצב") || ql.includes("מאוזן") || ql.includes("tir") || ql.includes("טווח")) {
         if (ent.length > 10) {
             const inRange = ent.filter(function(e) { return e.sgv >= 70 && e.sgv <= 180; }).length;
             const tir  = (inRange / ent.length * 100).toFixed(0);
@@ -231,19 +270,21 @@ async function askOmnibox() {
             const low  = ent.filter(function(e){ return e.sgv < 70; }).length;
             const high = ent.filter(function(e){ return e.sgv > 180; }).length;
             answer = "ניתוח 24 שעות אחרונות:<br>" +
-                "• TIR: " + tir + "%<br>" +
+                "• TIR: <b>" + tir + "%</b><br>" +
                 "• ממוצע: " + avg + " mg/dL<br>" +
                 "• נמוך מ-70: " + low + " קריאות<br>" +
                 "• גבוה מ-180: " + high + " קריאות<br>" +
                 (tir > 75 ? "🌟 יום מצוין!" : "📈 יש מקום לשיפור.");
-        } else { answer = "אין מספיק נתוני היסטוריה לניתוח. לחץ 'רענן הכל' ונסה שוב."; }
+        } else { answer = "אין מספיק נתוני היסטוריה. לחץ 'רענן הכל' ונסה שוב."; }
     }
+
     // בזאלי
-    else if (q.includes("בזאלי") || q.includes("basal")) {
-        answer = "קצב בזאלי נוכחי: " + nsData.basal + " U/hr.";
+    else if (ql.includes("בזאלי") || ql.includes("basal")) {
+        answer = "קצב בזאלי נוכחי: <b>" + nsData.basal + " U/hr</b>.";
     }
+
     else {
-        answer = "נסה: 'כמה IOB יש לי?', 'מה אכלתי?', 'גיל חיישן ופוד', 'איך הייתי היום?' או 'מה הבזאלי?'.";
+        answer = "נסה: 'כמה אהיה עוד שעה?', 'עוד 2 שעות?', 'מה אכלתי?', 'כמה הוזרק היום?', 'גיל חיישן ופוד', 'איך הייתי היום?'.";
     }
 
     resp.innerHTML = answer;
