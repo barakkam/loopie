@@ -73,16 +73,20 @@
 </div>
 
 <script>
-let nsData = { iob: 0, basal: 0, insulin: "--", sensorAge: null, podAge: null, hist: "--", meal: "אין" };
-let fullHistory = { entries: [], treatments: [], profile: null };
+let nsData = { iob: 0, basal: 0 };
+let fullHistory = { entries: [], treatments: [], devStatus: {} };
 let refreshTimer = null;
 
 function nsUrl() { return document.getElementById('nsUrl').value.trim().replace(/\/$/, ""); }
 function nsSecret() { return document.getElementById('apiSecret').value.trim(); }
-function nsGet(path) { 
+function nsGet(path) {
     const sep = path.includes('?') ? '&' : '?';
-    return fetch(nsUrl() + path + sep + 'api_secret=' + nsSecret(), { mode: 'cors' }); 
+    return fetch(nsUrl() + path + sep + 'api_secret=' + nsSecret(), { mode: 'cors' });
 }
+
+const safeGet = (obj, path, fallback = "--") => {
+    return path.split('.').reduce((acc, part) => acc && acc[part], obj) || fallback;
+};
 
 async function connect() {
     const btn = document.getElementById('loginBtn');
@@ -103,139 +107,81 @@ async function connect() {
 
 async function fetchData() {
     try {
-        // נתונים חיים למסך
+        // 1. נתונים חיים (Pebble)
         const pRes = await nsGet('/pebble');
         const p = await pRes.json();
-        const latest = p.bgs[0];
-        document.getElementById('current-bg').innerText = latest.sgv;
-        document.getElementById('current-bg').className = 'bg-value' + (latest.sgv < 70 ? ' low' : latest.sgv > 180 ? ' high' : '');
-        document.getElementById('trend-label').innerText = latest.direction;
-        document.getElementById('stat-iob').innerText = latest.iob || "0.0";
-        nsData.iob = latest.iob || 0;
+        const bgs = p.bgs || {};
 
-        const dRes = await nsGet('/api/v1/devicestatus.json?count=1');
-        const d = await dRes.json();
-        if (d[0] && d[0].pump) {
-            nsData.basal = d[0].pump.basal.rate;
-            document.getElementById('stat-basal').innerText = nsData.basal;
-        }
+        document.getElementById('current-bg').innerText = bgs.sgv || "--";
+        document.getElementById('current-bg').className = 'bg-value' + (bgs.sgv < 70 ? ' low' : bgs.sgv > 180 ? ' high' : '');
+        document.getElementById('trend-label').innerText = bgs.direction || "Flat";
+        document.getElementById('stat-iob').innerText = bgs.iob || "0.00";
 
-        // גיל ציוד
-        const tRes = await nsGet('/api/v1/treatments.json?find[eventType][$in]=Sensor Change,Pod Change,Site Change&count=2');
-        const treats = await tRes.json();
-        treats.forEach(t => {
-            const diffHours = (Date.now() - new Date(t.created_at).getTime()) / 3600000;
-            if (t.eventType.includes("Sensor")) nsData.sensorAge = diffHours;
-            if (t.eventType.includes("Pod") || t.eventType.includes("Site")) nsData.podAge = diffHours;
-        });
-
-        // טעינת מאגר נתונים מלא ל-24 שעות לניתוח עומק
+        // 2. מאגר רחב (24 שעות)
         const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-        const [ent, treat, prof] = await Promise.all([
-            nsGet('/api/v1/entries.json?find[dateString][$gte]=' + dayAgo + '&count=1000').then(r => r.json()),
-            nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + dayAgo + '&count=1000').then(r => r.json()),
-            nsGet('/api/v1/profile.json').then(r => r.json())
-        ]);
-        fullHistory = { entries: ent, treatments: treat, profile: prof[0] };
 
-    } catch (e) { console.error("Update error", e); }
+        const [ent, treat, dev] = await Promise.all([
+            nsGet('/api/v1/entries.json?find[dateString][$gte]=' + dayAgo + '&count=500').then(r => r.json()).catch(() => []),
+            nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + dayAgo + '&count=200').then(r => r.json()).catch(() => []),
+            nsGet('/api/v1/devicestatus.json?count=1').then(r => r.json()).catch(() => [])
+        ]);
+
+        fullHistory = { entries: ent, treatments: treat, devStatus: dev[0] || {} };
+
+        const basalRate = safeGet(fullHistory.devStatus, 'pump.basal.rate', "0.0");
+        document.getElementById('stat-basal').innerText = basalRate;
+
+    } catch (e) { console.error("Fetch error:", e); }
 }
 
 async function askOmnibox() {
     const input = document.getElementById('omnibox');
     const resp = document.getElementById('omni-res');
-    const q = input.value.trim();
-    const ql = q.toLowerCase();
+    const q = input.value.trim().toLowerCase();
     if (!q) return;
 
     resp.style.display = 'block';
-    resp.innerHTML = "מנתח נתוני עומק... 🧠";
+    resp.innerHTML = "מנתח... 🧠";
 
-    const ent = fullHistory.entries;
-    const tr  = fullHistory.treatments;
     let answer = "";
+    const tr  = fullHistory.treatments || [];
+    const ent = fullHistory.entries    || [];
 
-    try {
-        const hoursMatch = ql.match(/(\d+)/);
-        const hoursRequested = hoursMatch ? parseInt(hoursMatch[0]) : null;
-
-        // 1. שאלות על זמן ספציפי (לפני X שעות)
-        if (hoursRequested && (ql.includes("הוזרק") || ql.includes("אכלתי") || ql.includes("אוכל"))) {
-            const targetTime = Date.now() - (hoursRequested * 3600000);
-            const from = new Date(targetTime - 1800000).toISOString();
-            const to   = new Date(targetTime + 1800000).toISOString();
-            const res  = await nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + from + '&find[created_at][$lte]=' + to);
-            const data = await res.json();
-            if (data.length > 0) {
-                answer = data.map(t => '🕒 ב-' + new Date(t.created_at).toLocaleTimeString('he-IL') + ': הוזרק ' + (t.insulin || 0) + 'U על ' + (t.carbs || 0) + 'g פחמימות (' + (t.notes || 'ללא תיאור') + ')').join('<br>');
-            } else { answer = 'לא מצאתי רישום בדיוק לפני ' + hoursRequested + ' שעות.'; }
+    if (q.includes("iob") || q.includes("פעיל")) {
+        const iob = document.getElementById('stat-iob').innerText;
+        answer = "האינסולין הפעיל (IOB) שלך הוא " + iob + " יחידות.";
+    }
+    else if (q.includes("אכלתי") || q.includes("אוכל") || q.includes("פחמימות") || q.includes("cob")) {
+        const meals = tr.filter(t => t.carbs > 0).slice(0, 3);
+        if (meals.length) {
+            answer = "<b>ארוחות אחרונות:</b><br>" +
+                meals.map(m => "• " + new Date(m.created_at).toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit'}) + ": " + (m.notes || 'ארוחה') + " (" + m.carbs + "g)").join("<br>");
+        } else { answer = "לא מצאתי רישומי פחמימות ב-24 השעות האחרונות."; }
+    }
+    else if (q.includes("חיישן") || q.includes("פוד") || q.includes("גיל") || q.includes("מתי")) {
+        const sensor = tr.find(t => t.eventType === "Sensor Change");
+        const pod    = tr.find(t => t.eventType === "Pod Change" || t.eventType === "Site Change");
+        answer = "<b>מצב ציוד:</b><br>";
+        if (sensor) {
+            const sDays = ((Date.now() - new Date(sensor.created_at)) / (1000*60*60*24)).toFixed(1);
+            answer += "• חיישן: הוחלף לפני " + sDays + " ימים.<br>";
         }
-
-        // 2. הקשר "מתי / לפני" - חיפוש בנתוני עומק
-        else if (ql.includes("מתי") || ql.includes("לפני")) {
-            const hrs = hoursRequested || (ql.includes("שעה") ? 1 : 0);
-            const target = Date.now() - (hrs * 3600000);
-            const relevantTreat = tr.find(t => Math.abs(new Date(t.created_at).getTime() - target) < 1800000);
-            const relevantBG    = ent.find(e => Math.abs(new Date(e.dateString).getTime() - target) < 600000);
-            if (relevantTreat || relevantBG) {
-                answer = 'בזמן שציינת:<br>';
-                if (relevantBG)    answer += '• הסוכר עמד על ' + relevantBG.sgv + '.<br>';
-                if (relevantTreat) answer += '• פעולה: ' + (relevantTreat.notes || relevantTreat.eventType) + ' (' + (relevantTreat.insulin || 0) + 'U / ' + (relevantTreat.carbs || 0) + 'g).<br>';
-            } else { answer = 'לא מצאתי נתונים לזמן שציינת.'; }
+        if (pod) {
+            const pHours = ((Date.now() - new Date(pod.created_at)) / (1000*60*60)).toFixed(1);
+            answer += "• פוד: הוחלף לפני " + pHours + " שעות.";
         }
-
-        // 3. ארוחות אחרונות
-        else if (ql.includes("אכלתי") || ql.includes("אוכל") || ql.includes("פחמימות")) {
-            const meals = tr.filter(t => t.carbs > 0).slice(0, 3);
-            if (meals.length) {
-                answer = 'אלו הארוחות האחרונות שרשומות:<br>' +
-                    meals.map(m => '• ' + new Date(m.created_at).toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit'}) + ': ' + (m.notes || 'ארוחה') + ' (' + m.carbs + 'g)').join('<br>');
-            } else { answer = 'לא נמצאו ארוחות ב-24 השעות האחרונות.'; }
-        }
-
-        // 4. ניתוח מצב / TIR
-        else if (ql.includes("איך") || ql.includes("מצב") || ql.includes("מאוזן")) {
-            if (ent.length > 0) {
-                const tir = (ent.filter(e => e.sgv >= 70 && e.sgv <= 180).length / ent.length * 100).toFixed(0);
-                const avg = (ent.reduce((a, b) => a + b.sgv, 0) / ent.length).toFixed(0);
-                answer = 'ניתוח 24 שעות: היית בטווח ' + tir + '% מהזמן, עם ממוצע של ' + avg + '. ';
-                answer += tir > 80 ? 'יום מצוין! 🌟' : 'יש מקום לשיפור בטווח. 📈';
-            } else { answer = 'אין מספיק נתוני היסטוריה לניתוח.'; }
-        }
-
-        // 5. ציוד - גיל ושעות שנותרו
-        else if (ql.includes("חיישן") || ql.includes("פוד") || ql.includes("החלפה") || ql.includes("זמן נותר")) {
-            const lastSensor = tr.find(t => t.eventType === "Sensor Change");
-            const lastPod    = tr.find(t => t.eventType === "Pod Change" || t.eventType === "Site Change");
-            const sensorLeft = nsData.sensorAge ? Math.max(0, 240 - nsData.sensorAge).toFixed(1) : "לא ידוע";
-            const podLeft    = nsData.podAge    ? Math.max(0, 72  - nsData.podAge).toFixed(1)    : "לא ידוע";
-            answer = 'מצב ציוד:<br>';
-            if (lastSensor) answer += '• חיישן הוחלף לפני ' + ((Date.now() - new Date(lastSensor.created_at)) / (1000*60*60*24)).toFixed(1) + ' ימים. נותרו ~' + sensorLeft + ' שעות.<br>';
-            if (lastPod)    answer += '• פוד הוחלף לפני ' + ((Date.now() - new Date(lastPod.created_at)) / (1000*60*60)).toFixed(1) + ' שעות. נותרו ~' + podLeft + ' שעות.';
-            if (!lastSensor && !lastPod) answer += 'לא נמצאו החלפות ב-24 השעות האחרונות.';
-        }
-
-        // 6. בזאלי לפני X שעות
-        else if (hoursRequested && ql.includes("בזאלי")) {
-            const targetTime = Date.now() - (hoursRequested * 3600000);
-            const from = new Date(targetTime - 600000).toISOString();
-            const res  = await nsGet('/api/v1/devicestatus.json?find[created_at][$gte]=' + from + '&count=1');
-            const dd   = await res.json();
-            answer = dd[0] ? '💧 לפני ' + hoursRequested + ' שעות הבזאלי היה: ' + dd[0].pump.basal.rate + ' U/hr.' : 'לא מצאתי נתון בזאלי לזמן זה.';
-        }
-
-        // 7. סיכום יומי
-        else if (ql.includes("סיכום") || ql.includes("כמה הזרקתי היום")) {
-            const totalInsulin = tr.reduce((sum, t) => sum + (t.insulin || 0), 0).toFixed(2);
-            const totalCarbs   = tr.reduce((sum, t) => sum + (t.carbs   || 0), 0);
-            answer = '📅 סיכום 24 שעות אחרונות:<br>💉 סך אינסולין: ' + totalInsulin + 'U<br>🍞 סך פחמימות: ' + totalCarbs + 'g';
-        }
-
-        else {
-            answer = "לא מצאתי התאמה. נסה: 'מה אכלתי לפני 4 שעות?', 'כמה זמן נותר לחיישן?', 'איך הייתי היום?' או 'סיכום היום'.";
-        }
-
-    } catch (e) { answer = "שגיאה בשליפת נתונים. וודא שההיסטוריה מלאה ב-NS."; }
+        if (!sensor && !pod) { answer = "לא מצאתי רישומי החלפת ציוד ב-24 השעות האחרונות."; }
+    }
+    else if (q.includes("איך") || q.includes("מצב") || q.includes("מאוזן")) {
+        if (ent.length > 10) {
+            const tir = (ent.filter(e => e.sgv >= 70 && e.sgv <= 180).length / ent.length * 100).toFixed(0);
+            answer = "ב-24 השעות האחרונות היית בטווח (TIR) של " + tir + "%. ";
+            answer += tir > 75 ? "זה נראה מצוין! 🌟" : "יש מקום לשיפור באיזון. 📈";
+        } else { answer = "אין מספיק נתוני היסטוריה לניתוח היום."; }
+    }
+    else {
+        answer = "נסה לשאול על: 'מה אכלתי?', 'מתי החלפתי חיישן?' או 'כמה IOB יש לי?'.";
+    }
 
     resp.innerHTML = answer;
     input.value = '';
