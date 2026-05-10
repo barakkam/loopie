@@ -73,7 +73,7 @@
 </div>
 
 <script>
-let nsData = { iob: 0, basal: 0, insulin: "--", sensor: "--", pod: "--", hist: "--", meal: "אין", lastBolus: 0 };
+let nsData = { iob: 0, basal: 0, insulin: "--", sensor: "--", pod: "--", hist: "--", meal: "אין", lastBolus: 0, cob: 0 };
 let refreshTimer = null;
 
 function nsUrl() {
@@ -116,51 +116,39 @@ async function connect() {
 
 async function fetchData() {
     try {
-        // 1. נתוני סוכר ו-IOB (מ-Pebble API)
+        // 1. נתוני סוכר ו-IOB (מ-Pebble)
         const pRes = await nsGet('/pebble');
         if (pRes.ok) {
             const p = await pRes.json();
-            const latest = p.bgs && p.bgs[0];
-            if (latest) {
-                nsData.iob = latest.iob || 0;
-                const bgEl = document.getElementById('current-bg');
-                bgEl.innerText = latest.sgv;
-                bgEl.className = 'bg-value' + (latest.sgv < 70 ? ' low' : latest.sgv > 180 ? ' high' : '');
-                document.getElementById('trend-label').innerText = latest.direction || '';
-                document.getElementById('stat-iob').innerText = nsData.iob;
-            }
+            const latest = p.bgs[0];
+            document.getElementById('current-bg').innerText = latest.sgv;
+            document.getElementById('stat-iob').innerText = latest.iob || "0.0";
+            document.getElementById('trend-label').innerText = latest.direction || "Flat";
+            nsData.cob = latest.cob || 0;
         }
-
-        // 2. נתוני משאבה וציוד (DeviceStatus)
+        // 2. תיקון בזאלי וגיל ציוד (מ-DeviceStatus)
         const dRes = await nsGet('/api/v1/devicestatus.json?count=1');
         if (dRes.ok) {
             const d = await dRes.json();
-            if (d[0]) {
-                nsData.insulin = (d[0].pump && d[0].pump.insulin && d[0].pump.insulin.type) || "Humalog/Novo";
-                nsData.sensor  = d[0].sage || "לא ידוע";
-                nsData.pod     = d[0].cage || "לא ידוע";
-                nsData.basal   = (d[0].pump && d[0].pump.basal && d[0].pump.basal.rate) || 0;
+            const status = d[0];
+            if (status && status.pump) {
+                nsData.basal = status.pump.basal ? status.pump.basal.rate : 0.25;
                 document.getElementById('stat-basal').innerText = nsData.basal;
+                nsData.insulin = (status.pump.insulin && status.pump.insulin.type) || "Humalog/Novo";
+            }
+            if (status) {
+                nsData.sensor = status.sage || "לא ידוע";
+                nsData.pod = status.cage || "לא ידוע";
             }
         }
-
-        // 3. היסטוריה לפני 3 שעות
-        const threeHrs = Date.now() - (3 * 3600000);
-        const hRes = await nsGet('/api/v1/entries.json?find[date][$gte]=' + threeHrs + '&count=1');
-        if (hRes.ok) {
-            const h = await hRes.json();
-            nsData.hist = (h[0] && h[0].sgv) || "--";
-        }
-
-        // 4. ארוחה אחרונה והזרקה
-        const tRes = await nsGet('/api/v1/treatments.json?find[carbs][$gt]=0&count=1');
+        // 3. ארוחות והזרקות (Treatments)
+        const tRes = await nsGet('/api/v1/treatments.json?find[carbs][$gt]=0&count=5');
         if (tRes.ok) {
-            const t = await tRes.json();
-            const meal = t[0] || t;
-            if (meal) {
-                const time = new Date(meal.created_at).toLocaleTimeString('he-IL', {hour: '2-digit', minute:'2-digit'});
-                nsData.meal = (meal.notes || 'ארוחה') + ' (' + meal.carbs + 'g) ב-' + time;
-                nsData.lastBolus = meal.insulin || 0;
+            const treatments = await tRes.json();
+            if (treatments.length > 0) {
+                const t = treatments[0];
+                const time = new Date(t.created_at).toLocaleTimeString('he-IL', {hour: '2-digit', minute:'2-digit'});
+                nsData.meal = (t.notes || 'ארוחה רשומה') + ' 🍽️ (' + t.carbs + 'g 🍞) ב-' + time + '. הזרקה: ' + (t.insulin || 0) + 'U 💉';
             }
         }
     } catch (e) { console.error("Update failed:", e); }
@@ -171,42 +159,24 @@ async function askOmnibox() {
     const resp = document.getElementById('omni-res');
     const q = input.value.trim().toLowerCase();
     if (!q) return;
-
     resp.style.display = 'block';
-    resp.innerText = "מנתח נתונים... 🔍";
     let ans = "";
-
-    try {
-        if (q.includes("אכלתי") || q.includes("אוכל") || q.includes("הזרקנו") || q.includes("מאכל")) {
-            ans = "🍴 הארוחה האחרונה: " + nsData.meal + ". הזרקה: " + nsData.lastBolus + "U.";
-        }
-        else if (q.includes("בזאלי") || q.includes("basal") || q.includes("תיקון")) {
-            const pRes = await nsGet('/api/v1/profile.json');
-            const p = await pRes.json();
-            const store = p[0].store.Default;
-            const now = new Date();
-            const nextHour = String(now.getHours() + 1).padStart(2,'0') + ":00";
-            const basalEntry = store.basal.find(function(b) { return b.time >= nextHour; });
-            const basalNext = basalEntry ? basalEntry.value : nsData.basal;
-            ans = "💧 בזאלי כעת: " + nsData.basal + "U. בעוד שעה: " + basalNext + "U. יחס תיקון: " + store.sens + ".";
-        }
-        else if (q.includes("חיישן") || q.includes("פוד") || q.includes("ציוד") || q.includes("גיל")) {
-            ans = "📟 גיל חיישן: " + nsData.sensor + " | גיל פוד: " + nsData.pod + " | אינסולין: " + nsData.insulin + ".";
-        }
-        else if (q.includes("3 שעות") || q.includes("היסטוריה")) {
-            ans = "🕒 לפני 3 שעות הסוכר היה " + nsData.hist + " mg/dL.";
-        }
-        else if (q.includes("מצב") || q.includes("מה קורה")) {
-            const bg = document.getElementById('current-bg').innerText;
-            ans = "📊 מצב נוכחי: " + bg + " " + document.getElementById('trend-label').innerText + ". IOB: " + nsData.iob + "U.";
-        }
-        else {
-            ans = "🤔 נסה לשאול: 'מה אכלתי?', 'מה גיל החיישן?' או 'כמה היה לפני 3 שעות?'.";
-        }
-    } catch (e) {
-        ans = "❌ שגיאה בשליפת נתונים. וודא שכל הפלאגינים מופעלים ב-Nightscout.";
+    if (q.includes("אכלתי") || q.includes("אוכל") || q.includes("מאכל") || q.includes("cob")) {
+        ans = "📊 פחמימות פעילות (COB): " + nsData.cob + "g.
+🍴 " + nsData.meal;
     }
-
+    else if (q.includes("בזאלי") || q.includes("basal")) {
+        ans = "💧 קצב בזאלי נוכחי: " + nsData.basal + " U/hr.";
+    }
+    else if (q.includes("חיישן") || q.includes("פוד") || q.includes("גיל")) {
+        ans = "📟 גיל חיישן: " + nsData.sensor + " | גיל פוד: " + nsData.pod + " | אינסולין: " + nsData.insulin;
+    }
+    else if (q.includes("מצב") || q.includes("מה קורה")) {
+        ans = "✅ סוכר: " + document.getElementById('current-bg').innerText + " | IOB: " + document.getElementById('stat-iob').innerText + " | COB: " + nsData.cob + "g";
+    }
+    else {
+        ans = "🤔 נסה לשאול: 'מה אכלתי?', 'כמה COB יש לי?' או 'מה הבזאלי?'.";
+    }
     resp.innerText = ans;
     input.value = '';
 }
