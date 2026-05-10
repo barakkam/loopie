@@ -362,6 +362,22 @@ function hideStatus() {
     document.getElementById('login-status').className = 'status';
 }
 
+function buildNsUrl(endpoint) {
+    const url = document.getElementById('nsUrl').value.trim().replace(/\/$/, "");
+    const secret = document.getElementById('apiSecret').value.trim();
+    const sep = endpoint.includes('?') ? '&' : '?';
+    return url + endpoint + sep + 'api_secret=' + encodeURIComponent(secret);
+}
+
+async function fetchNS(endpoint) {
+    const res = await fetch(buildNsUrl(endpoint), {
+        method: 'GET', mode: 'cors',
+        headers: { 'Accept': 'application/json' }
+    });
+    if (!res.ok) throw new Error('שגיאת שרת (' + res.status + ')');
+    return await res.json();
+}
+
 async function testConnection() {
     const url = document.getElementById('nsUrl').value.trim().replace(/\/$/, "");
     const secret = document.getElementById('apiSecret').value.trim();
@@ -382,16 +398,10 @@ async function testConnection() {
     showStatus("בודק חיבור לשרת...", "info");
 
     try {
-        const res = await fetch(`${url}/api/v1/status.json`, {
-            headers: { 'api-secret': secret }
-        });
+        const data = await fetchNS('/api/v1/status.json');
+        const name = (data.settings && data.settings.customTitle) || data.name || "Nightscout";
 
-        if (!res.ok) throw new Error(`שגיאת שרת (${res.status})`);
-
-        const data = await res.json();
-        const name = data.settings?.customTitle || data.name || "Nightscout";
-
-        showStatus(`חיבור הצליח ל-${name} ✓`, "success");
+        showStatus('חיבור הצליח ל-' + name + ' ✓', "success");
 
         setTimeout(() => {
             document.getElementById('login-screen').classList.add('hidden');
@@ -409,17 +419,10 @@ async function testConnection() {
 }
 
 async function fetchData() {
-    const url = document.getElementById('nsUrl').value.trim().replace(/\/$/, "");
-    const secret = document.getElementById('apiSecret').value.trim();
-
     document.getElementById('last-update').textContent = "מרענן...";
 
     try {
-        const res = await fetch(`${url}/api/v1/entries.json?count=3`, {
-            headers: { 'api-secret': secret }
-        });
-        if (!res.ok) throw new Error("שגיאת שרת");
-        const entries = await res.json();
+        const entries = await fetchNS('/api/v1/entries.json?count=3');
 
         if (!entries || entries.length === 0) {
             document.getElementById('last-update').textContent = "אין נתונים זמינים";
