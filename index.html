@@ -84,8 +84,9 @@ function nsGet(path) {
     return fetch(nsUrl() + path + sep + 'api_secret=' + nsSecret(), { mode: 'cors' });
 }
 
-const safeGet = (obj, path, fallback = "--") => {
-    return path.split('.').reduce((acc, part) => acc && acc[part], obj) || fallback;
+const safeGet = (obj, path, fallback) => {
+    if (fallback === undefined) fallback = "--";
+    return path.split('.').reduce(function(acc, part) { return acc && acc[part]; }, obj) || fallback;
 };
 
 async function connect() {
@@ -107,31 +108,42 @@ async function connect() {
 
 async function fetchData() {
     try {
-        // 1. נתונים חיים (Pebble)
+        // 1. נתונים חיים (Pebble) — p.bgs הוא מערך, לוקחים [0]
         const pRes = await nsGet('/pebble');
         const p = await pRes.json();
-        const bgs = p.bgs || {};
+        const bgs = (p.bgs && p.bgs[0]) ? p.bgs[0] : {};
 
-        document.getElementById('current-bg').innerText = bgs.sgv || "--";
-        document.getElementById('current-bg').className = 'bg-value' + (bgs.sgv < 70 ? ' low' : bgs.sgv > 180 ? ' high' : '');
+        const sgv = bgs.sgv || 0;
+        document.getElementById('current-bg').innerText = sgv || "--";
+        document.getElementById('current-bg').className = 'bg-value' + (sgv < 70 ? ' low' : sgv > 180 ? ' high' : '');
         document.getElementById('trend-label').innerText = bgs.direction || "Flat";
-        document.getElementById('stat-iob').innerText = bgs.iob || "0.00";
+        const iobVal = bgs.iob || "0.00";
+        document.getElementById('stat-iob').innerText = iobVal;
+        nsData.iob = iobVal;
 
-        // 2. מאגר רחב (24 שעות)
-        const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        // 2. טעינה מקבילה: entries (24ש'), treatments (24ש'), ציוד (30 יום), devicestatus
+        const dayAgo   = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-        const [ent, treat, dev] = await Promise.all([
-            nsGet('/api/v1/entries.json?find[dateString][$gte]=' + dayAgo + '&count=500').then(r => r.json()).catch(() => []),
-            nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + dayAgo + '&count=200').then(r => r.json()).catch(() => []),
-            nsGet('/api/v1/devicestatus.json?count=1').then(r => r.json()).catch(() => [])
+        const [ent, treat, equipTreat, dev] = await Promise.all([
+            nsGet('/api/v1/entries.json?find[dateString][$gte]=' + dayAgo + '&count=500').then(function(r){ return r.json(); }).catch(function(){ return []; }),
+            nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + dayAgo + '&count=200').then(function(r){ return r.json(); }).catch(function(){ return []; }),
+            nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + monthAgo + '&find[eventType][$in]=Sensor%20Change,Pod%20Change,Site%20Change&count=10').then(function(r){ return r.json(); }).catch(function(){ return []; }),
+            nsGet('/api/v1/devicestatus.json?count=1').then(function(r){ return r.json(); }).catch(function(){ return []; })
         ]);
 
-        fullHistory = { entries: ent, treatments: treat, devStatus: dev[0] || {} };
+        // מיזוג — ציוד מ-30 יום עם שאר treatments מ-24 שעות (ללא כפילויות)
+        const allTreat = treat.concat(equipTreat.filter(function(e) {
+            return !treat.find(function(t) { return t._id === e._id; });
+        }));
+        fullHistory = { entries: ent, treatments: allTreat, devStatus: dev[0] || {} };
 
+        // בזאלי — safeGet מונע קריסה אם pump.basal לא קיים
         const basalRate = safeGet(fullHistory.devStatus, 'pump.basal.rate', "0.0");
         document.getElementById('stat-basal').innerText = basalRate;
+        nsData.basal = basalRate;
 
-    } catch (e) { console.error("Fetch error:", e); }
+    } catch (e) { console.error("Update error:", e); }
 }
 
 async function askOmnibox() {
@@ -147,40 +159,60 @@ async function askOmnibox() {
     const tr  = fullHistory.treatments || [];
     const ent = fullHistory.entries    || [];
 
-    if (q.includes("iob") || q.includes("פעיל")) {
-        const iob = document.getElementById('stat-iob').innerText;
-        answer = "האינסולין הפעיל (IOB) שלך הוא " + iob + " יחידות.";
+    // IOB
+    if (q.includes("iob") || q.includes("פעיל") || q.includes("אינסולין")) {
+        answer = "האינסולין הפעיל (IOB) שלך הוא " + nsData.iob + " יחידות.";
     }
-    else if (q.includes("אכלתי") || q.includes("אוכל") || q.includes("פחמימות") || q.includes("cob")) {
-        const meals = tr.filter(t => t.carbs > 0).slice(0, 3);
+    // ארוחות / COB / פחמימות
+    else if (q.includes("אכלתי") || q.includes("אוכל") || q.includes("פחמימות") || q.includes("cob") || q.includes("ארוחה")) {
+        const meals = tr.filter(function(t) { return t.carbs > 0; }).slice(0, 5);
         if (meals.length) {
             answer = "<b>ארוחות אחרונות:</b><br>" +
-                meals.map(m => "• " + new Date(m.created_at).toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit'}) + ": " + (m.notes || 'ארוחה') + " (" + m.carbs + "g)").join("<br>");
+                meals.map(function(m) {
+                    return "• " + new Date(m.created_at).toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit'}) +
+                        ": " + (m.notes || 'ארוחה') + " (" + m.carbs + "g" + (m.insulin ? ", " + m.insulin + "U" : "") + ")";
+                }).join("<br>");
         } else { answer = "לא מצאתי רישומי פחמימות ב-24 השעות האחרונות."; }
     }
-    else if (q.includes("חיישן") || q.includes("פוד") || q.includes("גיל") || q.includes("מתי")) {
-        const sensor = tr.find(t => t.eventType === "Sensor Change");
-        const pod    = tr.find(t => t.eventType === "Pod Change" || t.eventType === "Site Change");
+    // ציוד — מחפש ב-30 יום האחרונים
+    else if (q.includes("חיישן") || q.includes("פוד") || q.includes("גיל") || q.includes("ציוד") || q.includes("החלפ")) {
+        const sensor = tr.find(function(t) { return t.eventType === "Sensor Change"; });
+        const pod    = tr.find(function(t) { return t.eventType === "Pod Change" || t.eventType === "Site Change"; });
         answer = "<b>מצב ציוד:</b><br>";
         if (sensor) {
-            const sDays = ((Date.now() - new Date(sensor.created_at)) / (1000*60*60*24)).toFixed(1);
-            answer += "• חיישן: הוחלף לפני " + sDays + " ימים.<br>";
-        }
+            const ageH = (Date.now() - new Date(sensor.created_at)) / (1000*60*60);
+            const sDays = (ageH / 24).toFixed(1);
+            const sLeft = Math.max(0, 240 - ageH).toFixed(0);
+            answer += "• חיישן: הוחלף לפני " + sDays + " ימים. נותרו ~" + sLeft + " שעות.<br>";
+        } else { answer += "• חיישן: לא נמצאה החלפה ב-30 הימים האחרונים.<br>"; }
         if (pod) {
-            const pHours = ((Date.now() - new Date(pod.created_at)) / (1000*60*60)).toFixed(1);
-            answer += "• פוד: הוחלף לפני " + pHours + " שעות.";
-        }
-        if (!sensor && !pod) { answer = "לא מצאתי רישומי החלפת ציוד ב-24 השעות האחרונות."; }
+            const ageH = (Date.now() - new Date(pod.created_at)) / (1000*60*60);
+            const pLeft = Math.max(0, 72 - ageH).toFixed(0);
+            answer += "• פוד: הוחלף לפני " + ageH.toFixed(1) + " שעות. נותרו ~" + pLeft + " שעות.";
+        } else { answer += "• פוד: לא נמצאה החלפה ב-30 הימים האחרונים."; }
     }
-    else if (q.includes("איך") || q.includes("מצב") || q.includes("מאוזן")) {
+    // TIR / מאזן יומי
+    else if (q.includes("איך") || q.includes("מצב") || q.includes("מאוזן") || q.includes("tir") || q.includes("טווח")) {
         if (ent.length > 10) {
-            const tir = (ent.filter(e => e.sgv >= 70 && e.sgv <= 180).length / ent.length * 100).toFixed(0);
-            answer = "ב-24 השעות האחרונות היית בטווח (TIR) של " + tir + "%. ";
-            answer += tir > 75 ? "זה נראה מצוין! 🌟" : "יש מקום לשיפור באיזון. 📈";
-        } else { answer = "אין מספיק נתוני היסטוריה לניתוח היום."; }
+            const inRange = ent.filter(function(e) { return e.sgv >= 70 && e.sgv <= 180; }).length;
+            const tir = (inRange / ent.length * 100).toFixed(0);
+            const avg = (ent.reduce(function(a, b) { return a + b.sgv; }, 0) / ent.length).toFixed(0);
+            const low = ent.filter(function(e) { return e.sgv < 70; }).length;
+            const high = ent.filter(function(e) { return e.sgv > 180; }).length;
+            answer = "ניתוח 24 שעות אחרונות:<br>" +
+                "• TIR בטווח: " + tir + "%<br>" +
+                "• ממוצע סוכר: " + avg + " mg/dL<br>" +
+                "• נמוך מ-70: " + low + " קריאות<br>" +
+                "• גבוה מ-180: " + high + " קריאות<br>" +
+                (tir > 75 ? "🌟 יום מצוין!" : "📈 יש מקום לשיפור.");
+        } else { answer = "אין מספיק נתוני היסטוריה לניתוח."; }
+    }
+    // בזאלי
+    else if (q.includes("בזאלי") || q.includes("basal")) {
+        answer = "קצב בזאלי נוכחי: " + nsData.basal + " U/hr.";
     }
     else {
-        answer = "נסה לשאול על: 'מה אכלתי?', 'מתי החלפתי חיישן?' או 'כמה IOB יש לי?'.";
+        answer = "נסה לשאול: 'כמה IOB יש לי?', 'מה אכלתי?', 'גיל חיישן ופוד', 'איך הייתי היום?' או 'מה הבזאלי?'.";
     }
 
     resp.innerHTML = answer;
