@@ -1136,8 +1136,10 @@ async function recommendDose(inputText) {
         // שמור המלצה נוכחית לאחר הצגה
         await saveMemory(lastRecKey, {
             date: new Date().toISOString(),
-            totalR: totalR, carbsInput: carbsToCalc, foodName: foodName,
-            sgv: sgv, iob: iob
+            totalR: totalR, insNow: insNow, insLater: insLater,
+            carbsInput: carbsToCalc, carbsNow: carbsNow, carbsLater: carbsLater,
+            foodName: foodName, sgv: sgv, iob: iob, isf: isf,
+            smartNowPct: smartNowPct, splitReason: splitReason
         });
     } catch(e) { console.error('followup error:', e); }
 
@@ -1204,28 +1206,59 @@ async function recommendDose(inputText) {
         html += "</div>";
     }
 
-    // === חישוב אחוז פיצול מומלץ לפי רמת הסוכר ===
-    // רמה נמוכה = פחות עכשיו, רמה גבוהה = יותר עכשיו
+    // === חישוב אחוז פיצול חכם ===
+    // משתנים: רמת סוכר + שעה (לילה/יום) + מגמה
     var smartNowPct;
     var splitReason = "";
+    var splitFactors = [];
+
     if (carbsToCalc > 0) {
-        if (sgv < 100) {
-            smartNowPct = 50;
-            splitReason = "סוכר נמוך (" + sgv + ") — פיצול שווה למניעת היפו";
-        } else if (sgv < 130) {
-            smartNowPct = 60;
-            splitReason = "סוכר תקין-נמוך — 60/40 לאיזון";
-        } else if (sgv > 180) {
-            smartNowPct = 80;
-            splitReason = "סוכר גבוה (" + sgv + ") — יותר עכשיו לתיקון מהיר";
-        } else {
-            smartNowPct = nowPct; // ברירת מחדל (70%)
-            splitReason = "ברירת מחדל " + nowPct + "/" + (100-nowPct);
+        // בסיס לפי סוכר
+        var basePct;
+        if      (sgv < 90)  { basePct = 50; splitFactors.push("סוכר נמוך (" + sgv + ")"); }
+        else if (sgv < 120) { basePct = 60; splitFactors.push("סוכר תקין-נמוך (" + sgv + ")"); }
+        else if (sgv < 160) { basePct = 70; splitFactors.push("סוכר תקין (" + sgv + ")"); }
+        else if (sgv < 200) { basePct = 75; splitFactors.push("סוכר גבוה-תקין (" + sgv + ")"); }
+        else                { basePct = 80; splitFactors.push("סוכר גבוה (" + sgv + ")"); }
+
+        // תיקון לפי שעה (לילה = ספיגה איטית = פחות עכשיו)
+        var nightAdj = 0;
+        if (nowH >= 22 || nowH < 6) {
+            // לילה: ספיגת פחמימות איטית יותר, סכנת היפו מוגברת
+            nightAdj = -10;
+            splitFactors.push("לילה (" + nowH + ":xx) — ספיגה איטית");
+        } else if (nowH >= 6 && nowH < 9) {
+            // בוקר מוקדם: תנגודת אינסולין גבוהה (dawn phenomenon)
+            nightAdj = +5;
+            splitFactors.push("בוקר מוקדם — dawn phenomenon");
         }
+
+        // תיקון לפי מגמה
+        var trendAdj = 0;
+        if (delta >= 3) {
+            trendAdj = +5;
+            splitFactors.push("מגמה עולה (+" + delta + "/5דק')");
+        } else if (delta <= -2) {
+            trendAdj = -5;
+            splitFactors.push("מגמה יורדת (" + delta + "/5דק')");
+        }
+
+        // תיקון לפי COB קיים
+        var cobAdj = 0;
+        if (cob > 15) {
+            cobAdj = -10;
+            splitFactors.push("COB פעיל (" + cob + "g)");
+        }
+
+        smartNowPct = Math.max(40, Math.min(90, basePct + nightAdj + trendAdj + cobAdj));
+        // עיגול ל-5
+        smartNowPct = Math.round(smartNowPct / 5) * 5;
+        splitReason = splitFactors.join(" | ");
     } else {
-        smartNowPct = 100; // תיקון בלבד — הכל עכשיו
+        smartNowPct = 100;
+        splitReason = "תיקון — הכל עכשיו";
     }
-    var smartLaterPct  = 100 - smartNowPct;
+    var smartLaterPct = 100 - smartNowPct;
 
     // פחמימות לכל שלב
     var carbsNow   = carbsToCalc > 0 ? Math.round(carbsToCalc * smartNowPct   / 100) : 0;
@@ -2136,6 +2169,267 @@ function checkPendingDose() {
     showPopup("⚠️ הזרק השלמה! — " + PENDING_DOSE.foodName, html2);
 }
 
+// ========= מעקב אוטומטי אחרי ביצוע בNS =========
+var _lastMonitorCheck = Date.now();
+var _monitorTimer = null;
+var _lastKnownTreatments = []; // treatments ידועים
+
+async function startNSMonitor() {
+    if (_monitorTimer) clearInterval(_monitorTimer);
+    // טעינה ראשונית
+    var initRes = await nsGet('/api/v1/treatments.json?count=5');
+    if (initRes.ok) {
+        _lastKnownTreatments = await initRes.json();
+        _lastMonitorCheck = Date.now();
+    }
+    // בדיקה כל 90 שניות
+    _monitorTimer = setInterval(checkNSActions, 90000);
+}
+
+async function checkNSActions() {
+    try {
+        var since = new Date(_lastMonitorCheck - 5000).toISOString();
+        var res = await nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + since + '&count=20');
+        if (!res.ok) return;
+        var newTreats = await res.json();
+        _lastMonitorCheck = Date.now();
+
+        // סנן treatments חדשים שלא ראינו
+        var knownIds = _lastKnownTreatments.map(function(t){ return t._id; });
+        var fresh = newTreats.filter(function(t){
+            return !knownIds.includes(t._id) && t.insulin > 0;
+        });
+
+        if (fresh.length === 0) return;
+        _lastKnownTreatments = newTreats;
+
+        // ניתוח כל treatment חדש
+        fresh.forEach(function(t) {
+            analyzeNewTreatment(t);
+        });
+    } catch(e) { console.error("NSMonitor error:", e); }
+}
+
+async function analyzeNewTreatment(t) {
+    var ins  = parseFloat(t.insulin) || 0;
+    var carbs = t.carbs || 0;
+    var time = new Date(t.created_at).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+    var evType = t.eventType || 'Bolus';
+    var notes  = t.notes || '';
+
+    // בדוק אם זה הזרקת השלמה (pending dose)
+    var isPending = PENDING_DOSE && !PENDING_DOSE.triggered &&
+        (Date.now() - PENDING_DOSE.setAt) < 4*3600000;
+
+    // בנה ניתוח
+    var html = "<div style='background:#0a0a14;border-radius:10px;padding:12px;margin-bottom:10px;font-size:13px'>";
+    html += "<div style='font-size:11px;color:#888;margin-bottom:8px'>🕐 " + time + " — " + evType + (notes?" ("+notes+")":"") + "</div>";
+    html += "<div style='display:flex;justify-content:space-between;margin-bottom:6px'>";
+    html += "<span style='color:#aaa'>💉 הוזרק</span><b style='color:#10b981;font-size:18px'>" + ins + "U</b></div>";
+    if (carbs > 0) {
+        html += "<div style='display:flex;justify-content:space-between;margin-bottom:6px'>";
+        html += "<span style='color:#aaa'>🍞 פחמימות</span><b style='color:#f59e0b'>" + carbs + "g</b></div>";
+    }
+    html += "</div>";
+
+    // השווה להמלצה אחרונה
+    var memData = null;
+    try { memData = await loadMemory(); } catch(e) {}
+    var lastRec = memData && memData['last_recommendation'] ? memData['last_recommendation'].value : null;
+
+    if (lastRec && (Date.now() - new Date(lastRec.date).getTime()) < 60*60000) {
+        var recIns  = parseFloat(lastRec.totalR) || 0;
+        var recNow  = parseFloat(lastRec.insNow) || recIns;
+        var diff    = (ins - recNow).toFixed(2);
+        var diffAbs = Math.abs(parseFloat(diff));
+
+        html += "<div style='background:rgba(59,130,246,0.08);border:1px solid var(--blue-dim);border-radius:8px;padding:10px;font-size:13px'>";
+        html += "<b>📊 השוואה להמלצה:</b><br><br>";
+        html += "• הומלץ להזריק עכשיו: <b>" + recNow.toFixed(2) + "U</b><br>";
+        html += "• הוזרק בפועל: <b>" + ins + "U</b><br>";
+
+        if (diffAbs < 0.15) {
+            html += "<span style='color:#10b981'>✅ בדיוק כהמלצה!</span>";
+        } else if (ins < recNow) {
+            var pct = Math.round((1 - ins/recNow)*100);
+            html += "<span style='color:#f59e0b'>⚠️ הוזרק פחות ב-" + pct + "% (" + Math.abs(parseFloat(diff)) + "U חסר)</span><br>";
+            // חשב מה ה-IOB יעשה
+            var missedEffect = diffAbs * (parseFloat(lastRec.isf)||50);
+            html += "<small style='color:#888'>הסוכר עלול לעלות ~" + Math.round(missedEffect) + " mg/dL יותר</small>";
+        } else {
+            html += "<span style='color:#3b82f6'>ℹ️ הוזרק יותר ב-" + Math.abs(parseFloat(diff)) + "U</span>";
+        }
+        html += "</div>";
+
+        // אם פיצול — כמה נותר
+        if (isPending && PENDING_DOSE) {
+            html += "<br><div style='background:rgba(245,158,11,0.08);border:1px solid #f59e0b;border-radius:8px;padding:10px;font-size:13px'>";
+            html += "⏳ <b>תזכורת:</b> עוד " + PENDING_DOSE.insLater + "U (" + PENDING_DOSE.carbsLater + "g) — בהמתנה למגמת עלייה";
+            html += "</div>";
+        }
+
+        // שמור לזיכרון
+        try {
+            await recordInjectionOutcome(
+                lastRec.foodName || 'ארוחה', lastRec.carbsInput || carbs,
+                ins, 0, 0, nsData.currentSgv, null, null,
+                diffAbs < 0.2 ? 'good' : ins < recNow ? 'low' : 'high'
+            );
+        } catch(e2) {}
+    } else {
+        // הזרקה ללא המלצה קודמת — תעד
+        html += "<div style='font-size:12px;color:#888'>";
+        html += "הזרקה שנרשמה ב-NS. אין המלצה קרובה להשוואה.";
+        html += "</div>";
+    }
+
+    html += "<br><small style='color:#555'>⚕️ נתונים מ-NS בזמן אמת.</small>";
+    showPopup("🔔 הזרקה חדשה נרשמה ב-NS", html);
+}
+
+// ========= AI חיפוש ערכים תזונתיים =========
+async function lookupFoodAI(foodQuery) {
+    showPopup("🔍 מחפש נתונים תזונתיים...",
+        "<div style='text-align:center;padding:20px'><span class='spinner' style='width:24px;height:24px;border-width:3px'></span><br><br>שואל AI על " + foodQuery + "...</div>");
+
+    var prof  = fullHistory.profile;
+    var nowH  = new Date().getHours();
+    var cr    = prof ? parseFloat(profileValueAt(prof.carbratio||prof.carbRatio||prof.ic, nowH)||10) : 10;
+    var isf   = prof ? parseFloat(profileValueAt(prof.sens||prof.sensitivity, nowH)||50) : 50;
+    var sgv   = nsData.currentSgv || 120;
+    var iob   = parseFloat(nsData.iob) || 0;
+    var ins   = getInsulinProfile();
+    var actAdj = getActivityReduction();
+
+    var prompt = "אתה אנדוקרינולוג ודיאטן קליני מומחה בסוכרת סוג 1 T1D." +
+        "\n\nהמטופל שואל על: " + foodQuery +
+        "\n\nנתונים נוכחיים:" +
+        "\n- סוכר: " + sgv + " mg/dL" +
+        "\n- IOB: " + iob + "U" +
+        "\n- CR (יחס פחמימה/אינסולין): " + cr + " g/U" +
+        "\n- ISF: " + isf + " mg/dL/U" +
+        "\n- אינסולין: " + ins.name + " (שיא " + ins.peak + " דק', DIA " + (ins.dia/60).toFixed(1) + " ש')" +
+        "\n- שעה: " + nowH + ":00" +
+        (actAdj.note ? "\n- " + actAdj.note : "") +
+        "\n\nענה בדיוק בפורמט הבא (JSON בלבד, ללא טקסט נוסף):" +
+        "\n{" +
+        "\n  \"food\": \"שם המאכל\", " +
+        "\n  \"serving\": \"גודל מנה (למשל: 100g, פרוסה, כוס)\", " +
+        "\n  \"carbs\": 0, " +
+        "\n  \"durationH\": 0, " +
+        "\n  \"glycemicIndex\": \"נמוך/בינוני/גבוה\", " +
+        "\n  \"absorptionType\": \"מהיר/בינוני/איטי\", " +
+        "\n  \"insulinNow\": 0.0, " +
+        "\n  \"insulinLater\": 0.0, " +
+        "\n  \"splitPct\": 70, " +
+        "\n  \"splitReason\": \"סיבה לפיצול\", " +
+        "\n  \"preMealMin\": 0, " +
+        "\n  \"notes\": \"הערות רפואיות חשובות\", " +
+        "\n  \"loopEstimate\": 0.0" +
+        "\n}" +
+        "\n\nחשב:" +
+        "\n- carbs: כמה גרם פחמימות בגודל המנה המצוין" +
+        "\n- durationH: כמה שעות פועל הסוכר (לפי שומן/חלבון/GI)" +
+        "\n- insulinNow: (carbs/CR + תיקון סוכר - IOB) × splitPct/100 × (1-" + actAdj.reduction + ")" +
+        "\n- insulinLater: שארית המינון" +
+        "\n- splitPct: אחוז עכשיו (לפי GI + סוכר נוכחי + שעה " + nowH + ")" +
+        "\n- loopEstimate: מה Loop היה מחשב ללא split" +
+        "\n- preMealMin: כמה דקות לפני אכילה להזריק (" + ins.name + ")" +
+        "\n\nהחזר JSON בלבד.";
+
+    try {
+        var response = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                model: "claude-sonnet-4-20250514",
+                max_tokens: 600,
+                messages: [{ role: "user", content: prompt }]
+            })
+        });
+
+        if (!response.ok) throw new Error("API error " + response.status);
+        var data = await response.json();
+        var rawText = data.content.map(function(c){ return c.text||""; }).join("").trim();
+
+        // Parse JSON
+        var jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error("No JSON in response");
+        var fd = JSON.parse(jsonMatch[0]);
+
+        // שמור במאגר מאכלים זמני לשיחה זו
+        if (fd.carbs && fd.durationH) {
+            FOOD_DB[fd.food] = { carbs: fd.carbs, durationH: fd.durationH, notes: fd.absorptionType + " | GI: " + fd.glycemicIndex };
+        }
+
+        // בנה תצוגה
+        var html = "";
+        html += "<div style='background:#0a0a14;border-radius:10px;padding:14px;margin-bottom:12px'>";
+        html += "<b style='color:var(--blue);font-size:16px'>" + fd.food + "</b>";
+        html += "<div style='font-size:12px;color:#888;margin-top:4px'>מנה: " + fd.serving + "</div><br>";
+        html += "<div style='display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1a1a28'>";
+        html += "<span style='color:#aaa'>🍞 פחמימות</span><b style='color:#f59e0b'>" + fd.carbs + "g</b></div>";
+        html += "<div style='display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1a1a28'>";
+        html += "<span style='color:#aaa'>⏱️ משך ספיגה</span><b style='color:#3b82f6'>" + fd.durationH + " שעות</b></div>";
+        html += "<div style='display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1a1a28'>";
+        html += "<span style='color:#aaa'>📈 אינדקס גליקמי</span><b>" + fd.glycemicIndex + " (" + fd.absorptionType + ")</b></div>";
+        if (fd.preMealMin > 0) {
+            html += "<div style='display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1a1a28'>";
+            html += "<span style='color:#aaa'>⏰ Pre-bolus</span><b style='color:#f59e0b'>" + fd.preMealMin + " דק' לפני</b></div>";
+        }
+        html += "</div>";
+
+        // המלצת הזרקה
+        html += "<div style='background:rgba(16,185,129,0.1);border:2px solid #10b981;border-radius:12px;padding:14px;margin-bottom:10px'>";
+        html += "<div style='font-size:11px;color:#888;margin-bottom:8px'>💉 המלצת הזרקה</div>";
+        var totalIns = (parseFloat(fd.insulinNow||0) + parseFloat(fd.insulinLater||0)).toFixed(1);
+        html += "<div style='display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1a2a1a'>";
+        html += "<span style='color:#aaa'>סה'כ אינסולין</span><b style='color:#10b981;font-size:24px'>" + totalIns + "U</b></div>";
+        html += "<div style='font-size:11px;color:#888;margin-top:8px'>" + fd.carbs + "g ÷ " + cr + " = " + (fd.carbs/cr).toFixed(2) + "U";
+        if (sgv > 120) html += " + " + ((sgv-120)/isf).toFixed(2) + "U תיקון";
+        if (iob > 0) html += " - " + iob + "U IOB";
+        html += "</div></div>";
+
+        // פיצול
+        if (fd.insulinLater > 0) {
+            html += "<div style='background:#111120;border-radius:10px;padding:12px;margin-bottom:10px'>";
+            html += "<div style='font-size:11px;color:#888;margin-bottom:8px'>🔀 פיצול מומלץ (" + fd.splitPct + "/" + (100-fd.splitPct) + ") — " + fd.splitReason + "</div>";
+
+            html += "<div style='background:#0a0a14;border-radius:8px;padding:10px;margin-bottom:6px;border:1px solid #10b981'>";
+            html += "<div style='font-size:11px;color:#10b981;margin-bottom:4px'>▶ עכשיו" + (fd.preMealMin > 0 ? " (" + fd.preMealMin + " דק' לפני)" : "") + "</div>";
+            html += "<div style='display:flex;justify-content:space-between'><span style='color:#aaa'>🍞</span><b style='color:#f59e0b'>" + Math.round(fd.carbs * fd.splitPct/100) + "g</b></div>";
+            html += "<div style='display:flex;justify-content:space-between'><span style='color:#aaa'>💉</span><b style='color:#10b981'>" + parseFloat(fd.insulinNow).toFixed(1) + "U</b></div>";
+            html += "</div>";
+
+            html += "<div style='background:#0a0a14;border-radius:8px;padding:10px;border:1px solid var(--blue)'>";
+            html += "<div style='font-size:11px;color:var(--blue);margin-bottom:4px'>⏳ לאחר מגמת עלייה</div>";
+            html += "<div style='display:flex;justify-content:space-between'><span style='color:#aaa'>🍞</span><b style='color:#f59e0b'>" + Math.round(fd.carbs * (100-fd.splitPct)/100) + "g</b></div>";
+            html += "<div style='display:flex;justify-content:space-between'><span style='color:#aaa'>💉</span><b style='color:var(--blue)'>" + parseFloat(fd.insulinLater).toFixed(1) + "U</b></div>";
+            html += "</div></div>";
+        }
+
+        // השוואה ל-Loop
+        html += "<div style='background:#0a0a14;border-radius:8px;padding:10px;margin-bottom:10px;font-size:13px'>";
+        html += "<div style='display:flex;justify-content:space-between;margin-bottom:4px'>";
+        html += "<span style='color:#aaa'>🔄 Loop היה מציע</span><b style='color:#6b6b80'>" + parseFloat(fd.loopEstimate||0).toFixed(1) + "U</b></div>";
+        html += "<div style='display:flex;justify-content:space-between'>";
+        html += "<span style='color:#aaa'>✨ Loopie ממליץ</span><b style='color:#10b981'>" + totalIns + "U</b></div></div>";
+
+        if (fd.notes) {
+            html += "<div style='background:rgba(245,158,11,0.08);border:1px solid #f59e0b;border-radius:8px;padding:10px;font-size:13px;margin-bottom:8px'>";
+            html += "⚕️ " + fd.notes + "</div>";
+        }
+        html += "<small style='color:#555'>נתונים מ-AI | ניהול T1D — לשיקול אנדוקרינולוג.</small>";
+
+        showPopup("🍽️ " + fd.food + " — " + fd.carbs + "g", html);
+
+    } catch(e) {
+        console.error("AI food lookup error:", e);
+        showPopup("שגיאה", "לא הצלחתי לקבל נתונים מה-AI: " + e.message +
+            "<br><br>נסה שאלות כמו:<br>• 'כמה פחמימות בג'חנון 100 גרם'<br>• 'תפוח בינוני כמה להזריק'");
+    }
+}
+
 async function connect() {
     var btn = document.getElementById('loginBtn');
     if (!nsUrl() || !nsSecret()) return;
@@ -2148,6 +2442,7 @@ async function connect() {
         document.getElementById('main-screen').classList.remove('hidden');
         fetchData();
         refreshTimer = setInterval(fetchData, 60000);
+        startNSMonitor();
     } catch(e) {
         btn.disabled = false;
         btn.innerText = "שגיאת חיבור (" + e.message + ")";
@@ -2633,6 +2928,19 @@ async function askOmnibox() {
                     }
                 }
             } catch(e) { console.error("6mo sensor lookup:", e); }
+        }
+    }
+
+    // --- AI חיפוש מאכל לא מוכר ---
+    else if (ql.includes("כמה פחמימות") || ql.includes("מה הערך") || ql.includes("כמה יש ב") ||
+             (ql.includes("כמה להזריק") && !findFood(q.replace(/כמה להזריק (על )?/gi,'').trim()))) {
+        var foodQ = q.replace(/כמה\s+(פחמימות\s+)?(יש\s+)?(ב|על|ב-)?/gi,'')
+                     .replace(/כמה\s+להזריק\s+(על\s+)?/gi,'').trim();
+        if (foodQ.length > 1) {
+            closePopup();
+            lookupFoodAI(foodQ);
+            input.value = '';
+            return;
         }
     }
 
