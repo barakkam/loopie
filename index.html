@@ -2481,28 +2481,56 @@ async function askOmnibox() {
             return sKeys.some(function(k){ return ev.includes(k); });
         });
 
-        // 2. שלוף sage/cage ישירות מ-NS devicestatus (ערכים בשעות)
+        // 2. שלוף SAGE/CAGE מ-NS — ה-API המיוחד /api/v2/properties
         var sageFromDev = null;
         var cageFromDev = null;
         try {
-            var dsRes = await nsGet('/api/v1/devicestatus.json?count=1');
-            if (dsRes.ok) {
-                var dsArr = await dsRes.json();
-                var ds = Array.isArray(dsArr) ? dsArr[0] : dsArr;
-                if (ds) {
-                    // NS מחזיר sage/cage בשעות ישירות
-                    var sageVal = ds.sage !== undefined ? ds.sage
-                                : dig(ds,'pump.sage') !== null ? dig(ds,'pump.sage')
-                                : dig(ds,'loop.sage');
-                    var cageVal = ds.cage !== undefined ? ds.cage
-                                : dig(ds,'pump.cage') !== null ? dig(ds,'pump.cage')
-                                : dig(ds,'loop.cage');
-                    if (sageVal !== null && sageVal !== undefined) sageFromDev = parseFloat(sageVal);
-                    if (cageVal !== null && cageVal !== undefined) cageFromDev = parseFloat(cageVal);
-                    console.log("SAGE from DeviceStatus:", sageFromDev, "CAGE:", cageFromDev);
+            // נסה /api/v2/properties שמכיל sage/cage מחושבים
+            var propRes = await nsGet('/api/v2/properties/sage,cage,iob,cob');
+            if (propRes.ok) {
+                var props = await propRes.json();
+                console.log("NS properties:", JSON.stringify(props).substring(0,300));
+                if (props.sage && props.sage.display !== undefined) {
+                    // sage.display = "4d 3h" — נמיר לשעות
+                    var sageDisplay = props.sage.display || '';
+                    var sageDMatch = sageDisplay.match(/(\d+)d\s*(\d+)h/);
+                    var sageHMatch = sageDisplay.match(/(\d+)h/);
+                    if (sageDMatch) sageFromDev = parseInt(sageDMatch[1])*24 + parseInt(sageDMatch[2]);
+                    else if (sageHMatch) sageFromDev = parseInt(sageHMatch[1]);
+                    else if (props.sage.value !== undefined) sageFromDev = parseFloat(props.sage.value);
                 }
+                if (props.cage && props.cage.display !== undefined) {
+                    var cageDisplay = props.cage.display || '';
+                    var cageDMatch = cageDisplay.match(/(\d+)d\s*(\d+)h/);
+                    var cageHMatch = cageDisplay.match(/(\d+)h/);
+                    if (cageDMatch) cageFromDev = parseInt(cageDMatch[1])*24 + parseInt(cageDMatch[2]);
+                    else if (cageHMatch) cageFromDev = parseInt(cageHMatch[1]);
+                    else if (props.cage.value !== undefined) cageFromDev = parseFloat(props.cage.value);
+                }
+                console.log("SAGE hours:", sageFromDev, "CAGE hours:", cageFromDev);
             }
-        } catch(e) { console.error("sage/cage fetch:", e); }
+        } catch(e) { console.error("properties fetch:", e); }
+
+        // fallback — נסה devicestatus ישיר
+        if (sageFromDev === null) {
+            try {
+                var dsRes2 = await nsGet('/api/v1/devicestatus.json?count=1');
+                if (dsRes2.ok) {
+                    var dsArr2 = await dsRes2.json();
+                    var ds2 = Array.isArray(dsArr2) ? dsArr2[0] : dsArr2;
+                    if (ds2) {
+                        console.log("DeviceStatus keys:", Object.keys(ds2));
+                        // חיפוש sage/cage בכל רמות ה-JSON
+                        var dsStr = JSON.stringify(ds2);
+                        var sageMatch = dsStr.match(/"sage"\s*:\s*([\d.]+)/i);
+                        var cageMatch = dsStr.match(/"cage"\s*:\s*([\d.]+)/i);
+                        if (sageMatch) sageFromDev = parseFloat(sageMatch[1]);
+                        if (cageMatch) cageFromDev = parseFloat(cageMatch[1]);
+                        console.log("DeviceStatus sage:", sageFromDev, "cage:", cageFromDev);
+                    }
+                }
+            } catch(e2) {}
+        }
 
         // === חיפוש פוד/משאבה ===
         var pKeys = ['pod','site change','cannula','infusion','reservoir','omnipod','פוד','משאבה','site'];
@@ -2534,7 +2562,7 @@ async function askOmnibox() {
             var sLeft2 = Math.max(0, 240 - sAgeH);
             var sAgeDays = Math.floor(sAgeH/24);
             var sAgeHrs  = Math.round(sAgeH % 24);
-            ans += "• גיל חיישן: <b>" + sAgeDays + "d " + sAgeHrs + "h</b> (SAGE מ-NS)<br>";
+            ans += "• גיל חיישן (SAGE): <b>" + sAgeDays + "d " + sAgeHrs + "h</b><br>";
             ans += "• נותרו: <b style='color:" + (sLeft2<24?"#ef4444":sLeft2<48?"#f59e0b":"#10b981") + "'>" + Math.floor(sLeft2/24) + "d " + Math.round(sLeft2%24) + "h (~" + (sLeft2/24).toFixed(1) + " ימים)</b><br>";
             var sNextMs = Date.now() + sLeft2*3600000;
             ans += "• החלפה הבאה: <b>" + new Date(sNextMs).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) + "</b><br>";
@@ -2548,7 +2576,7 @@ async function askOmnibox() {
 
         // --- פוד/משאבה ---
         ans += "<div style='background:#0a0a14;border-radius:10px;padding:12px'>";
-        ans += "<div style='font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px'>💊 פוד / אתר עירוי</div>";
+        ans += "<div style='font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px'>💊 פוד / קנולה (CAGE)</div>";
 
         if (pod) {
             var ph = (Date.now() - new Date(pod.created_at)) / 3600000;
@@ -2566,7 +2594,7 @@ async function askOmnibox() {
             var cLeft = Math.max(0, 72 - cAgeH);
             var cAgeDays = Math.floor(cAgeH/24);
             var cAgeHrs  = Math.round(cAgeH % 24);
-            ans += "• גיל פוד: <b>" + cAgeDays + "d " + cAgeHrs + "h</b> (CAGE מ-NS)<br>";
+            ans += "• גיל פוד/קנולה (CAGE): <b>" + cAgeDays + "d " + cAgeHrs + "h</b><br>";
             ans += "• נותרו: <b style='color:" + (cLeft<12?"#ef4444":cLeft<24?"#f59e0b":"#10b981") + "'>" + Math.floor(cLeft/24) + "d " + Math.round(cLeft%24) + "h</b><br>";
             var cNextMs = Date.now() + cLeft*3600000;
             ans += "• החלפה הבאה: <b>" + new Date(cNextMs).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) + "</b>";
@@ -2576,25 +2604,35 @@ async function askOmnibox() {
         }
         ans += "</div>";
 
-        // טעינה נוספת מ-NS אם treatments לא מספיקים
-        if (!sensor && !sageFromDev) {
+        // אם עדיין לא נמצא — נסה לשלוף treatments עם count גדול יותר וגם Sensor Start
+        if (!sensor) {
             try {
                 var mo6Ago = new Date(Date.now() - 180*86400000).toISOString();
-                var sRes = await nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + mo6Ago + '&count=500');
-                if (sRes.ok) {
-                    var sTreats = await sRes.json();
-                    var sFound = sTreats.find(function(t){
+                // נסה גם חיפוש ספציפי לפי eventType
+                var sRes2 = await nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + mo6Ago + '&count=1000');
+                if (sRes2.ok) {
+                    var sTreats2 = await sRes2.json();
+                    console.log("All treatment eventTypes (6mo):", JSON.stringify(
+                        sTreats2.reduce(function(a,t){ if(t.eventType) a[t.eventType]=(a[t.eventType]||0)+1; return a; }, {})
+                    ));
+                    var sFound2 = sTreats2.find(function(t){
                         var ev = (t.eventType||'').toLowerCase();
                         return sKeys.some(function(k){ return ev.includes(k); });
                     });
-                    if (sFound) {
-                        var sh2 = (Date.now()-new Date(sFound.created_at))/3600000;
-                        ans += "<br><div style='background:rgba(59,130,246,0.08);border-radius:8px;padding:8px;font-size:12px'>";
-                        ans += "📡 נמצא ב-6 חודשים: " + sFound.eventType + " מ-" + new Date(sFound.created_at).toLocaleDateString('he-IL') + " (לפני " + (sh2/24).toFixed(1) + " ימים)";
-                        ans += "</div>";
+                    if (sFound2) {
+                        var sh2 = (Date.now()-new Date(sFound2.created_at))/3600000;
+                        var sLeft3 = Math.max(0, 240-sh2);
+                        ans = ans.replace("לא נמצא רישום החלפת חיישן.", "");
+                        ans += "<br>📡 נמצא ב-6 חודשים: <b>" + sFound2.eventType + "</b><br>";
+                        ans += "• הוחלף: " + new Date(sFound2.created_at).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) + "<br>";
+                        ans += "• נותרו: <b>" + sLeft3.toFixed(0) + "h</b>";
+                    } else {
+                        // הצג את כל ה-eventTypes שיש
+                        var allEv2 = sTreats2.reduce(function(a,t){ if(t.eventType) a[t.eventType]=true; return a; }, {});
+                        ans += "<br><small style='color:#666'>כל ה-eventTypes ב-6 חודשים: " + Object.keys(allEv2).join(", ") + "</small>";
                     }
                 }
-            } catch(e) {}
+            } catch(e) { console.error("6mo sensor lookup:", e); }
         }
     }
 
