@@ -188,6 +188,7 @@
 
 <script>
 let nsData = { iob: "0.00", cob: 0, basal: "0.0", currentSgv: 0, delta: 0 };
+let PENDING_DOSE = null; // הזרקה ממתינה לחלקה השני
 
 // === הגדרות אינסולין — ניתן לשנות ===
 // מערכת Loopie מותאמת לסוכרת סוג 1 (T1D) בגיל הנעורים.
@@ -309,12 +310,22 @@ function calcRescueCarbs(sgv, targetBG, iob, isf) {
     return Math.max(fromSGV, fromIOB, 0);
 }
 
-// חיפוש מאכל במאגר (חיפוש חלקי)
+// חיפוש מאכל במאגר — עם תמיכה בחיפוש חלקי ועברית חסרה
 function findFood(name) {
-    var n = name.toLowerCase();
+    if (!name || !name.trim()) return null;
+    var n = name.trim().toLowerCase();
     var keys = Object.keys(FOOD_DB);
+    // התאמה מדויקת
     for (var i = 0; i < keys.length; i++) {
-        if (n.includes(keys[i]) || keys[i].includes(n)) return { key: keys[i], data: FOOD_DB[keys[i]] };
+        if (n === keys[i].toLowerCase()) return { key: keys[i], data: FOOD_DB[keys[i]] };
+    }
+    // חיפוש חלקי — הקלט מוכל במפתח
+    for (var i = 0; i < keys.length; i++) {
+        if (keys[i].toLowerCase().includes(n) && n.length >= 2) return { key: keys[i], data: FOOD_DB[keys[i]] };
+    }
+    // חיפוש חלקי — המפתח מוכל בקלט
+    for (var i = 0; i < keys.length; i++) {
+        if (n.includes(keys[i].toLowerCase()) && keys[i].length >= 2) return { key: keys[i], data: FOOD_DB[keys[i]] };
     }
     return null;
 }
@@ -1193,31 +1204,114 @@ async function recommendDose(inputText) {
         html += "</div>";
     }
 
-    // === שלב 1: הזרקה ראשונה ===
-    html += "<div style='background:rgba(16,185,129,0.1);border:2px solid #10b981;border-radius:12px;padding:14px;margin-bottom:10px'>";
-    html += "<div style='font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px'>⏰ שלב 1 — הזרק עכשיו (" + preBolusMin + " דק' לפני אכילה)</div>";
-    html += "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px'>";
-    html += "<span style='color:#aaa;font-size:13px'>🍞 פחמימות</span><b style='color:#f59e0b;font-size:16px'>" + (carbsToCalc||0) + "g</b></div>";
-    html += "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px'>";
-    html += "<span style='color:#aaa;font-size:13px'>💉 אינסולין (" + ins.name + ")</span><b style='color:#10b981;font-size:22px'>" + doseNowR + "U</b></div>";
-    html += "<div style='display:flex;justify-content:space-between;align-items:center'>";
-    html += "<span style='color:#aaa;font-size:13px'>⏱️ משך ארוחה</span><b style='color:#3b82f6;font-size:13px'>" + foodDurH + " שעות" + (foodNote ? " — " + foodNote : "") + "</b></div>";
-    html += "<div style='font-size:11px;color:#888;margin-top:8px;border-top:1px solid #1a1a28;padding-top:6px'>";
-    html += "חישוב: " + carbsToCalc + "g ÷ " + effectiveCR.toFixed(1) + " = " + carbInsulin.toFixed(2) + "U";
+    // === חישוב אחוז פיצול מומלץ לפי רמת הסוכר ===
+    // רמה נמוכה = פחות עכשיו, רמה גבוהה = יותר עכשיו
+    var smartNowPct;
+    var splitReason = "";
+    if (carbsToCalc > 0) {
+        if (sgv < 100) {
+            smartNowPct = 50;
+            splitReason = "סוכר נמוך (" + sgv + ") — פיצול שווה למניעת היפו";
+        } else if (sgv < 130) {
+            smartNowPct = 60;
+            splitReason = "סוכר תקין-נמוך — 60/40 לאיזון";
+        } else if (sgv > 180) {
+            smartNowPct = 80;
+            splitReason = "סוכר גבוה (" + sgv + ") — יותר עכשיו לתיקון מהיר";
+        } else {
+            smartNowPct = nowPct; // ברירת מחדל (70%)
+            splitReason = "ברירת מחדל " + nowPct + "/" + (100-nowPct);
+        }
+    } else {
+        smartNowPct = 100; // תיקון בלבד — הכל עכשיו
+    }
+    var smartLaterPct  = 100 - smartNowPct;
+
+    // פחמימות לכל שלב
+    var carbsNow   = carbsToCalc > 0 ? Math.round(carbsToCalc * smartNowPct   / 100) : 0;
+    var carbsLater = carbsToCalc > 0 ? Math.round(carbsToCalc * smartLaterPct / 100) : 0;
+
+    // אינסולין לכל שלב
+    var insNow   = (Math.round((total * smartNowPct   / 100) * 2) / 2).toFixed(1);
+    var insLater = (Math.round((total * smartLaterPct / 100) * 2) / 2).toFixed(1);
+
+    // שמור הזרקה ממתינה לניטור מגמה
+    if (useExt && parseFloat(insLater) > 0) {
+        PENDING_DOSE = {
+            foodName:    foodName || 'ארוחה',
+            carbsTotal:  carbsToCalc,
+            carbsLater:  carbsLater,
+            insLater:    insLater,
+            insNow:      insNow,
+            totalR:      totalR,
+            loopR:       loopR,
+            isf:         isf,
+            cr:          effectiveCR,
+            foodDurH:    foodDurH,
+            smartNowPct: smartNowPct,
+            setAt:       Date.now(),
+            triggered:   false
+        };
+        if (window._pendingTimer) clearInterval(window._pendingTimer);
+        window._pendingTimer = setInterval(checkPendingDose, 2 * 60000);
+    }
+
+    // === כרטיס ראשי — סיכום מינון ===
+    html += "<div style='background:rgba(16,185,129,0.1);border:2px solid #10b981;border-radius:12px;padding:16px;margin-bottom:10px'>";
+    html += "<div style='font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px'>💉 " + (carbsToCalc > 0 ? "הזרקה על ארוחה" : "תיקון סוכר") + (preBolusMin > 0 ? " — " + preBolusMin + " דק' לפני אכילה" : "") + "</div>";
+
+    if (carbsToCalc > 0) {
+        html += "<div style='display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #1a2a1a'>";
+        html += "<span style='color:#aaa'>🍞 פחמימות סה'כ</span>";
+        html += "<b style='color:#f59e0b;font-size:18px'>" + carbsToCalc + "g</b></div>";
+    }
+
+    html += "<div style='display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #1a2a1a'>";
+    html += "<span style='color:#aaa'>💉 אינסולין סה'כ (" + ins.name + ")</span>";
+    html += "<b style='color:#10b981;font-size:26px'>" + totalR + "U</b></div>";
+
+    html += "<div style='display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #1a2a1a'>";
+    html += "<span style='color:#aaa'>⏱️ משך הזרקה</span>";
+    html += "<b style='color:#3b82f6'>" + foodDurH + " שעות" + (foodNote ? " · " + foodNote : "") + "</b></div>";
+
+    html += "<div style='font-size:11px;color:#888;margin-top:8px'>";
+    if (carbsToCalc > 0) html += carbsToCalc + "g ÷ " + effectiveCR.toFixed(1) + " = " + carbInsulin.toFixed(2) + "U";
     if (corrInsulin > 0.1) html += " + " + corrInsulin.toFixed(2) + "U תיקון";
     if (iob > 0.1) html += " − " + iob + "U IOB";
-    html += " = " + totalR + "U סה\"כ × " + nowPct + "% = " + doseNowR + "U";
+    html += " = <b style='color:#10b981'>" + totalR + "U</b>";
     html += "</div></div>";
 
-    // === שלב 2: השלמה ===
-    html += "<div style='background:rgba(59,130,246,0.08);border:2px solid var(--blue);border-radius:12px;padding:14px;margin-bottom:10px'>";
-    html += "<div style='font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px'>⏱️ שלב 2 — השלמה בעוד " + extDur + " דק'</div>";
-    html += "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px'>";
-    html += "<span style='color:#aaa;font-size:13px'>💉 אינסולין</span><b style='color:#3b82f6;font-size:22px'>" + doseLaterR + "U</b></div>";
-    html += "<div style='display:flex;justify-content:space-between;align-items:center'>";
-    html += "<span style='color:#aaa;font-size:13px'>⏱️ משך אינסולין</span><b style='color:#3b82f6;font-size:13px'>" + (ins.dia/60).toFixed(1) + " שעות (שיא " + ins.peak + " דק')</b></div>";
-    html += "<div style='font-size:11px;color:#888;margin-top:6px'>" + totalR + "U × " + laterPct + "% = " + doseLaterR + "U</div>";
-    html += "</div>";
+    // === פיצול חכם ===
+    if (useExt && parseFloat(totalR) > 0 && carbsToCalc > 0) {
+        html += "<div style='background:#111120;border-radius:12px;padding:14px;margin-bottom:10px'>";
+        html += "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:10px'>";
+        html += "<div style='font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px'>🔀 פיצול מומלץ</div>";
+        html += "<div style='font-size:11px;color:#f59e0b'>" + splitReason + "</div></div>";
+
+        // שלב 1 — עכשיו
+        html += "<div style='background:#0a0a14;border-radius:10px;padding:12px;margin-bottom:8px;border:1px solid #10b981'>";
+        html += "<div style='font-size:11px;color:#10b981;font-weight:700;margin-bottom:8px'>▶ שלב 1 — הזרק עכשיו" + (preBolusMin > 0 ? " (" + preBolusMin + " דק' לפני)" : "") + "</div>";
+        html += "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px'>";
+        html += "<span style='color:#aaa;font-size:13px'>🍞 פחמימות לאכול</span>";
+        html += "<b style='color:#f59e0b;font-size:20px'>" + carbsNow + "g</b></div>";
+        html += "<div style='display:flex;justify-content:space-between;align-items:center'>";
+        html += "<span style='color:#aaa;font-size:13px'>💉 אינסולין</span>";
+        html += "<b style='color:#10b981;font-size:20px'>" + insNow + "U</b></div>";
+        html += "<div style='font-size:11px;color:#666;margin-top:4px'>" + smartNowPct + "% מסה'כ | " + carbsNow + "g מתוך " + carbsToCalc + "g | " + insNow + "U מתוך " + totalR + "U</div>";
+        html += "</div>";
+
+        // שלב 2 — לאחר מגמת עלייה
+        html += "<div style='background:#0a0a14;border-radius:10px;padding:12px;border:1px solid var(--blue)'>";
+        html += "<div style='font-size:11px;color:var(--blue);font-weight:700;margin-bottom:8px'>⏳ שלב 2 — לאחר מגמת עלייה (המערכת תתריע)</div>";
+        html += "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px'>";
+        html += "<span style='color:#aaa;font-size:13px'>🍞 פחמימות לאכול</span>";
+        html += "<b style='color:#f59e0b;font-size:20px'>" + carbsLater + "g</b></div>";
+        html += "<div style='display:flex;justify-content:space-between;align-items:center'>";
+        html += "<span style='color:#aaa;font-size:13px'>💉 אינסולין</span>";
+        html += "<b style='color:var(--blue);font-size:20px'>" + insLater + "U</b></div>";
+        html += "<div style='font-size:11px;color:#666;margin-top:4px'>" + smartLaterPct + "% מסה'כ | " + carbsLater + "g מתוך " + carbsToCalc + "g | " + insLater + "U מתוך " + totalR + "U</div>";
+        html += "</div></div>";
+    }
 
     // === תחזית + תיקון אם צריך ===
     html += "<div style='background:#111120;border-radius:10px;padding:12px;margin-bottom:10px;font-size:13px'>";
@@ -1233,8 +1327,8 @@ async function recommendDose(inputText) {
     html += "</div>";
 
     // === השוואה ל-Loop ===
-    html += "<div style='background:#0a0a14;border-radius:10px;padding:12px;margin-bottom:10px;font-size:13px'>";
-    html += "<div style='font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px'>🔄 השוואה</div>";
+    html += "<div style='background:#0a0a14;border-radius:10px;padding:14px;margin-bottom:10px'>";
+    html += "<div style='font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px'>🔄 השוואה עם Loop</div>";
     html += "<div style='display:flex;justify-content:space-between;margin-bottom:4px'>";
     var loopLabel = loopActual !== null ? "Loop ממליץ (בפועל)" : "Loop (מחושב)";
     html += "<span style='color:#aaa'>" + loopLabel + "</span><b style='color:#6b6b80'>" + loopR + "U</b></div>";
@@ -1977,6 +2071,71 @@ async function submitOutcome(foodName, carbs, insulin, outcome) {
     showPopup("✅ נשמר!", "תודה! Loopie למד מהתוצאה ויתחשב בה בהמלצה הבאה על <b>" + foodName + "</b>.");
 }
 
+// ========= ניטור מגמת עלייה לפיצול הזרקה =========
+function checkPendingDose() {
+    if (!PENDING_DOSE || PENDING_DOSE.triggered) return;
+    var sgv   = nsData.currentSgv;
+    var delta = nsData.delta;
+    var iob   = parseFloat(nsData.iob) || 0;
+    var minsElapsed = (Date.now() - PENDING_DOSE.setAt) / 60000;
+
+    // תנאי להתראה:
+    // 1. עלייה בדלתא (סוכר עולה) OR
+    // 2. עברו יותר מ-45 דק' ועדיין לא הוזרק
+    var risingTrend = delta >= 2 && sgv > 130;
+    var timeout     = minsElapsed > 45;
+
+    if (!risingTrend && !timeout) return;
+
+    PENDING_DOSE.triggered = true;
+    clearInterval(window._pendingTimer);
+
+    // חשב כמה להשלים — בהתחשב ב-IOB שנצבר
+    var remainDose = parseFloat(PENDING_DOSE.doseLaterR);
+    var iobAdjust  = Math.max(0, remainDose - iob * 0.3).toFixed(1); // הפחת חלק מ-IOB
+
+    // חשב מה Loop היה מציע עכשיו
+    var loopNowSug = PENDING_DOSE.loopR;
+
+    var reason = risingTrend
+        ? "📈 מגמת עלייה! סוכר " + sgv + " ועולה +" + delta + "/5דק'"
+        : "⏰ עברו " + Math.round(minsElapsed) + " דק' מהזרקה הראשונה";
+
+    var html2 = "<div style='background:rgba(245,158,11,0.12);border:1px solid #f59e0b;border-radius:8px;padding:10px;margin-bottom:10px'>" + reason + "</div>";
+
+    html2 += "<div style='background:#0a0a14;border-radius:10px;padding:14px;margin-bottom:10px'>";
+    html2 += "<div style='font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px'>💉 השלמת הזרקה על " + PENDING_DOSE.foodName + "</div>";
+
+    html2 += "<div style='display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #1a1a28'>";
+    html2 += "<span style='color:#aaa'>🍞 פחמימות מקוריות</span><b style='color:#f59e0b'>" + PENDING_DOSE.carbsTotal + "g</b></div>";
+
+    html2 += "<div style='display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #1a1a28'>";
+    html2 += "<span style='color:#aaa'>💉 השלמה מומלצת (Loopie)</span><b style='color:#10b981;font-size:24px'>" + iobAdjust + "U</b></div>";
+
+    html2 += "<div style='display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #1a1a28'>";
+    html2 += "<span style='color:#aaa'>🔄 Loop מציע כעת</span><b style='color:#6b6b80'>" + loopNowSug + "U</b></div>";
+
+    html2 += "<div style='display:flex;justify-content:space-between;align-items:center;padding:8px 0'>";
+    html2 += "<span style='color:#aaa'>⏱️ משך הזרקה</span><b style='color:#3b82f6'>" + PENDING_DOSE.foodDurH + " שעות (יתרה)</b></div>";
+
+    html2 += "<div style='font-size:11px;color:#888;margin-top:8px'>";
+    html2 += "מקורית: " + PENDING_DOSE.doseLaterR + "U | מותאם לפי IOB נוכחי (" + iob + "U): " + iobAdjust + "U";
+    html2 += "</div></div>";
+
+    if (Math.abs(parseFloat(iobAdjust) - parseFloat(loopNowSug)) < 0.3) {
+        html2 += "<div style='font-size:12px;color:#10b981;margin-bottom:8px'>✅ הסכמה עם Loop</div>";
+    } else if (parseFloat(iobAdjust) > parseFloat(loopNowSug)) {
+        html2 += "<div style='font-size:12px;color:#f59e0b;margin-bottom:8px'>Loopie מציע יותר מ-Loop — סוכר עולה מהר</div>";
+    } else {
+        html2 += "<div style='font-size:12px;color:#888;margin-bottom:8px'>Loop מציע יותר — בדוק IOB ב-Loop</div>";
+    }
+
+    html2 += "<small style='color:#555'>⚕️ המלצה לשיקול דעת — ניהול T1D.</small>";
+    html2 += "<br><button onclick='PENDING_DOSE=null;closePopup()' style='margin-top:10px;width:100%;padding:8px;background:rgba(16,185,129,0.15);border:1px solid #10b981;border-radius:8px;cursor:pointer;color:#10b981;font-weight:600'>✅ הוזרקה — סגור</button>";
+
+    showPopup("⚠️ הזרק השלמה! — " + PENDING_DOSE.foodName, html2);
+}
+
 async function connect() {
     var btn = document.getElementById('loginBtn');
     if (!nsUrl() || !nsSecret()) return;
@@ -2118,6 +2277,7 @@ async function fetchData() {
 
         loadHistory();
         checkActiveActivity();
+        checkPendingDose();
     } catch(e) { console.error("fetchData error:", e); }
 }
 
@@ -2304,52 +2464,119 @@ async function askOmnibox() {
         } else { ans = "לא נמצא פרופיל. בדוק שפלאגין Profile מופעל ב-NS."; }
     }
 
-    // --- ציוד (חיפוש רחב ב-3 חודשים) ---
+    // --- ציוד — חיפוש רחב מ-NS treatments + DeviceStatus ---
     else if (ql.includes("חיישן") || ql.includes("סנסור") || ql.includes("פוד") || ql.includes("משאבה") ||
-             ql.includes("גיל") || ql.includes("ציוד") || ql.includes("החלפ")) {
+             ql.includes("גיל") || ql.includes("ציוד") || ql.includes("החלפ") || ql.includes("site")) {
 
-        // כל eventTypes שיש — להצגת דיאגנוז
+        // כל eventTypes שיש בNS — לדיאגנוז ולמידה
         var allTypes = {};
         tr.forEach(function(t){ if(t.eventType) allTypes[t.eventType]=true; });
+        var allTypesList = Object.keys(allTypes);
 
-        // חיפוש חיישן
-        var sKeys = ['sensor','cgm','dexcom','libre','חיישן','סנסור'];
+        // === חיפוש חיישן ===
+        // 1. חיפוש לפי keywords ב-eventType
+        var sKeys = ['sensor','cgm','dexcom','libre','g6','g7','חיישן','סנסור','sensor change','sensor start'];
         var sensor = tr.find(function(t){
             var ev = (t.eventType||'').toLowerCase();
             return sKeys.some(function(k){ return ev.includes(k); });
         });
 
-        // חיפוש פוד/משאבה
-        var pKeys = ['pod','site','cannula','infusion','reservoir','omnipod','פוד','משאבה'];
+        // 2. אם לא נמצא — נסה מ-DeviceStatus (sage = sensor age in days)
+        var sageFromDev = null;
+        if (!sensor && dev) {
+            var sage = dig(dev, 'sage') || dig(dev, 'pump.sage') || dig(dev, 'loop.sage');
+            if (sage !== null) sageFromDev = parseFloat(sage); // ימים
+        }
+
+        // 3. אם יש cage/sage ב-devicestatus
+        var cageFromDev = null;
+        if (dev) {
+            var cage = dig(dev, 'cage') || dig(dev, 'pump.cage');
+            if (cage !== null) cageFromDev = parseFloat(cage);
+        }
+
+        // === חיפוש פוד/משאבה ===
+        var pKeys = ['pod','site change','cannula','infusion','reservoir','omnipod','פוד','משאבה','site'];
         var pod = tr.find(function(t){
             var ev = (t.eventType||'').toLowerCase();
             return pKeys.some(function(k){ return ev.includes(k); });
         });
 
+        // === בניית תשובה ===
         ans = "<b>📟 מצב ציוד:</b><br><br>";
 
+        // --- חיישן ---
+        ans += "<div style='background:#0a0a14;border-radius:10px;padding:12px;margin-bottom:10px'>";
+        ans += "<div style='font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px'>📡 חיישן CGM</div>";
+
         if (sensor) {
-            var sh = (Date.now()-new Date(sensor.created_at))/3600000;
-            ans += "📡 <b>חיישן</b> [" + sensor.eventType + "]:<br>" +
-                "• הוחלף: " + new Date(sensor.created_at).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) + " (לפני " + timeAgo(sensor.created_at) + ")<br>" +
-                "• נותרו: ~" + Math.max(0,240-sh).toFixed(0) + " שעות<br>" +
-                "• החלפה הבאה: " + new Date(new Date(sensor.created_at).getTime()+240*3600000).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) + "<br><br>";
+            var sh = (Date.now() - new Date(sensor.created_at)) / 3600000;
+            var sLeft = Math.max(0, 240 - sh);
+            var sChanged  = new Date(sensor.created_at).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+            var sNextDate = new Date(new Date(sensor.created_at).getTime() + 240*3600000);
+            var sNext     = sNextDate.toLocaleString('he-IL',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+            ans += "• הוחלף: <b>" + sChanged + "</b> (לפני " + timeAgo(sensor.created_at) + ")<br>";
+            ans += "• סוג רישום: " + sensor.eventType + "<br>";
+            ans += "• נותרו: <b style='color:" + (sLeft<24?"#ef4444":sLeft<48?"#f59e0b":"#10b981") + "'>" + sLeft.toFixed(0) + " שעות (~" + (sLeft/24).toFixed(1) + " ימים)</b><br>";
+            ans += "• החלפה הבאה: <b>" + sNext + "</b>";
+        } else if (sageFromDev !== null) {
+            var sAgeH = sageFromDev * 24;
+            var sLeft2 = Math.max(0, 240 - sAgeH);
+            ans += "• גיל מ-DeviceStatus: <b>" + sageFromDev.toFixed(1) + " ימים</b><br>";
+            ans += "• נותרו: <b style='color:" + (sLeft2<24?"#ef4444":sLeft2<48?"#f59e0b":"#10b981") + "'>" + sLeft2.toFixed(0) + " שעות</b><br>";
+            ans += "<small style='color:#888'>לא נמצא Sensor Change ב-NS treatments</small>";
         } else {
-            ans += "📡 חיישן: לא נמצא.<br><br>";
+            ans += "<span style='color:#f59e0b'>לא נמצא רישום החלפת חיישן.</span><br>";
+            ans += "<small style='color:#888'>סוגי אירועים קיימים: " + (allTypesList.join(", ") || "אין") + "</small><br>";
+            ans += "<small style='color:#888'>💡 רשום ב-NS: Sensor Change / Sensor Start</small>";
         }
+        ans += "</div>";
+
+        // --- פוד/משאבה ---
+        ans += "<div style='background:#0a0a14;border-radius:10px;padding:12px'>";
+        ans += "<div style='font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px'>💊 פוד / אתר עירוי</div>";
 
         if (pod) {
-            var ph = (Date.now()-new Date(pod.created_at))/3600000;
-            ans += "💊 <b>פוד/משאבה</b> [" + pod.eventType + "]:<br>" +
-                "• הוחלף: " + new Date(pod.created_at).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) + " (לפני " + timeAgo(pod.created_at) + ")<br>" +
-                "• נותרו: ~" + Math.max(0,72-ph).toFixed(0) + " שעות<br>" +
-                "• החלפה הבאה: " + new Date(new Date(pod.created_at).getTime()+72*3600000).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+            var ph = (Date.now() - new Date(pod.created_at)) / 3600000;
+            var pLeft = Math.max(0, 72 - ph);
+            var pChanged  = new Date(pod.created_at).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+            var pNextDate = new Date(new Date(pod.created_at).getTime() + 72*3600000);
+            var pNext     = pNextDate.toLocaleString('he-IL',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+            ans += "• הוחלף: <b>" + pChanged + "</b> (לפני " + timeAgo(pod.created_at) + ")<br>";
+            ans += "• סוג רישום: " + pod.eventType + "<br>";
+            ans += "• נותרו: <b style='color:" + (pLeft<12?"#ef4444":pLeft<24?"#f59e0b":"#10b981") + "'>" + pLeft.toFixed(0) + " שעות (~" + (pLeft/24).toFixed(1) + " ימים)</b><br>";
+            ans += "• החלפה הבאה: <b>" + pNext + "</b>";
+        } else if (cageFromDev !== null) {
+            var cAgeH = cageFromDev * 24;
+            var cLeft = Math.max(0, 72 - cAgeH);
+            ans += "• גיל מ-DeviceStatus: <b>" + cageFromDev.toFixed(1) + " ימים</b><br>";
+            ans += "• נותרו: <b style='color:" + (cLeft<12?"#ef4444":cLeft<24?"#f59e0b":"#10b981") + "'>" + cLeft.toFixed(0) + " שעות</b>";
         } else {
-            ans += "💊 פוד/משאבה: לא נמצא.";
+            ans += "<span style='color:#f59e0b'>לא נמצא רישום החלפת פוד/אתר.</span><br>";
+            ans += "<small style='color:#888'>💡 רשום ב-NS: Site Change / Pod Change</small>";
         }
+        ans += "</div>";
 
-        // תמיד הצג אילו eventTypes קיימים — לדיאגנוז
-        ans += "<br><br><small style='color:#666'>כל סוגי האירועים ב-NS: <b>" + Object.keys(allTypes).join(", ") + "</b></small>";
+        // טעינה נוספת מ-NS אם treatments לא מספיקים
+        if (!sensor && !sageFromDev) {
+            try {
+                var mo6Ago = new Date(Date.now() - 180*86400000).toISOString();
+                var sRes = await nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + mo6Ago + '&count=500');
+                if (sRes.ok) {
+                    var sTreats = await sRes.json();
+                    var sFound = sTreats.find(function(t){
+                        var ev = (t.eventType||'').toLowerCase();
+                        return sKeys.some(function(k){ return ev.includes(k); });
+                    });
+                    if (sFound) {
+                        var sh2 = (Date.now()-new Date(sFound.created_at))/3600000;
+                        ans += "<br><div style='background:rgba(59,130,246,0.08);border-radius:8px;padding:8px;font-size:12px'>";
+                        ans += "📡 נמצא ב-6 חודשים: " + sFound.eventType + " מ-" + new Date(sFound.created_at).toLocaleDateString('he-IL') + " (לפני " + (sh2/24).toFixed(1) + " ימים)";
+                        ans += "</div>";
+                    }
+                }
+            } catch(e) {}
+        }
     }
 
     // --- ניתוח ארוחה ספציפית ---
