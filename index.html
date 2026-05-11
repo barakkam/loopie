@@ -1104,7 +1104,7 @@ async function recommendDose(inputText) {
             html += "• " + m.key + (m.qty>1?" ×"+m.qty:"") + ": <b>" + m.carbs + "g</b>" + (m.data.notes?" — "+m.data.notes:"") + "<br>";
         });
         if (foodMatches.length > 1) {
-            html += "<b>סה"כ: " + carbsInput + "g | משך מקסימלי: " + foodDurH + "ש'</b>";
+            html += "<b>סה\"כ: " + carbsInput + "g | משך מקסימלי: " + foodDurH + "ש'</b>";
         }
         html += "</div>";
     } else if (foodMatch) {
@@ -1146,7 +1146,7 @@ async function recommendDose(inputText) {
     html += "חישוב: " + carbsToCalc + "g ÷ " + effectiveCR.toFixed(1) + " = " + carbInsulin.toFixed(2) + "U";
     if (corrInsulin > 0.1) html += " + " + corrInsulin.toFixed(2) + "U תיקון";
     if (iob > 0.1) html += " − " + iob + "U IOB";
-    html += " = " + totalR + "U סה"כ × " + nowPct + "% = " + doseNowR + "U";
+    html += " = " + totalR + "U סה\"כ × " + nowPct + "% = " + doseNowR + "U";
     html += "</div></div>";
 
     // === שלב 2: השלמה ===
@@ -1406,7 +1406,7 @@ function checkActiveActivity() {
             if (sp.preCarbsG > 0 && nsData.currentSgv && nsData.currentSgv < 140) {
                 msg += "• 🍬 אכול <b>" + sp.preCarbsG + "g</b> פחמימות מהירות לפני<br>";
             }
-            msg += "• <span style='color:#f59e0b;cursor:pointer' onclick='showSportPlan("" + a.id + "")'>📋 הצג תוכנית ספורט מלאה</span>";
+            msg += "• <span style='color:#f59e0b;cursor:pointer' onclick='showSportPlan(\"' + a.id + '\")'>📋 הצג תוכנית ספורט מלאה</span>";
         }
         else if (result.type === 'during') {
             color = "#10b981";
@@ -1414,7 +1414,7 @@ function checkActiveActivity() {
             msg = "<b>🏃 " + a.name + " פעיל עכשיו</b> (נגמר בעוד " + minsLeft2 + " דק')<br>";
             msg += "• יעד: <b>" + sp.targetBGRange + "</b>";
             if (sp.noBolusRule) msg += " | <b style='color:#ef4444'>אל תזריק אינסולין!</b>";
-            msg += "<br>• <span style='color:#10b981;cursor:pointer' onclick='showSportPlan("" + a.id + "")'>📋 תוכנית ספורט</span>";
+            msg += "<br>• <span style='color:#10b981;cursor:pointer' onclick='showSportPlan(\"' + a.id + '\")'>📋 תוכנית ספורט</span>";
         }
         else if (result.type === 'after') {
             color = "#3b82f6";
@@ -2163,7 +2163,7 @@ async function askOmnibox() {
                 p.items.forEach(function(item){
                     ans += "• " + item.name + (item.fast ? " <span style='color:#f59e0b'>⚡ מהיר</span>" : " <span style='color:#10b981'>🐢 מייצב</span>") + "<br>";
                 });
-                ans += "<small style='color:#888'>סה"כ: " + p.totalCarbs + "g</small></div>";
+                ans += "<small style='color:#888'>סה\"כ: " + p.totalCarbs + "g</small></div>";
             });
 
             ans += "<div style='background:rgba(59,130,246,0.06);border:1px solid var(--blue-dim);border-radius:8px;padding:10px;font-size:13px'>";
