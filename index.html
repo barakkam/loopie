@@ -1034,61 +1034,117 @@ async function recommendDose(inputText) {
     // === חישוב מינון ===
     var carbsToCalc  = carbsInput || 0;
     var carbInsulin  = carbsToCalc > 0 ? carbsToCalc / effectiveCR : 0;
-    var corrInsulin  = Math.max(0, (sgv - targetBG) / isf);
+
+    // תיקון סוכר: (סוכר נוכחי - מטרה) ÷ ISF
+    // מחושב גם אם אין פחמימות — לתיקון עצמאי
+    var corrInsulinRaw = (sgv - targetBG) / isf;
+    var corrInsulin    = Math.max(0, corrInsulinRaw);
+
     // התחשבות בפעילות גופנית
-    var actAdj   = getActivityReduction();
+    var actAdj    = getActivityReduction();
     var actFactor = 1 - actAdj.reduction;
+
     var totalRaw = (carbInsulin + corrInsulin) * actFactor - iob;
     var total    = Math.max(0, totalRaw);
     var totalR   = (Math.round(total * 2) / 2).toFixed(1);
 
+    // === Loop מציע (Correction Bolus בלבד לפי devicestatus) ===
+    // שולף ה-recommendedBolus האחרון מה-Loop אם קיים
+    var loopActual = null;
+    try {
+        var loopEnacted   = dig(fullHistory.devStatus, 'loop.enacted');
+        var loopSuggested = dig(fullHistory.devStatus, 'loop.recommendedBolus');
+        if (loopSuggested !== null) loopActual = parseFloat(loopSuggested);
+        else if (loopEnacted && loopEnacted.bolusVolume) loopActual = parseFloat(loopEnacted.bolusVolume);
+    } catch(e) {}
+    var loopSuggestion = loopActual !== null ? loopActual : Math.max(0, carbInsulin + corrInsulin - iob);
+    var loopR = (Math.round(loopSuggestion * 2) / 2).toFixed(1);
+
     // חלוקת מינון — תמיד לפי הגדרות (70/30)
-    var useExt     = INSULIN_CONFIG.splitNow < 100;
-    var nowPct     = learnedExt ? learnedExtPct : INSULIN_CONFIG.splitNow;
+    // לתיקון בלבד (ללא פחמימות) — אין split, הכל עכשיו
+    var useExt     = carbsToCalc > 0 && INSULIN_CONFIG.splitNow < 100;
+    var nowPct     = useExt ? (learnedExt ? learnedExtPct : INSULIN_CONFIG.splitNow) : 100;
     var laterPct   = 100 - nowPct;
     var extDur     = learnedExt ? learnedExtDur : INSULIN_CONFIG.splitDelay;
     var doseNow    = total * nowPct   / 100;
     var doseLater  = total * laterPct / 100;
     var doseNowR   = (Math.round(doseNow   * 2) / 2).toFixed(1);
     var doseLaterR = (Math.round(doseLater * 2) / 2).toFixed(1);
-    var preBolusMin = ins.preMeal;
-
-    // === הצעת Loop (מה ה-Loop היה מציע) ===
-    // Loop מחשב: (carbs/CR) + correction - IOB ללא split
-    var loopSuggestion = Math.max(0, carbInsulin + corrInsulin - iob);
-    var loopR = (Math.round(loopSuggestion * 2) / 2).toFixed(1);
+    var preBolusMin = carbsToCalc > 0 ? ins.preMeal : 0;
 
     // === תחזית סוכר אחרי הזרקה ===
-    // אחרי שיא האינסולין (ins.peak דק') — הורדה צפויה
-    var expectedDrop  = total * isf;   // כמה הסוכר יירד
-    var expectedPeak  = sgv + (carbsToCalc > 0 ? carbsToCalc * 4 : 0) - (doseNow * isf); // שיא צפוי
-    var sgvAtPeak     = Math.round(Math.max(60, Math.min(400, expectedPeak)));
-    var sgvAt2h       = Math.round(Math.max(60, Math.min(400, sgv + carbsToCalc*3 - total*isf*0.7 + (delta*12*1.5))));
-    var sgvAt3h       = Math.round(Math.max(60, Math.min(400, sgv + carbsToCalc*2 - total*isf*0.9 + (delta*12*0.5))));
+    var sgvAtPeak = Math.round(Math.max(60, Math.min(400,
+        sgv + (carbsToCalc > 0 ? carbsToCalc * 4 : 0) - (doseNow * isf))));
+    var sgvAt2h   = Math.round(Math.max(60, Math.min(400,
+        sgv + carbsToCalc*3 - total*isf*0.7 + (delta*12*1.5))));
+    var sgvAt3h   = Math.round(Math.max(60, Math.min(400,
+        sgv + carbsToCalc*2 - total*isf*0.9 + (delta*12*0.5))));
 
-    // === מינון תיקון (השלמה) אחרי שעה — אם תחזית גבוהה ===
-    var corrAfter = 0;
+    // תיקון נוסף אחרי שיא אם עדיין גבוה
+    var corrAfter  = 0;
     var corrAfterR = "0.0";
     if (sgvAtPeak > 180) {
         corrAfter  = Math.max(0, (sgvAtPeak - targetBG) / isf - parseFloat(doseLaterR));
         corrAfterR = (Math.round(corrAfter * 2) / 2).toFixed(1);
     }
 
+    // === מעקב אחרי המלצה קודמת ===
+    // בדיקה: האם בוצעה הזרקה בפועל ב-NS תוך 15 דק' מהמלצה אחרונה?
+    var lastRecKey  = 'last_recommendation';
+    var followUpMsg = null;
+    try {
+        var memData = await loadMemory();
+        var lastRec = memData[lastRecKey] ? memData[lastRecKey].value : null;
+        if (lastRec && (Date.now() - new Date(lastRec.date).getTime()) < 30*60000) {
+            // בדוק טיפולים ב-NS מאז ההמלצה
+            var sinceRec = new Date(lastRec.date).toISOString();
+            var checkRes = await nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + sinceRec + '&count=10');
+            if (checkRes.ok) {
+                var recentTreats = await checkRes.json();
+                var bolusGiven = recentTreats.filter(function(t){ return t.insulin > 0; });
+                if (bolusGiven.length > 0) {
+                    var actualIns = bolusGiven.reduce(function(a,t){ return a+(t.insulin||0); }, 0).toFixed(2);
+                    var recIns    = lastRec.totalR;
+                    var diff      = (parseFloat(actualIns) - parseFloat(recIns)).toFixed(1);
+                    if (Math.abs(parseFloat(diff)) < 0.2) {
+                        followUpMsg = { type:'match', text:'✅ ההזרקה בוצעה בהתאם להמלצה (' + actualIns + 'U)' };
+                    } else if (parseFloat(actualIns) < parseFloat(recIns)) {
+                        followUpMsg = { type:'partial', text:'⚠️ הוזרק ' + actualIns + 'U מתוך ' + recIns + 'U מומלץ (' + diff + 'U פחות)' };
+                    } else {
+                        followUpMsg = { type:'more', text:'ℹ️ הוזרק ' + actualIns + 'U (יותר מהמלצה של ' + recIns + 'U)' };
+                    }
+                } else if ((Date.now() - new Date(lastRec.date).getTime()) > 15*60000) {
+                    followUpMsg = { type:'none', text:'❓ לא נמצאה הזרקה בפועל ב-NS לאחר ההמלצה' };
+                }
+            }
+        }
+        // שמור המלצה נוכחית לאחר הצגה
+        await saveMemory(lastRecKey, {
+            date: new Date().toISOString(),
+            totalR: totalR, carbsInput: carbsToCalc, foodName: foodName,
+            sgv: sgv, iob: iob
+        });
+    } catch(e) { console.error('followup error:', e); }
+
     // === בניית HTML ===
     var html = "";
 
-    // === נימוק רפואי לחישוב ===
-    // CR (יחס פחמימה): כמה גרם פחמימה "מכוסים" ע"י יחידת אינסולין אחת
-    // תוצאה מחישוב: (carbs ÷ CR) = אינסולין לפחמימות
-    // ISF: כמה mg/dL יורד הסוכר לכל יחידת אינסולין נוסף
-    // תיקון = (סוכר נוכחי - מטרה) ÷ ISF
-    // IOB מנוכה כדי למנוע כפל — אינסולין שכבר ניתן עדיין פעיל
+    // מעקב המלצה קודמת
+    if (followUpMsg) {
+        var fColor = followUpMsg.type==='match'?'#10b981':followUpMsg.type==='partial'?'#f59e0b':'#6b6b80';
+        html += "<div style='background:rgba(0,0,0,0.2);border:1px solid "+fColor+";border-radius:8px;padding:10px;margin-bottom:10px;font-size:13px'>";
+        html += followUpMsg.text + "</div>";
+    }
 
     // מצב נוכחי
     html += "<div style='background:#0a0a14;border-radius:10px;padding:12px;margin-bottom:12px;font-size:13px'>";
     html += "• " + ins.name + " | שיא: ~" + ins.peak + " דק' | DIA: " + (ins.dia/60).toFixed(1) + "ש'<br>";
     html += "• סוכר: <b>" + sgv + "</b> Δ" + (delta>=0?"+":"") + delta + " | IOB: <b>" + iob + "U</b> | COB: <b>" + cob + "g</b><br>";
-    html += "• CR: <b>" + effectiveCR.toFixed(1) + "g/U</b>" + crNote + " | ISF: <b>" + isf + "</b> | מטרה: <b>" + targetBG + "</b></div>";
+    html += "• CR: <b>" + effectiveCR.toFixed(1) + "g/U</b>" + crNote + " | ISF: <b>" + isf + "</b> | מטרה: <b>" + targetBG + "</b><br>";
+    if (carbsToCalc === 0 && sgv > targetBG) {
+        html += "• <span style='color:#f59e0b'>תיקון בלבד: (" + sgv + " - " + targetBG + ") ÷ " + isf + " = <b>" + corrInsulin.toFixed(2) + "U</b> − IOB " + iob + "U</span>";
+    }
+    html += "</div>";
 
     // === טען המלצה מזיכרון NS ===
     var memRec = null;
@@ -1176,14 +1232,19 @@ async function recommendDose(inputText) {
     html += "<div style='background:#0a0a14;border-radius:10px;padding:12px;margin-bottom:10px;font-size:13px'>";
     html += "<div style='font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px'>🔄 השוואה</div>";
     html += "<div style='display:flex;justify-content:space-between;margin-bottom:4px'>";
-    html += "<span style='color:#aaa'>Loop היה מציע</span><b style='color:#6b6b80'>" + loopR + "U</b></div>";
+    var loopLabel = loopActual !== null ? "Loop ממליץ (בפועל)" : "Loop (מחושב)";
+    html += "<span style='color:#aaa'>" + loopLabel + "</span><b style='color:#6b6b80'>" + loopR + "U</b></div>";
     html += "<div style='display:flex;justify-content:space-between'>";
-    html += "<span style='color:#aaa'>המלצת Loopie</span><b style='color:#10b981'>" + totalR + "U (70/30 על " + extDur + " דק')</b></div>";
+    var loopieLabel = useExt ? "המלצת Loopie (" + nowPct + "/" + laterPct + " על " + extDur + " דק')" : "המלצת Loopie (תיקון מיידי)";
+    html += "<span style='color:#aaa'>" + loopieLabel + "</span><b style='color:#10b981'>" + totalR + "U</b></div>";
     var diff = (parseFloat(totalR) - parseFloat(loopR)).toFixed(1);
-    if (Math.abs(diff) > 0.3) {
+    if (Math.abs(parseFloat(diff)) > 0.2) {
         html += "<div style='font-size:11px;color:#888;margin-top:6px'>";
-        html += diff > 0 ? "Loopie מציע יותר — בגלל חלוקת מינון ולא בולוס חד" : "זהה / פחות — IOB מכסה חלק";
+        if (parseFloat(diff) > 0) html += "Loopie מציע יותר — כולל תיקון סוכר גבוה";
+        else html += "Loop מציע יותר — ייתכן שהוא מזהה pattern שונה";
         html += "</div>";
+    } else {
+        html += "<div style='font-size:11px;color:#10b981;margin-top:6px'>✅ הסכמה עם Loop</div>";
     }
     html += "</div>";
 
@@ -2080,12 +2141,11 @@ async function loadHistory() {
 
 async function askOmnibox() {
     var input = document.getElementById('omnibox');
-    var resp  = document.getElementById('omni-res');
     var q     = input.value.trim();
     var ql    = q.toLowerCase();
     if (!q) return;
-    resp.style.display = 'block';
-    resp.innerHTML = "מנתח... 🧠";
+    // מציג "מנתח..." בפופאפ בינוני
+    showPopup("Loopie 🧠", "<div style='text-align:center;padding:20px;color:#888'>מנתח... 🧠</div>");
 
     var tr   = fullHistory.treatments || [];
     var ent  = fullHistory.entries    || [];
@@ -2094,11 +2154,14 @@ async function askOmnibox() {
     var ans  = "";
     var nowH = new Date().getHours();
 
-    // --- המלצת מינון ---
+    // --- המלצת מינון (כולל תיקון עצמאי) ---
     if (ql.includes("להזריק") || ql.includes("כמה אינסולין") || ql.includes("מינון") ||
-        (ql.includes("כמה") && (ql.includes("יחידות") || ql.includes("יח'") || ql.includes("u")))) {
+        ql.includes("לתקן") || ql.includes("correction") ||
+        (ql.includes("כמה") && (ql.includes("יחידות") || ql.includes("יח'"))) ||
+        (ql.includes("תיקון") && !ql.includes("isf") && !ql.includes("רגישות") && !ql.includes("פרופיל"))) {
         closePopup();
-        recommendDose(q);
+        var corrOnly = (ql.includes("תיקון") || ql.includes("לתקן")) && !ql.includes("על ");
+        recommendDose(corrOnly ? "__correction__" : q);
         input.value = '';
         return;
     }
@@ -2173,7 +2236,7 @@ async function askOmnibox() {
     }
 
     // --- IOB ---
-    else if (ql.includes("iob") || ql.includes("אינסולין פעיל")) {
+    else if (ql.includes("iob") || ql.includes("אינסולין פעיל") || q === "IOB") {
         ans = "💉 IOB: <b>" + nsData.iob + " יחידות</b>.";
     }
 
