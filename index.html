@@ -2475,25 +2475,34 @@ async function askOmnibox() {
 
         // === חיפוש חיישן ===
         // 1. חיפוש לפי keywords ב-eventType
-        var sKeys = ['sensor','cgm','dexcom','libre','g6','g7','חיישן','סנסור','sensor change','sensor start'];
+        var sKeys = ['sensor start','sensor change','sensor','cgm','dexcom','libre','g6','g7','חיישן','סנסור'];
         var sensor = tr.find(function(t){
             var ev = (t.eventType||'').toLowerCase();
             return sKeys.some(function(k){ return ev.includes(k); });
         });
 
-        // 2. אם לא נמצא — נסה מ-DeviceStatus (sage = sensor age in days)
+        // 2. שלוף sage/cage ישירות מ-NS devicestatus (ערכים בשעות)
         var sageFromDev = null;
-        if (!sensor && dev) {
-            var sage = dig(dev, 'sage') || dig(dev, 'pump.sage') || dig(dev, 'loop.sage');
-            if (sage !== null) sageFromDev = parseFloat(sage); // ימים
-        }
-
-        // 3. אם יש cage/sage ב-devicestatus
         var cageFromDev = null;
-        if (dev) {
-            var cage = dig(dev, 'cage') || dig(dev, 'pump.cage');
-            if (cage !== null) cageFromDev = parseFloat(cage);
-        }
+        try {
+            var dsRes = await nsGet('/api/v1/devicestatus.json?count=1');
+            if (dsRes.ok) {
+                var dsArr = await dsRes.json();
+                var ds = Array.isArray(dsArr) ? dsArr[0] : dsArr;
+                if (ds) {
+                    // NS מחזיר sage/cage בשעות ישירות
+                    var sageVal = ds.sage !== undefined ? ds.sage
+                                : dig(ds,'pump.sage') !== null ? dig(ds,'pump.sage')
+                                : dig(ds,'loop.sage');
+                    var cageVal = ds.cage !== undefined ? ds.cage
+                                : dig(ds,'pump.cage') !== null ? dig(ds,'pump.cage')
+                                : dig(ds,'loop.cage');
+                    if (sageVal !== null && sageVal !== undefined) sageFromDev = parseFloat(sageVal);
+                    if (cageVal !== null && cageVal !== undefined) cageFromDev = parseFloat(cageVal);
+                    console.log("SAGE from DeviceStatus:", sageFromDev, "CAGE:", cageFromDev);
+                }
+            }
+        } catch(e) { console.error("sage/cage fetch:", e); }
 
         // === חיפוש פוד/משאבה ===
         var pKeys = ['pod','site change','cannula','infusion','reservoir','omnipod','פוד','משאבה','site'];
@@ -2520,11 +2529,16 @@ async function askOmnibox() {
             ans += "• נותרו: <b style='color:" + (sLeft<24?"#ef4444":sLeft<48?"#f59e0b":"#10b981") + "'>" + sLeft.toFixed(0) + " שעות (~" + (sLeft/24).toFixed(1) + " ימים)</b><br>";
             ans += "• החלפה הבאה: <b>" + sNext + "</b>";
         } else if (sageFromDev !== null) {
-            var sAgeH = sageFromDev * 24;
+            // sage מ-NS הוא בשעות
+            var sAgeH  = sageFromDev;
             var sLeft2 = Math.max(0, 240 - sAgeH);
-            ans += "• גיל מ-DeviceStatus: <b>" + sageFromDev.toFixed(1) + " ימים</b><br>";
-            ans += "• נותרו: <b style='color:" + (sLeft2<24?"#ef4444":sLeft2<48?"#f59e0b":"#10b981") + "'>" + sLeft2.toFixed(0) + " שעות</b><br>";
-            ans += "<small style='color:#888'>לא נמצא Sensor Change ב-NS treatments</small>";
+            var sAgeDays = Math.floor(sAgeH/24);
+            var sAgeHrs  = Math.round(sAgeH % 24);
+            ans += "• גיל חיישן: <b>" + sAgeDays + "d " + sAgeHrs + "h</b> (SAGE מ-NS)<br>";
+            ans += "• נותרו: <b style='color:" + (sLeft2<24?"#ef4444":sLeft2<48?"#f59e0b":"#10b981") + "'>" + Math.floor(sLeft2/24) + "d " + Math.round(sLeft2%24) + "h (~" + (sLeft2/24).toFixed(1) + " ימים)</b><br>";
+            var sNextMs = Date.now() + sLeft2*3600000;
+            ans += "• החלפה הבאה: <b>" + new Date(sNextMs).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) + "</b><br>";
+            ans += "<small style='color:#888'>מקור: SAGE מ-DeviceStatus</small>";
         } else {
             ans += "<span style='color:#f59e0b'>לא נמצא רישום החלפת חיישן.</span><br>";
             ans += "<small style='color:#888'>סוגי אירועים קיימים: " + (allTypesList.join(", ") || "אין") + "</small><br>";
@@ -2547,10 +2561,15 @@ async function askOmnibox() {
             ans += "• נותרו: <b style='color:" + (pLeft<12?"#ef4444":pLeft<24?"#f59e0b":"#10b981") + "'>" + pLeft.toFixed(0) + " שעות (~" + (pLeft/24).toFixed(1) + " ימים)</b><br>";
             ans += "• החלפה הבאה: <b>" + pNext + "</b>";
         } else if (cageFromDev !== null) {
-            var cAgeH = cageFromDev * 24;
+            // cage מ-NS הוא בשעות
+            var cAgeH = cageFromDev;
             var cLeft = Math.max(0, 72 - cAgeH);
-            ans += "• גיל מ-DeviceStatus: <b>" + cageFromDev.toFixed(1) + " ימים</b><br>";
-            ans += "• נותרו: <b style='color:" + (cLeft<12?"#ef4444":cLeft<24?"#f59e0b":"#10b981") + "'>" + cLeft.toFixed(0) + " שעות</b>";
+            var cAgeDays = Math.floor(cAgeH/24);
+            var cAgeHrs  = Math.round(cAgeH % 24);
+            ans += "• גיל פוד: <b>" + cAgeDays + "d " + cAgeHrs + "h</b> (CAGE מ-NS)<br>";
+            ans += "• נותרו: <b style='color:" + (cLeft<12?"#ef4444":cLeft<24?"#f59e0b":"#10b981") + "'>" + Math.floor(cLeft/24) + "d " + Math.round(cLeft%24) + "h</b><br>";
+            var cNextMs = Date.now() + cLeft*3600000;
+            ans += "• החלפה הבאה: <b>" + new Date(cNextMs).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) + "</b>";
         } else {
             ans += "<span style='color:#f59e0b'>לא נמצא רישום החלפת פוד/אתר.</span><br>";
             ans += "<small style='color:#888'>💡 רשום ב-NS: Site Change / Pod Change</small>";
