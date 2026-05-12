@@ -6,8 +6,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Loopie v32 - Ultra Connect</title>
-    <!-- v202605112127 -->
+    <title>Loopie v33 - Ultra Connect</title>
+    <!-- v202605122200 -->
     <style>
         :root {
             --bg: #0e0e12; --card: #16161e; --border: #2a2a38; --blue: #3b82f6;
@@ -106,6 +106,9 @@
         <div class="stats-grid">
             <div class="stat-box"><span class="stat-lbl">IOB</span><span id="stat-iob" class="stat-val">0.0</span></div>
             <div class="stat-box"><span class="stat-lbl">בזאלי</span><span id="stat-basal" class="stat-val">0.0</span></div>
+        </div>
+        <div id="stat-cob-bar" style="display:none;background:rgba(245,158,11,0.1);border:1px solid #f59e0b;border-radius:8px;padding:6px 12px;margin-bottom:10px;font-size:13px;text-align:center">
+            🍞 COB פעיל: <b id="stat-cob-val" style="color:#f59e0b">0</b>g
         </div>
         <div id="activity-banner"></div>
         <div class="omni-row">
@@ -262,16 +265,25 @@ function detectFoodName(text) {
         if (EMOJI_MAP[emojis[i]]) return EMOJI_MAP[emojis[i]];
     }
 
-    // הסר מילות שאלה
-    var cleaned = lower
-        .replace(/^(כמה להזריק על|כמה אינסולין על|מינון על|על|כמה יש ב|כמה פחמימות ב)/,'')
+    // הסר מילות פעולה ושאלה
+    var cleaned = t
+        .replace(/כמה\s+להזריק\s+(על\s+)?/gi,'')
+        .replace(/כמה\s+אינסולין\s+(על\s+)?/gi,'')
+        .replace(/כמה\s+פחמימות\s+(ב|ב-)?/gi,'')
+        .replace(/מינון\s+(על\s+)?/gi,'')
+        .replace(/^על\s+/,'')
         .replace(/\?/g,'').trim();
 
     if (!cleaned || cleaned.length < 2) return null;
 
-    // לא שאלה
-    var questionWords = ['כמה','מה','האם','איפה','מתי','למה','איך','לפני','אחרי'];
-    if (questionWords.some(function(w){ return cleaned.indexOf(w) === 0; })) return null;
+    // דלג על מילות שאלה
+    var questionWords = ['כמה','מה','האם','איפה','מתי','למה','איך','לפני','אחרי',
+                         'iob','cob','smb','תיקון','בזאלי','פרופיל','isf','cr'];
+    var cl = cleaned.toLowerCase();
+    if (questionWords.some(function(w){ return cl === w || cl.startsWith(w + ' '); })) return null;
+
+    // דלג על מילים קצרות מאוד שאינן שמות אוכל
+    if (cleaned.length < 2) return null;
 
     return cleaned;
 }
@@ -282,9 +294,9 @@ function detectFoodName(text) {
 // 2. Firestore Database → Create → Start in test mode
 // 3. Project Settings → SDK → Config → העתק לכאן
 var FIREBASE_CONFIG = {
-    apiKey:            "",   // ← הדבק כאן
-    projectId:         "",   // ← שם הפרויקט
-    useFirebase:       false // ← שנה ל-true אחרי הגדרה
+    apiKey:      "AIzaSyCxQki23DH4DUL8dMxa88Jg7J9mk0WREqg",
+    projectId:   "loopiedb",
+    useFirebase: true
 };
 
 // Firebase Firestore REST API (ללא SDK — עובד ב-HTML פשוט)
@@ -1295,15 +1307,20 @@ async function recommendDose(inputText) {
     var total    = Math.max(0, totalRaw);
     var totalR   = (Math.round(total * 2) / 2).toFixed(1);
 
-    // === Loop מציע (Correction Bolus בלבד לפי devicestatus) ===
-    // שולף ה-recommendedBolus האחרון מה-Loop אם קיים
+    // === Loop מציע — שולף recommendedBolus מ-DeviceStatus ===
     var loopActual = null;
     try {
-        var loopEnacted   = dig(fullHistory.devStatus, 'loop.enacted');
-        var loopSuggested = dig(fullHistory.devStatus, 'loop.recommendedBolus');
-        if (loopSuggested !== null) loopActual = parseFloat(loopSuggested);
-        else if (loopEnacted && loopEnacted.bolusVolume) loopActual = parseFloat(loopEnacted.bolusVolume);
+        var dev2 = fullHistory.devStatus;
+        if (dev2) {
+            // נסה כמה מיקומים
+            var lb = dig(dev2,'loop.recommendedBolus') ||
+                     dig(dev2,'loop.recommendation.bolus') ||
+                     dig(dev2,'openaps.suggested.bolus') ||
+                     dig(dev2,'openaps.enacted.bolus');
+            if (lb !== null && lb !== undefined) loopActual = parseFloat(lb);
+        }
     } catch(e) {}
+    // אם לא נמצא — חשב כמו Loop (ללא split, עם IOB)
     var loopSuggestion = loopActual !== null ? loopActual : Math.max(0, carbInsulin + corrInsulin - iob);
     var loopR = (Math.round(loopSuggestion * 2) / 2).toFixed(1);
 
@@ -1396,8 +1413,9 @@ async function recommendDose(inputText) {
     // מצב נוכחי
     html += "<div style='background:#0a0a14;border-radius:10px;padding:12px;margin-bottom:12px;font-size:13px'>";
     html += "• " + ins.name + " | שיא: ~" + ins.peak + " דק' | DIA: " + (ins.dia/60).toFixed(1) + "ש'<br>";
-    html += "• סוכר: <b>" + sgv + "</b> Δ" + (delta>=0?"+":"") + delta + " | IOB: <b>" + iob + "U</b> | COB: <b>" + cob + "g</b><br>";
+    html += "• סוכר: <b>" + sgv + "</b> Δ" + (delta>=0?"+":"") + delta + " | IOB: <b>" + iob + "U</b> | COB: <b>" + (typeof cob==='number'?cob:0) + "g</b><br>";
     html += "• CR: <b>" + effectiveCR.toFixed(1) + "g/U</b>" + crNote + " | ISF: <b>" + isf + "</b> | מטרה: <b>" + targetBG + "</b><br>";
+    if (cob > 0) html += "• COB פעיל: <b style='color:#f59e0b'>" + cob + "g</b><br>";
     if (carbsToCalc === 0 && sgv > targetBG) {
         html += "• <span style='color:#f59e0b'>תיקון בלבד: (" + sgv + " - " + targetBG + ") ÷ " + isf + " = <b>" + corrInsulin.toFixed(2) + "U</b> − IOB " + iob + "U</span>";
     }
@@ -1741,15 +1759,19 @@ var INTENSITY_REDUCTION = { low: 0, medium: 25, high: 40 };
 var POST_ACTIVITY_REDUCTION = { low: 10, medium: 20, high: 30 };
 
 function switchTab(id, el) {
-    ['tab-home','tab-activity','tab-reports','tab-ns','tab-logs'].forEach(function(t){
-        document.getElementById(t).classList.add('hidden');
-    });
-    document.getElementById(id).classList.remove('hidden');
-    document.querySelectorAll('.nav-tab').forEach(function(t){ t.classList.remove('active'); });
-    el.classList.add('active');
-    if (id === 'tab-activity') renderActivities();
-    if (id === 'tab-ns') loadNSFrame();
-    if (id === 'tab-logs') loadLogs('all');
+    try {
+        ['tab-home','tab-activity','tab-reports','tab-ns','tab-logs'].forEach(function(t){
+            var el2 = document.getElementById(t);
+            if (el2) el2.classList.add('hidden');
+        });
+        var target = document.getElementById(id);
+        if (target) target.classList.remove('hidden');
+        document.querySelectorAll('.nav-tab').forEach(function(t){ t.classList.remove('active'); });
+        if (el) el.classList.add('active');
+        if (id === 'tab-activity') { try { renderActivities(); } catch(e){} }
+        if (id === 'tab-ns')       { try { loadNSFrame();       } catch(e){} }
+        if (id === 'tab-logs')     { try { loadLogs('all');      } catch(e){} }
+    } catch(e) { console.error('switchTab error:', e); }
 }
 
 function loadNSFrame() {
@@ -2447,12 +2469,11 @@ async function checkNSActions() {
         var fresh = newTreats.filter(function(t){
             if (knownIds.includes(t._id)) return false;
             if (!t.insulin || t.insulin <= 0) return false;
-            // סנן SMB/microbolus — אלה הזרקות אוטומטיות של הלופ, לא מעניינות
-            var ev = (t.eventType || '').toLowerCase();
-            var isSMB = ev.includes('smb') || ev.includes('microbolus') || ev.includes('super micro');
-            if (isSMB) return false;
-            // סנן בולוסים קטנים מאוד שהלופ הזריק (< 0.5U = כנראה SMB)
-            if (t.insulin < 0.5 && !t.carbs) return false;
+            // סנן SMB/microbolus
+            var ev2 = (t.eventType || '').toLowerCase();
+            if (ev2.includes('smb') || ev2.includes('microbolus')) return false;
+            // בולוס קטן בלי פחמימות = SMB של Loop
+            if (parseFloat(t.insulin||0) < 0.5 && !t.carbs) return false;
             return true;
         });
 
@@ -3870,10 +3891,17 @@ async function fetchData() {
                 ];
                 var cobRaw = null;
                 for (var j = 0; j < cobPaths.length; j++) {
-                    cobRaw = dig(dev, cobPaths[j]);
-                    if (cobRaw !== null && cobRaw !== 0) { console.log("COB found at:", cobPaths[j], "=", cobRaw); break; }
+                    var cv = dig(dev, cobPaths[j]);
+                    if (cv === null || cv === undefined) continue;
+                    // NS may return {cob:0, timestamp:...}
+                    if (typeof cv === 'object' && cv.cob !== undefined) cv = cv.cob;
+                    if (typeof cv === 'number' || (typeof cv === 'string' && !isNaN(cv))) {
+                        cobRaw = parseFloat(cv);
+                        console.log("COB found at:", cobPaths[j], "=", cobRaw);
+                        break;
+                    }
                 }
-                nsData.cob = cobRaw !== null ? cobRaw : 0;
+                nsData.cob = cobRaw !== null ? Math.round(cobRaw) : 0;
 
                 // בזאלי בפועל
                 var basalPaths = [
@@ -3888,6 +3916,13 @@ async function fetchData() {
                 }
                 nsData.basal = basalRaw !== null ? basalRaw : "0.0";
                 document.getElementById('stat-basal').innerText = nsData.basal;
+                // הצג COB bar אם יש COB פעיל
+                var cobBar = document.getElementById('stat-cob-bar');
+                var cobVal = document.getElementById('stat-cob-val');
+                if (cobBar && cobVal) {
+                    if (nsData.cob > 0) { cobBar.style.display='block'; cobVal.innerText=nsData.cob; }
+                    else { cobBar.style.display='none'; }
+                }
             }
         }
 
@@ -3956,19 +3991,33 @@ async function askOmnibox() {
 
     // זיהוי ישיר של שם מאכל ללא מילות שאלה
     var directFood = detectFoodName(q);
-    var isKnownFood = directFood && (findFood(directFood) !== null ||
-        Object.values(EMOJI_MAP).some(function(v){ return v === directFood; }));
+    var knownInDB  = directFood ? findFood(directFood) : null;
+    var knownEmoji = directFood && Object.values(EMOJI_MAP).some(function(v){
+        return v && v.toLowerCase() === directFood.toLowerCase();
+    });
+    var isKnownFood  = !!(knownInDB || knownEmoji);
+    var isUnknownFood = directFood && !isKnownFood && directFood.length >= 2;
+
     var hasKeyword = ql.includes("להזריק") || ql.includes("כמה אינסולין") ||
         ql.includes("מינון") || ql.includes("לתקן") || ql.includes("correction") ||
         (ql.includes("כמה") && (ql.includes("יחידות") || ql.includes("יח'"))) ||
         (ql.includes("תיקון") && !ql.includes("isf") && !ql.includes("רגישות") && !ql.includes("פרופיל"));
 
-    // --- המלצת מינון ---
+    // --- המלצת מינון על מאכל מוכר ---
     if (hasKeyword || isKnownFood) {
         closePopup();
         var corrOnly = (ql.includes("תיקון") || ql.includes("לתקן")) && !ql.includes("על ");
         if (directFood) LAST_FOOD_QUERY = directFood;
         recommendDose(corrOnly ? "__correction__" : (directFood || q));
+        input.value = '';
+        return;
+    }
+
+    // --- מאכל לא מוכר — שלח ל-AI אוטומטית ---
+    if (isUnknownFood) {
+        LAST_FOOD_QUERY = directFood;
+        closePopup();
+        lookupFoodAI(directFood);
         input.value = '';
         return;
     }
@@ -4506,7 +4555,9 @@ async function askOmnibox() {
         if (filtered.length) {
             var prof5 = fullHistory.profile;
             var nowH5 = new Date().getHours();
-            var dia5  = getInsulinProfile().dia; // משך פעולה בדקות
+            var ins5  = getInsulinProfile();
+            var dia5  = ins5.dia; // משך פעולה בדקות
+            console.log("DIA for meals:", dia5, "ins type:", ins5.name);
 
             ans = "<b>" + mealTitle + ":</b><br><br>";
             ans += filtered.map(function(m){
