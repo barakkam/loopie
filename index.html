@@ -3399,18 +3399,21 @@ async function checkSensorHealth() {
         var sageH = null;
         try {
             var propRes2 = await nsGet('/api/v2/properties/sage');
-            if (!propRes2.ok) throw new Error("sage API " + propRes2.status);
-            var propText2 = await propRes2.text();
-            if (!propText2 || propText2.trim() === '') throw new Error("empty response");
-            var prop2 = JSON.parse(propText2);
-            if (prop2.sage) {
-                var sd = (prop2.sage.display||'').match(/(\d+)d\s*(\d+)h/);
-                var sh = (prop2.sage.display||'').match(/^(\d+)h/);
-                if (sd) sageH = parseInt(sd[1])*24 + parseInt(sd[2]);
-                else if (sh) sageH = parseInt(sh[1]);
-                else if (prop2.sage.value) sageH = parseFloat(prop2.sage.value);
+            if (propRes2 && propRes2.ok) {
+                var propText2 = await propRes2.text();
+                if (propText2 && propText2.trim().startsWith('{')) {
+                    var prop2 = JSON.parse(propText2);
+                    if (prop2 && prop2.sage) {
+                        var dispStr = (prop2.sage.display||'');
+                        var sd = dispStr.match(/(\d+)d\s*(\d+)h/);
+                        var sh = dispStr.match(/(\d+)h/);
+                        if (sd) sageH = parseInt(sd[1])*24 + parseInt(sd[2]);
+                        else if (sh) sageH = parseInt(sh[1]);
+                        else if (prop2.sage.value !== undefined) sageH = parseFloat(prop2.sage.value);
+                    }
+                }
             }
-        } catch(e) { console.log("sage fetch:", e.message); }
+        } catch(e) { console.log("sage:", e.message); }
 
         var failScore   = 0;
         var failReasons = [];
@@ -3974,7 +3977,7 @@ async function fetchData() {
         checkActiveActivity();
         checkPendingDose();
         checkPodFailure();
-        checkSensorHealth();
+        try { checkSensorHealth(); } catch(e) { console.error('sensorHealth:', e); }
     } catch(e) { console.error("fetchData error:", e); }
 }
 
