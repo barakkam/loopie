@@ -2697,36 +2697,28 @@ async function lookupFoodAI(foodQuery) {
         "\n\nהחזר JSON בלבד.";
 
     try {
-        // Try direct API first, fallback to CORS proxy
-        var apiUrl = "https://api.anthropic.com/v1/messages";
-        var response;
-        try {
-            response = await fetch(apiUrl, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    model: "claude-sonnet-4-20250514",
-                    max_tokens: 600,
-                    messages: [{ role: "user", content: prompt }]
-                })
-            });
-            if (!response.ok) throw new Error("Direct API failed: " + response.status);
-        } catch(corsErr) {
-            // CORS fallback — use corsproxy.io
-            response = await fetch("https://corsproxy.io/?" + encodeURIComponent(apiUrl), {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    model: "claude-sonnet-4-20250514",
-                    max_tokens: 600,
-                    messages: [{ role: "user", content: prompt }]
-                })
-            });
-        }
+        // Gemini API — תומך ב-CORS מ-browser
+        var response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyCLrAb7uqrShw1dNfBcjBIpFFALjEeh2tQ", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { maxOutputTokens: 600, temperature: 0.2 }
+            })
+        });
 
-        if (!response.ok) throw new Error("API error " + response.status);
+        if (!response.ok) {
+            var errText = await response.text();
+            throw new Error("Gemini error " + response.status + ": " + errText.substring(0,100));
+        }
         var data = await response.json();
-        var rawText = data.content.map(function(c){ return c.text||""; }).join("").trim();
+        // Gemini response structure: candidates[0].content.parts[0].text
+        var rawText = "";
+        try {
+            rawText = data.candidates[0].content.parts[0].text.trim();
+        } catch(pe) {
+            throw new Error("Gemini parse error: " + JSON.stringify(data).substring(0,100));
+        }
 
         // Parse JSON
         var jsonMatch = rawText.match(/\{[\s\S]*\}/);
@@ -3456,14 +3448,17 @@ async function importFromGmail(token) {
             '\nאם אין מידע על שעה — דלג על הפריט.' +
             '\n\nמיילים:\n' + found.map(function(f,i){ return (i+1) + '. ' + f.subject; }).join('\n');
 
-        var aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+        var aiRes = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyCLrAb7uqrShw1dNfBcjBIpFFALjEeh2tQ', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 500,
-                messages: [{ role: 'user', content: prompt }] })
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { maxOutputTokens: 500, temperature: 0.1 }
+            })
         });
         var aiData = await aiRes.json();
-        var rawText = (aiData.content || []).map(function(c){ return c.text||''; }).join('').trim();
+        var rawText = '';
+        try { rawText = aiData.candidates[0].content.parts[0].text.trim(); } catch(e2) {}
         var jsonMatch = rawText.match(/\[[\s\S]*\]/);
         if (!jsonMatch) throw new Error('No JSON from AI');
         var activities = JSON.parse(jsonMatch[0]);
