@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Loopie v34 - 20260512210909</title>
+    <title>Loopie v35 - 20260512210909</title>
     <!-- v20260512210909 -->
     <style>
         :root {
@@ -456,7 +456,24 @@ var FOOD_DB = {
     "המבורגר":      { carbs: 50,  durationH: 5, notes: "שומן+חלבון — ספיגה איטית" },
     "ציפס":         { carbs: 15,  durationH: 3, notes: "10 יחידות", perUnit: "10 יח'" },
     "פסטה":         { carbs: 15,  durationH: 5, notes: "כוס — ספיגה איטית", perUnit: "כוס" },
-    "אורז":         { carbs: 5,   durationH: 3, notes: "כף", perUnit: "כף" }
+    "אורז":         { carbs: 5,   durationH: 3, notes: "כף", perUnit: "כף" },
+    // מאכלים ישראליים נוספים
+    "ג'חנון":       { carbs: 50,  durationH: 6, notes: "100g — שומן גבוה, ספיגה איטית מאוד" },
+    "מלאווח":       { carbs: 45,  durationH: 6, notes: "100g — שומן גבוה, ספיגה איטית" },
+    "תפוח":         { carbs: 15,  durationH: 2, notes: "תפוח בינוני — GI נמוך" },
+    "בננה":         { carbs: 25,  durationH: 2, notes: "בננה בינונית — GI בינוני" },
+    "ענבים":        { carbs: 15,  durationH: 1, notes: "כוס — GI בינוני-גבוה" },
+    "תמר":          { carbs: 18,  durationH: 1, notes: "תמר אחד — GI גבוה", perUnit: "תמר" },
+    "לחם":          { carbs: 15,  durationH: 2, notes: "פרוסה — GI בינוני", perUnit: "פרוסה" },
+    "במבה":         { carbs: 10,  durationH: 2, notes: "שקית קטנה 25g" },
+    "קרואסון":      { carbs: 30,  durationH: 3, notes: "שומן בינוני — ספיגה בינונית" },
+    "גבינה לבנה":   { carbs: 3,   durationH: 1, notes: "100g — פחמימות נמוכות" },
+    "יוגורט":       { carbs: 12,  durationH: 1, notes: "גביע — GI נמוך" },
+    "חלב":          { carbs: 12,  durationH: 1, notes: "כוס 250ml" },
+    "שוקולד":       { carbs: 20,  durationH: 2, notes: "קוביית שוקולד 40g" },
+    "עוגייה":       { carbs: 10,  durationH: 2, notes: "עוגייה אחת", perUnit: "עוגייה" },
+    "גלידה":        { carbs: 20,  durationH: 2, notes: "כדור — GI גבוה", perUnit: "כדור" },
+    "מיץ תפוזים":   { carbs: 26,  durationH: 1, notes: "כוס 250ml — GI גבוה" }
 };
 
 // === פחמימות חילוץ (rescue carbs) ===
@@ -2697,6 +2714,7 @@ async function lookupFoodAI(foodQuery) {
         "\n\nהחזר JSON בלבד.";
 
     try {
+        console.log("Calling Gemini for:", foodQuery);
         // Gemini API — תומך ב-CORS מ-browser
         var response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyCLrAb7uqrShw1dNfBcjBIpFFALjEeh2tQ", {
             method: "POST",
@@ -2865,8 +2883,18 @@ async function lookupFoodAI(foodQuery) {
 
     } catch(e) {
         console.error("AI food lookup error:", e);
-        showPopup("שגיאה", "לא הצלחתי לקבל נתונים מה-AI: " + e.message +
-            "<br><br>נסה שאלות כמו:<br>• 'כמה פחמימות בג'חנון 100 גרם'<br>• 'תפוח בינוני כמה להזריק'");
+        showPopup("⚠️ שגיאת AI", [
+            "<div style='font-size:13px'>",
+            "שגיאה: <b>" + e.message + "</b><br><br>",
+            "בינתיים — מאכלים מוכרים:<br>",
+            "• <b>ג'חנון 100g</b> ≈ 50g פחמימות / 5-6 שעות<br>",
+            "• <b>תפוח בינוני</b> ≈ 15g / 1.5 שעות<br>",
+            "• <b>בננה</b> ≈ 25g / 2 שעות<br>",
+            "• <b>לחם פרוסה</b> ≈ 15g / 2 שעות<br>",
+            "• <b>אורז כוס</b> ≈ 45g / 3 שעות<br>",
+            "<br><small style='color:#888'>הוסף לאומניבוקס: 'ג'חנון 50g' לחישוב מיידי</small>",
+            "</div>"
+        ].join(''));
     }
 }
 
