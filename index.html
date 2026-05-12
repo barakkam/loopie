@@ -560,6 +560,14 @@ function calcRescueCarbs(sgv, targetBG, iob, isf) {
     return Math.max(fromSGV, fromIOB, 0);
 }
 
+// === פונקציות עזר לבזאלי — קפיצות של 0.05 ===
+function roundBasal(val) {
+    var r = Math.round(parseFloat(val) / 0.05) * 0.05;
+    return parseFloat(r.toFixed(2));
+}
+function basalUp(val)   { return roundBasal(parseFloat(val) + 0.05); }
+function basalDown(val) { return roundBasal(Math.max(0, parseFloat(val) - 0.05)); }
+
 // חיפוש מאכל במאגר — עם תמיכה בחיפוש חלקי ועברית חסרה
 function findFood(name) {
     if (!name || !name.trim()) return null;
