@@ -79,7 +79,12 @@
     <input type="text" id="nsUrl" placeholder="https://herokuapp.com">
     <label>API Secret</label>
     <input type="password" id="apiSecret" placeholder="••••••••">
-    <button class="btn" id="loginBtn" onclick="connect()">התחבר למערכת</button>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:8px;justify-content:center">
+        <input type="checkbox" id="remember-me" checked style="width:16px;height:16px;cursor:pointer">
+        <label for="remember-me" style="color:var(--muted);font-size:13px;cursor:pointer">זכור אותי</label>
+    </div>
+    <button class="btn" id="loginBtn" onclick="connect()" style="margin-top:10px">התחבר למערכת</button>
+    <button class="btn" onclick="clearSaved()" style="background:transparent;border:1px solid var(--border);color:var(--muted);margin-top:6px;font-size:12px">נקה נתונים שמורים</button>
 </div>
 
 <div id="main-screen" class="card hidden">
@@ -3664,8 +3669,17 @@ function alertPodFailure() {
     });
 }
 
+function clearSaved() {
+    localStorage.removeItem('loopie_ns_url');
+    localStorage.removeItem('loopie_ns_secret');
+    location.reload();
+}
+
 async function connect() {
     var btn = document.getElementById('loginBtn');
+    // שמור/טעין אוטומטית
+    var remEl = document.getElementById('remember-me');
+    var remember = !remEl || remEl.checked;
     if (!nsUrl() || !nsSecret()) return;
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span> מתחבר...';
@@ -3674,6 +3688,11 @@ async function connect() {
         if (!res.ok) throw new Error('HTTP ' + res.status);
         document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('main-screen').classList.remove('hidden');
+        if (remember) {
+            var nu = document.getElementById('nsUrl'); var as = document.getElementById('apiSecret');
+            if (nu) localStorage.setItem('loopie_ns_url', nu.value.trim());
+            if (as) localStorage.setItem('loopie_ns_secret', as.value.trim());
+        }
         fetchData();
         refreshTimer = setInterval(fetchData, 60000);
         startNSMonitor();
@@ -4563,6 +4582,21 @@ async function askOmnibox() {
             showSportPlan(String(nextAct.id));
             input.value = '';
             return;
+        }
+        // ים/בריכה/שחייה — תוכנית מיידית
+        if (ql.includes("ים") || ql.includes("בריכה") || ql.includes("שחי") || ql.includes("ריצה") || ql.includes("כדורגל")) {
+            var actName2 = ql.includes("בריכה") ? "בריכה" : ql.includes("שחי") ? "שחייה" : ql.includes("ריצה") ? "ריצה" : ql.includes("כדורגל") ? "כדורגל" : "ים";
+            var sp2 = (ql.includes("ריצה") || ql.includes("כדורגל")) ? SPORT_PLANS.high : SPORT_PLANS.medium;
+            var curBW2 = parseFloat(nsData.basal) || 0;
+            var redBW2 = curBW2 > 0 ? roundBasal(curBW2*(1-sp2.basalReduction/100)) : null;
+            var hw = "<div style='background:#0a0a14;border-radius:10px;padding:12px;margin-bottom:10px;font-size:13px'>🏊 <b>" + actName2 + "</b> | " + sp2.label + "</div>";
+            hw += "<div style='background:rgba(245,158,11,0.08);border:1px solid #f59e0b;border-radius:10px;padding:12px;margin-bottom:10px'><b style='color:#f59e0b'>⏰ לפני:</b><br><br>";
+            if (curBW2>0) hw += "• בזאלי: ⬇️ "+curBW2+" → <b>"+redBW2+" U/hr</b><br>";
+            hw += "• יעד כניסה: <b>140–160 mg/dL</b><br>• אם מתחת 120 — אכול 15g<br>• הזרק 20-30% פחות על ארוחה לפני</div>";
+            hw += "<div style='background:rgba(16,185,129,0.08);border:1px solid #10b981;border-radius:10px;padding:12px;margin-bottom:10px'><b style='color:#10b981'>🏊 בזמן:</b><br><br>• יעד: <b>"+sp2.targetBGRange+"</b><br>• בדוק כל 45 דק'<br>• מתחת 100: 15g מהיר + פתיבר<br>• ⛔ אל תזריק בזמן פעילות</div>";
+            hw += "<div style='background:rgba(59,130,246,0.08);border:1px solid var(--blue);border-radius:10px;padding:12px'><b style='color:var(--blue)'>✅ אחרי ("+sp2.postDurationH+"ש'):</b><br><br>• הפחת "+sp2.postReduction+"% לכל הזרקה<br>• ⚠️ ירידת סוכר מאוחרת — בדוק לפני שינה</div>";
+            showPopup("🏊 תוכנית " + actName2, hw);
+            input.value=''; return;
         }
         ans = "לא נמצאה פעילות מתוכננת היום.<br>עבור ללשונית 🏃 <b>פעילות</b> להוספת חוג.";
     }
