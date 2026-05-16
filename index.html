@@ -208,6 +208,36 @@
         </div>
         <div style="color:var(--muted);font-size:13px;text-align:center;padding:8px">בחר טווח לייצור דוח</div>
     </div>
+
+    <!-- TAB: NS -->
+    <div id="tab-ns" class="hidden">
+        <div id="ns-frame-wrap" style="position:relative;width:100%;height:70vh;border-radius:10px;overflow:hidden;background:#000">
+            <iframe id="ns-iframe" src="about:blank" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
+            <div id="ns-frame-msg" style="display:none;position:absolute;inset:0;background:#0a0a14;border-radius:10px;flex-direction:column;align-items:center;justify-content:center;color:#888;font-size:14px;text-align:center;padding:20px">
+                <div style="font-size:36px;margin-bottom:12px">🔒</div>
+                <b style="color:var(--text);margin-bottom:8px">NS חוסם iframe</b><br>
+                <button onclick="openNSExternal()" class="btn" style="width:auto;padding:10px 20px;margin-top:12px">🔗 פתח NS בטאב חדש</button>
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+            <button class="btn" onclick="reloadNSFrame()" style="font-size:13px;padding:10px">🔄 רענן</button>
+            <button class="btn" onclick="openNSExternal()" style="font-size:13px;padding:10px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-dim)">🔗 פתח בטאב</button>
+        </div>
+    </div>
+
+    <!-- TAB: לוגים -->
+    <div id="tab-logs" class="hidden">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">
+            <button class="btn" onclick="loadLogs('all')"    style="font-size:12px;padding:8px">📋 הכל</button>
+            <button class="btn" onclick="loadLogs('food')"   style="font-size:12px;padding:8px">🍽️ ארוחות</button>
+            <button class="btn" onclick="loadLogs('rescue')" style="font-size:12px;padding:8px">🔵 חילוץ</button>
+            <button class="btn" onclick="loadLogs('sport')"  style="font-size:12px;padding:8px">🏃 ספורט</button>
+            <button class="btn" onclick="exportLogs()" style="font-size:12px;padding:8px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-dim);grid-column:span 2">📤 ייצוא CSV</button>
+        </div>
+        <input type="text" id="logs-search" placeholder="חיפוש..." oninput="filterLogs()" style="margin-bottom:8px">
+        <div id="logs-stats" style="font-size:12px;color:var(--muted);margin-bottom:8px;text-align:center"></div>
+        <div id="logs-list" style="max-height:55vh;overflow-y:auto"></div>
+    </div>
 </div>
 
 <!-- Popup -->
@@ -455,6 +485,7 @@ var FOOD_DB = {
     "פיצה מסעדה":   { carbs: 35,  durationH: 5, notes: "שומן גבוה — ספיגה איטית", perUnit: "חתיכה" },
     "המבורגר":      { carbs: 50,  durationH: 5, notes: "שומן+חלבון — ספיגה איטית" },
     "ציפס":         { carbs: 1.5, durationH: 3, notes: "יחידה אחת (10 יח'=15g)", perUnit: "יחידה" },
+    "צ'יפס":        { carbs: 1.5, durationH: 3, notes: "יחידה אחת (10 יח'=15g)", perUnit: "יחידה" },
     "פסטה":         { carbs: 15,  durationH: 5, notes: "כוס — ספיגה איטית", perUnit: "כוס" },
     "אורז":         { carbs: 5,   durationH: 3, notes: "כף", perUnit: "כף" },
     // מאכלים ישראליים נוספים
@@ -462,7 +493,8 @@ var FOOD_DB = {
     "מלאווח":       { carbs: 45,  durationH: 6, notes: "100g — שומן גבוה, ספיגה איטית" },
     "תפוח":         { carbs: 15,  durationH: 2, notes: "תפוח בינוני — GI נמוך" },
     "בננה":         { carbs: 25,  durationH: 2, notes: "בננה בינונית — GI בינוני" },
-    "ענבים":        { carbs: 15,  durationH: 1, notes: "כוס — GI בינוני-גבוה" },
+    "ענבים":        { carbs: 15,  durationH: 1.5, notes: "כוס — GI בינוני-גבוה" },
+    "ענב":          { carbs: 15,  durationH: 1.5, notes: "כוס — GI בינוני-גבוה" },
     "תמר":          { carbs: 18,  durationH: 1, notes: "תמר אחד — GI גבוה", perUnit: "תמר" },
     "לחם":          { carbs: 15,  durationH: 2, notes: "פרוסה — GI בינוני", perUnit: "פרוסה" },
     "במבה":         { carbs: 10,  durationH: 2, notes: "שקית קטנה 25g" },
@@ -473,7 +505,27 @@ var FOOD_DB = {
     "שוקולד":       { carbs: 20,  durationH: 2, notes: "קוביית שוקולד 40g" },
     "עוגייה":       { carbs: 10,  durationH: 2, notes: "עוגייה אחת", perUnit: "עוגייה" },
     "גלידה":        { carbs: 20,  durationH: 2, notes: "כדור — GI גבוה", perUnit: "כדור" },
-    "מיץ תפוזים":   { carbs: 26,  durationH: 1, notes: "כוס 250ml — GI גבוה" }
+    "מיץ תפוזים":   { carbs: 26,  durationH: 1, notes: "כוס 250ml — GI גבוה" },
+    "טילון":        { carbs: 40,  durationH: 1, notes: "ארטיק — GI גבוה מאוד" },
+    "ארטיק":        { carbs: 20,  durationH: 1, notes: "GI גבוה" },
+    "פופסיקל":      { carbs: 15,  durationH: 1, notes: "GI גבוה" },
+    "בורקס":        { carbs: 30,  durationH: 5, notes: "שומן גבוה — ספיגה איטית" },
+    "בורקס גבינה":  { carbs: 28,  durationH: 5, notes: "שומן גבוה" },
+    "בורקס תפוח אדמה": { carbs: 32, durationH: 5, notes: "עמילן + שומן — ספיגה איטית" },
+    "שניצל":        { carbs: 15,  durationH: 3, notes: "ציפוי — GI בינוני" },
+    "פלאפל":        { carbs: 20,  durationH: 3, notes: "3 כדורים" },
+    "חומוס":        { carbs: 15,  durationH: 3, notes: "מנה — GI נמוך" },
+    "אבטיח":        { carbs: 15,  durationH: 1, notes: "פרוסה — GI גבוה" },
+    "מלון":         { carbs: 12,  durationH: 1, notes: "פרוסה — GI בינוני" },
+    "תות":          { carbs: 8,   durationH: 1, notes: "כוס — GI נמוך" },
+    "אפרסק":        { carbs: 12,  durationH: 1.5, notes: "בינוני" },
+    "דובדבן":       { carbs: 12,  durationH: 1, notes: "כוס" },
+    "מנגו":         { carbs: 20,  durationH: 1.5, notes: "GI בינוני-גבוה" },
+    "פיצוחים":      { carbs: 5,   durationH: 2, notes: "חופן — פחמימות נמוכות" },
+    "קרקרים":       { carbs: 15,  durationH: 2, notes: "6 קרקרים", perUnit: "קרקר" },
+    "ביסלי":        { carbs: 12,  durationH: 2, notes: "שקית קטנה 25g" },
+    "חטיף":         { carbs: 15,  durationH: 2, notes: "שקית קטנה" },
+    "פיצה פטה":     { carbs: 20,  durationH: 3, notes: "2 פרוסות קטנות" }
 };
 
 // === פחמימות חילוץ (rescue carbs) ===
@@ -568,22 +620,35 @@ function roundBasal(val) {
 function basalUp(val)   { return roundBasal(parseFloat(val) + 0.05); }
 function basalDown(val) { return roundBasal(Math.max(0, parseFloat(val) - 0.05)); }
 
+// נרמול שמות — טיפול בוריאציות כתיב
+function normalizeFood(name) {
+    if (!name) return '';
+    return name.trim().toLowerCase()
+        .replace(/צ['']?יפס|ציפס|chips/g, 'ציפס')
+        .replace(/המבורגר|המבורגרר|burger|המבורגם/g, 'המבורגר')
+        .replace(/פיצ['']?ה|פיצה|פיצא|pizza/g, 'פיצה')
+        .replace(/פית['']?ה|פיתה|פיתא/g, 'פיתה')
+        .replace(/[''`]/g, '');
+}
+
 // חיפוש מאכל במאגר — עם תמיכה בחיפוש חלקי ועברית חסרה
 function findFood(name) {
     if (!name || !name.trim()) return null;
-    var n = name.trim().toLowerCase();
+    var n = normalizeFood(name);
     var keys = Object.keys(FOOD_DB);
     // התאמה מדויקת
     for (var i = 0; i < keys.length; i++) {
-        if (n === keys[i].toLowerCase()) return { key: keys[i], data: FOOD_DB[keys[i]] };
+        if (n === normalizeFood(keys[i])) return { key: keys[i], data: FOOD_DB[keys[i]] };
     }
     // חיפוש חלקי — הקלט מוכל במפתח
     for (var i = 0; i < keys.length; i++) {
-        if (keys[i].toLowerCase().includes(n) && n.length >= 2) return { key: keys[i], data: FOOD_DB[keys[i]] };
+        var nk = normalizeFood(keys[i]);
+        if (nk.includes(n) && n.length >= 2) return { key: keys[i], data: FOOD_DB[keys[i]] };
     }
     // חיפוש חלקי — המפתח מוכל בקלט
     for (var i = 0; i < keys.length; i++) {
-        if (n.includes(keys[i].toLowerCase()) && keys[i].length >= 2) return { key: keys[i], data: FOOD_DB[keys[i]] };
+        var nk2 = normalizeFood(keys[i]);
+        if (n.includes(nk2) && nk2.length >= 2) return { key: keys[i], data: FOOD_DB[keys[i]] };
     }
     return null;
 }
@@ -1438,7 +1503,7 @@ async function recommendDose(inputText) {
     // מצב נוכחי
     html += "<div style='background:#0a0a14;border-radius:10px;padding:12px;margin-bottom:12px;font-size:13px'>";
     html += "• " + ins.name + " | שיא: ~" + ins.peak + " דק' | DIA: " + (ins.dia/60).toFixed(1) + "ש'<br>";
-    html += "• סוכר: <b>" + sgv + "</b> Δ" + (delta>=0?"+":"") + delta + " | IOB: <b>" + iob + "U</b> | COB: <b>" + (typeof cob==='number'?cob:0) + "g</b><br>";
+    html += "• סוכר: <b>" + sgv + "</b> Δ" + (delta>=0?"+":"") + delta + " | IOB: <b>" + iob + "U</b> | COB: <b>" + parseFloat(cob||0).toFixed(1) + "g</b><br>";
     html += "• CR: <b>" + effectiveCR.toFixed(1) + "g/U</b>" + crNote + " | ISF: <b>" + isf + "</b> | מטרה: <b>" + targetBG + "</b><br>";
     if (cob > 0) html += "• COB פעיל: <b style='color:#f59e0b'>" + cob + "g</b><br>";
     if (carbsToCalc === 0 && sgv > targetBG) {
@@ -2455,6 +2520,7 @@ function checkPendingDose() {
     html2 += "<small style='color:#555'>⚕️ המלצה לשיקול דעת — ניהול T1D.</small>";
     html2 += "<br><button onclick='PENDING_DOSE=null;closePopup()' style='margin-top:10px;width:100%;padding:8px;background:rgba(16,185,129,0.15);border:1px solid #10b981;border-radius:8px;cursor:pointer;color:#10b981;font-weight:600'>✅ הוזרקה — סגור</button>";
 
+    alertPending(PENDING_DOSE.foodName, iobAdjust);
     showPopup("⚠️ הזרק השלמה! — " + PENDING_DOSE.foodName, html2);
 }
 
@@ -2724,7 +2790,7 @@ async function lookupFoodAI(foodQuery) {
     try {
         console.log("Calling Gemini for:", foodQuery);
         // Gemini API — תומך ב-CORS מ-browser
-        var response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyCLrAb7uqrShw1dNfBcjBIpFFALjEeh2tQ", {
+        var response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyDBI95wYKtfw0idRIUlxDmgBICbKsZYgFA", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -3484,7 +3550,7 @@ async function importFromGmail(token) {
             '\nאם אין מידע על שעה — דלג על הפריט.' +
             '\n\nמיילים:\n' + found.map(function(f,i){ return (i+1) + '. ' + f.subject; }).join('\n');
 
-        var aiRes = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyCLrAb7uqrShw1dNfBcjBIpFFALjEeh2tQ', {
+        var aiRes = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyDBI95wYKtfw0idRIUlxDmgBICbKsZYgFA', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -3539,6 +3605,64 @@ async function importFromGmail(token) {
         }
     }
 })();
+
+// ========= Web Push Notifications =========
+var _notifPermission = 'default';
+
+async function requestNotificationPermission() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'granted') {
+        _notifPermission = 'granted';
+        return;
+    }
+    if (Notification.permission !== 'denied') {
+        var perm = await Notification.requestPermission();
+        _notifPermission = perm;
+    }
+}
+
+function sendNotification(title, body, options) {
+    if (_notifPermission !== 'granted') return;
+    try {
+        var opts = Object.assign({
+            icon: 'https://raw.githubusercontent.com/barakkam/loopie/main/favicon.ico',
+            badge: 'https://raw.githubusercontent.com/barakkam/loopie/main/favicon.ico',
+            vibrate: [200, 100, 200],
+            tag: 'loopie-alert',
+            renotify: true,
+            requireInteraction: false
+        }, options || {});
+        var n = new Notification(title, Object.assign({ body: body }, opts));
+        n.onclick = function() { window.focus(); n.close(); };
+        // גם הצג popup במסך
+        setTimeout(function(){ showPopup(title, body); }, 100);
+    } catch(e) {
+        // fallback — רק popup
+        showPopup(title, body);
+    }
+}
+
+// התראות לפי חומרה
+function alertLow(sgv, delta) {
+    sendNotification("⚠️ סוכר נמוך!", "סוכר " + sgv + " mg/dL" + (delta < 0 ? " ויורד" : ""), {
+        tag: 'loopie-low', requireInteraction: true, vibrate: [300,100,300,100,300]
+    });
+}
+function alertHigh(sgv, delta) {
+    sendNotification("📈 סוכר גבוה", "סוכר " + sgv + " mg/dL" + (delta > 0 ? " ועולה" : ""), {
+        tag: 'loopie-high'
+    });
+}
+function alertPending(foodName, dose) {
+    sendNotification("⏳ הזרק השלמה!", foodName + " — הזרק " + dose + "U", {
+        tag: 'loopie-pending', requireInteraction: true
+    });
+}
+function alertPodFailure() {
+    sendNotification("🚨 חשד לכשל פוד!", "סוכר לא יורד למרות אינסולין", {
+        tag: 'loopie-pod', requireInteraction: true, vibrate: [500,200,500]
+    });
+}
 
 async function connect() {
     var btn = document.getElementById('loginBtn');
@@ -3601,6 +3725,7 @@ async function fetchData() {
                     var grid = document.querySelector('.stats-grid');
                     if (grid) grid.parentNode.insertBefore(alertDiv, grid.nextSibling);
                 } else if (isRising && !existing) {
+                    alertHigh(e0.sgv, nsData.delta); // Push notification
                     var alertDiv = document.createElement('div');
                     alertDiv.id = 'rising-alert';
                     alertDiv.style.cssText = 'background:rgba(245,158,11,0.15);border:1px solid #f59e0b;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;cursor:pointer';
@@ -3657,7 +3782,7 @@ async function fetchData() {
                         break;
                     }
                 }
-                nsData.cob = cobRaw !== null ? Math.round(cobRaw) : 0;
+                nsData.cob = cobRaw !== null ? parseFloat(parseFloat(cobRaw).toFixed(1)) : 0;
 
                 // בזאלי בפועל
                 var basalPaths = [
@@ -4423,7 +4548,7 @@ async function askOmnibox() {
     }
 
     // --- תוכנית ספורט ---
-    else if (ql.includes("ספורט") || ql.includes("פעילות") || ql.includes("activity") || ql.includes("יעד") || ql.includes("אימון") || ql.includes("לפני ספורט") || ql.includes("טמפ")) {
+    else if (ql.includes("ספורט") || ql.includes("פעילות") || ql.includes("activity") || ql.includes("יעד") || ql.includes("אימון") || ql.includes("לפני ספורט") || ql.includes("טמפ") || ql.includes("ים") || ql.includes("בריכה") || ql.includes("שחייה") || ql.includes("שחי") || ql.includes("ריצה") || ql.includes("אופניים") || ql.includes("כדורגל") || ql.includes("כדורסל") || ql.includes("mma") || ql.includes("כושר")) {
         var now2  = new Date();
         var dayN2 = now2.getDay();
         var nowM2 = now2.getHours()*60 + now2.getMinutes();
