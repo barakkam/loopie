@@ -487,7 +487,7 @@ var INSULIN_PROFILES = {
 var FOOD_DB = {
     "פיתה":         { carbs: 50,  durationH: 3, notes: "פחמימות מהירות-בינוניות" },
     "פיצה ביתית":   { carbs: 25,  durationH: 5, notes: "שומן גבוה — ספיגה איטית", perUnit: "חתיכה" },
-    "פיצה מסעדה":   { carbs: 35,  durationH: 5, notes: "שומן גבוה — ספיגה איטית", perUnit: "חתיכה" },
+    "פיצה מסעדה":   { carbs: 40,  durationH: 5, notes: "שומן גבוה — ספיגה איטית (40g לסלייס)", perUnit: "חתיכה" },
     "המבורגר":      { carbs: 50,  durationH: 5, notes: "שומן+חלבון — ספיגה איטית" },
     "ציפס":         { carbs: 1.5, durationH: 3, notes: "יחידה אחת (10 יח'=15g)", perUnit: "יחידה" },
     "צ'יפס":        { carbs: 1.5, durationH: 3, notes: "יחידה אחת (10 יח'=15g)", perUnit: "יחידה" },
@@ -827,8 +827,8 @@ async function generateReport(days) {
                 if (!bucket.length) return;
                 var avgBucketBG = bucket.reduce(function(a,s){return a+s.avg;},0)/bucket.length;
                 var rec = null;
-                if (avgBucketBG > 160) rec = "⬆️ שקול הגדלת בזאלי " + b.time + ": " + b.value + " U/hr → <b>" + basalUp(b.value) + " U/hr</b> (+0.05)";
-                if (avgBucketBG < 90)  rec = "⬇️ שקול הקטנת בזאלי " + b.time + ": " + b.value + " U/hr → <b>" + basalDown(b.value) + " U/hr</b> (-0.05)";
+                if (avgBucketBG > 160) rec = "⬆️ שקול הגדלת בזאלי " + b.time + ": " + b.value + " → <b>" + basalUp(b.value) + " U/hr</b> | ⏳ המתן 3 ימים לפני שינוי נוסף";
+                if (avgBucketBG < 90)  rec = "⬇️ שקול הקטנת בזאלי " + b.time + ": " + b.value + " → <b>" + basalDown(b.value) + " U/hr</b> | ⏳ המתן 3 ימים לפני שינוי נוסף";
                 if (rec) basalRecs.push(rec);
             });
         }
@@ -2483,8 +2483,9 @@ function checkPendingDose() {
     clearInterval(window._pendingTimer);
 
     // חשב כמה להשלים — בהתחשב ב-IOB שנצבר
-    var remainDose = parseFloat(PENDING_DOSE.doseLaterR);
-    var iobAdjust  = Math.max(0, remainDose - iob * 0.3).toFixed(1); // הפחת חלק מ-IOB
+    var remainDose = parseFloat(PENDING_DOSE.insLater || PENDING_DOSE.doseLaterR || 0);
+    var iobVal     = parseFloat(iob) || 0;
+    var iobAdjust  = Math.max(0, remainDose - iobVal * 0.3).toFixed(1); // הפחת חלק מ-IOB
 
     // חשב מה Loop היה מציע עכשיו
     var loopNowSug = PENDING_DOSE.loopR;
@@ -2501,8 +2502,9 @@ function checkPendingDose() {
     html2 += "<div style='display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #1a1a28'>";
     html2 += "<span style='color:#aaa'>🍞 פחמימות מקוריות</span><b style='color:#f59e0b'>" + PENDING_DOSE.carbsTotal + "g</b></div>";
 
+    var iobAdjustSafe = isNaN(parseFloat(iobAdjust)) ? "0.0" : parseFloat(iobAdjust).toFixed(1);
     html2 += "<div style='display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #1a1a28'>";
-    html2 += "<span style='color:#aaa'>💉 השלמה מומלצת (Loopie)</span><b style='color:#10b981;font-size:24px'>" + iobAdjust + "U</b></div>";
+    html2 += "<span style='color:#aaa'>💉 השלמה מומלצת (Loopie)</span><b style='color:#10b981;font-size:24px'>" + iobAdjustSafe + "U</b></div>";
 
     html2 += "<div style='display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #1a1a28'>";
     html2 += "<span style='color:#aaa'>🔄 Loop מציע כעת</span><b style='color:#6b6b80'>" + loopNowSug + "U</b></div>";
@@ -3675,6 +3677,113 @@ function clearSaved() {
     location.reload();
 }
 
+// ========= מעקב שינויי פרמטרים — כלל 3 ימים =========
+async function analyzeParamChanges() {
+    var mem = await loadMemory();
+    var paramHist = mem['param_history'] ? (mem['param_history'].value || []) : [];
+    if (!paramHist.length) return null;
+
+    var last = paramHist[0];
+    var daysSinceChange = (Date.now() - new Date(last.date).getTime()) / 86400000;
+    var stabilized = daysSinceChange >= 3;
+
+    return {
+        lastChange: last,
+        daysSince: daysSinceChange.toFixed(1),
+        stabilized: stabilized,
+        count: paramHist.length
+    };
+}
+
+async function recordParamChange(paramName, oldVal, newVal, reason) {
+    var mem = await loadMemory();
+    var prev = (mem['param_history'] && mem['param_history'].value) ? mem['param_history'].value : [];
+    prev.unshift({
+        date: new Date().toISOString(),
+        param: paramName, oldVal: oldVal, newVal: newVal,
+        reason: reason || '',
+        outcomes: [] // תוצאות שנאספות ב-3 ימים הבאים
+    });
+    if (prev.length > 30) prev = prev.slice(0,30);
+    await saveMemory('param_history', prev);
+}
+
+// ========= ניתוח כשלי פוד/חיישן מהיסטוריה =========
+async function analyzeFailureHistory() {
+    var mem = await loadMemory();
+    var html = "<div style='font-size:13px'>";
+
+    // כשלי פוד
+    var podFails = Object.keys(mem).filter(function(k){ return k.startsWith('pod_failure_'); });
+    if (podFails.length) {
+        html += "<div style='background:#0a0a14;border-radius:10px;padding:12px;margin-bottom:10px'>";
+        html += "<b style='color:#ef4444'>⚠️ כשלי פוד בהיסטוריה: " + podFails.length + "</b><br><br>";
+        podFails.slice(0,3).forEach(function(k){
+            var d = mem[k].value || {};
+            var date = new Date(d.date||k.replace('pod_failure_','')).toLocaleDateString('he-IL');
+            html += "• " + date + ": " + (d.reasons||[]).join(', ').substring(0,60) + "<br>";
+            if (d.corrGiven) html += "  תיקון ידני: " + d.corrGiven + "U<br>";
+        });
+
+        // ניתוח דפוס
+        if (podFails.length >= 2) {
+            html += "<br><b>ניתוח דפוס:</b><br>";
+            html += "• " + podFails.length + " כשלים תועדו<br>";
+            html += "• בדוק: האם הכשלים קורים בימים ספציפיים? אחרי פעילות? בחום?<br>";
+            html += "• המלצה: שקול החלפת פוד כל 2.5 יום (לא 3)";
+        }
+        html += "</div>";
+    } else {
+        html += "<div style='background:#0a0a14;border-radius:8px;padding:10px;margin-bottom:8px'>";
+        html += "✅ אין כשלי פוד מתועדים בזיכרון";
+        html += "</div>";
+    }
+
+    // ניתוח מהיסטוריית NS — Site Change + סוכר גבוה
+    try {
+        var since30 = new Date(Date.now() - 30*86400000).toISOString();
+        var scRes = await nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + since30 + '&find[eventType]=Site+Change&count=20');
+        if (scRes.ok) {
+            var sites = await scRes.json();
+            if (sites.length) {
+                html += "<div style='background:#0a0a14;border-radius:10px;padding:12px;margin-bottom:10px'>";
+                html += "<b>📊 החלפות פוד ב-30 יום: " + sites.length + "</b><br><br>";
+                html += "• ממוצע: " + (30/sites.length).toFixed(1) + " ימים לפוד<br>";
+                html += "• החלפה אחרונה: " + new Date(sites[0].created_at).toLocaleDateString('he-IL');
+                html += "</div>";
+            }
+        }
+    } catch(e) {}
+
+    // שינויי פרמטרים
+    var paramHist = mem['param_history'] ? (mem['param_history'].value || []) : [];
+    if (paramHist.length) {
+        html += "<div style='background:#0a0a14;border-radius:10px;padding:12px;margin-bottom:10px'>";
+        html += "<b style='color:#f59e0b'>⚙️ שינויי פרמטרים אחרונים:</b><br><br>";
+        paramHist.slice(0,3).forEach(function(p){
+            var date = new Date(p.date).toLocaleDateString('he-IL');
+            var daysAgo = ((Date.now()-new Date(p.date).getTime())/86400000).toFixed(1);
+            var stable = parseFloat(daysAgo) >= 3;
+            html += "• " + date + " (" + daysAgo + " ימים): ";
+            html += "<b>" + p.param + "</b> " + p.oldVal + " → " + p.newVal;
+            html += " " + (stable ? "✅ יציב" : "⏳ מתייצב (" + daysAgo + "/3 ימים)") + "<br>";
+        });
+        html += "<br><small style='color:#888'>כלל 3 ימים: שינוי פרמטר לוקח 3 ימים להשפיע. המתן לפני שינוי נוסף.</small>";
+        html += "</div>";
+    }
+
+    html += "<div style='background:rgba(59,130,246,0.08);border:1px solid var(--blue-dim);border-radius:8px;padding:10px;font-size:12px'>";
+    html += "<b>💡 שאלות לניתוח:</b><br>";
+    html += "• <b>'ניתוח פוד'</b> — היסטוריית כשלים<br>";
+    html += "• <b>'ניתוח חיישן'</b> — ביצועי חיישן<br>";
+    html += "• <b>'ניתוח פרמטרים'</b> — שינויים ותוצאות<br>";
+    html += "• <b>'מה אכלתי'</b> — היסטוריית ארוחות<br>";
+    html += "• <b>'זיכרון'</b> — כל הנתונים השמורים";
+    html += "</div></div>";
+
+    showPopup("📊 ניתוח היסטוריה", html);
+}
+
 async function connect() {
     var btn = document.getElementById('loginBtn');
     // שמור/טעין אוטומטית
@@ -3891,7 +4000,9 @@ async function askOmnibox() {
 
     // === חסימה מוקדמת — מילים שאינן מאכל ===
     var nonFoodWords = ['פוד','pod','חיישן','סנסור','ציוד','בזאלי','isf','cr','iob','cob',
-                        'תיקון','ספורט','אימון','ים','בריכה','smb','זיכרון','דוח','לוגים'];
+                        'תיקון','ספורט','אימון','ים','בריכה','smb','זיכרון','דוח','לוגים',
+                        'ניתוח','מצב','סטטוס','status','פרופיל','profile','מה המצב',
+                        'היסטוריה','מאכלים','רשימה','חילוץ','היפו','נמוך','גבוה'];
     var isNonFood = nonFoodWords.some(function(w){ return ql === w || ql.startsWith(w+' ') || ql.endsWith(' '+w); });
 
     // זיהוי ישיר של שם מאכל ללא מילות שאלה
@@ -4411,16 +4522,37 @@ async function askOmnibox() {
 
     // --- ארוחות ---
     else if (ql.includes("אכלתי") || ql.includes("אוכל") || ql.includes("ארוחה") || ql.includes("הזרק") || ql.includes("carbs")) {
-        // מסנן רק ארוחות עם פחמימות, או בולוס עם הערה — לא SMB/microbolus
-        var smbKeys = ['smb','microbolus','super micro','correction','תיקון'];
+        // בנה מפת בולוסים לפי זמן (לקישור עם פחמימות)
+        var bolusMap2 = {};
+        tr.forEach(function(t){
+            var ins2 = parseFloat(t.insulin||0);
+            if (ins2 >= 0.5) { // בולוס משמעותי
+                var tKey = Math.round(new Date(t.created_at).getTime() / 600000); // 10 דק'
+                if (!bolusMap2[tKey] || ins2 > parseFloat(bolusMap2[tKey].insulin||0)) {
+                    bolusMap2[tKey] = t;
+                }
+            }
+        });
+
+        var smbKeys = ['smb','microbolus','super micro'];
         var allMeals = tr.filter(function(t){
             var ev = (t.eventType||'').toLowerCase();
-            var isSMB = smbKeys.some(function(k){ return ev.includes(k); });
-            // רישום עם פחמימות — תמיד כלול
+            if (smbKeys.some(function(k){ return ev.includes(k); })) return false;
             if (t.carbs > 0) return true;
-            // בולוס ללא פחמימות — כלול רק אם יש הערה ואינו SMB
-            if (t.insulin > 0 && !isSMB && (t.notes||t.foodType)) return true;
+            if (parseFloat(t.insulin||0) >= 0.5 && (t.notes||t.foodType)) return true;
             return false;
+        }).map(function(t){
+            // אם פחמימות בלי אינסולין — חפש בולוס קרוב
+            if (t.carbs > 0 && !(parseFloat(t.insulin||0) >= 0.5)) {
+                var tMs = new Date(t.created_at).getTime();
+                var best = null, bestDiff = 20*60000;
+                Object.values(bolusMap2).forEach(function(b){
+                    var diff = Math.abs(new Date(b.created_at).getTime() - tMs);
+                    if (diff < bestDiff) { bestDiff = diff; best = b; }
+                });
+                if (best) return Object.assign({}, t, { insulin: best.insulin, extended: best.extended, duration: best.duration, _matchedBolus: true });
+            }
+            return t;
         });
         var mealNumM = ql.match(/(\d+)/);
         var mealNum  = mealNumM ? parseInt(mealNumM[1]) : null;
@@ -4544,12 +4676,22 @@ async function askOmnibox() {
                     html3 += "<div style='font-size:11px;color:#666;margin-top:4px'>" + insLine + "</div>";
                 }
 
-                // progress bar נספיגה
-                if (insTot > 0 && minsAgo < diaMins) {
+                // פחמימות שנספגו (כמו Loop)
+                if (m.carbs > 0) {
+                    var carbsAbsorbed = Math.min(m.carbs, Math.round(m.carbs * absorbedPct / 100));
+                    var carbsRemain   = Math.max(0, m.carbs - carbsAbsorbed);
+                    var carbColor2    = carbsRemain === 0 ? '#10b981' : carbsRemain < m.carbs * 0.3 ? '#f59e0b' : '#3b82f6';
                     html3 += "<div style='background:#1a1a28;border-radius:3px;height:4px;margin-top:6px'>";
-                    html3 += "<div style='background:" + absColor + ";width:" + absorbedPctR + "%;height:100%;border-radius:3px;transition:width 0.3s'></div>";
+                    html3 += "<div style='background:" + carbColor2 + ";width:" + absorbedPctR + "%;height:100%;border-radius:3px'></div>";
                     html3 += "</div>";
-                    html3 += "<div style='font-size:10px;color:#555;margin-top:2px'>נותר IOB: <b style='color:" + absColor + "'>" + remainingU + "U</b></div>";
+                    html3 += "<div style='font-size:10px;color:#888;margin-top:2px'>";
+                    html3 += "🍞 נספג: <b style='color:" + carbColor2 + "'>" + carbsAbsorbed + "g</b>";
+                    if (carbsRemain > 0) html3 += " | נותר: <b>" + carbsRemain + "g</b>";
+                    else html3 += " ✅";
+                    if (insTot > 0) html3 += " | IOB: <b style='color:" + absColor + "'>" + remainingU + "U</b>";
+                    html3 += "</div>";
+                } else if (insTot > 0 && minsAgo < diaMins) {
+                    html3 += "<div style='font-size:10px;color:#555;margin-top:4px'>IOB נותר: <b style='color:" + absColor + "'>" + remainingU + "U</b></div>";
                 }
 
                 html3 += "</div>"; // card
@@ -4730,6 +4872,13 @@ async function askOmnibox() {
         checkPodFailure();
         input.value = '';
         return;
+    }
+
+    // --- ניתוח פוד/חיישן/פרמטרים ---
+    else if (ql.includes("ניתוח פוד") || ql.includes("כשל פוד") || ql.includes("היסטוריה") ||
+             ql.includes("ניתוח חיישן") || ql.includes("ניתוח פרמטר") || ql.includes("שינויים")) {
+        analyzeFailureHistory();
+        input.value = ''; return;
     }
 
     else {
