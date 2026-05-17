@@ -3889,8 +3889,13 @@ async function askOmnibox() {
     var ans  = "";
     var nowH = new Date().getHours();
 
+    // === חסימה מוקדמת — מילים שאינן מאכל ===
+    var nonFoodWords = ['פוד','pod','חיישן','סנסור','ציוד','בזאלי','isf','cr','iob','cob',
+                        'תיקון','ספורט','אימון','ים','בריכה','smb','זיכרון','דוח','לוגים'];
+    var isNonFood = nonFoodWords.some(function(w){ return ql === w || ql.startsWith(w+' ') || ql.endsWith(' '+w); });
+
     // זיהוי ישיר של שם מאכל ללא מילות שאלה
-    var directFood = detectFoodName(q);
+    var directFood = isNonFood ? null : detectFoodName(q);
     var knownInDB  = directFood ? findFood(directFood) : null;
     var knownEmoji = directFood && Object.values(EMOJI_MAP).some(function(v){
         return v && v.toLowerCase() === directFood.toLowerCase();
@@ -4206,7 +4211,7 @@ async function askOmnibox() {
     }
 
     // --- ציוד — חיפוש רחב מ-NS treatments + DeviceStatus ---
-    else if (ql.includes("חיישן") || ql.includes("סנסור") || ql.includes("פוד") || ql.includes("משאבה") ||
+    else if (ql.includes("חיישן") || ql.includes("סנסור") || ql.includes("פוד") || q.toLowerCase() === "pod" || ql.includes("משאבה") ||
              ql.includes("גיל") || ql.includes("ציוד") || ql.includes("החלפ") || ql.includes("site")) {
 
         // כל eventTypes שיש בNS — לדיאגנוז ולמידה
