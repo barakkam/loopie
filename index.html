@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
-<head>
-    <meta charset="UTF-8">
+<!-- saved from url=(0052)file:///C:/Users/barak/Downloads/loopie-ultra_8.html -->
+<html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Loopie v35 - 20260512210909</title>
-    <!-- v20260512210909 -->
+    <title>Loopie v36 - 202605192224</title>
+    <!-- v202605192224 -->
     <style>
         :root {
             --bg: #0e0e12; --card: #16161e; --border: #2a2a38; --blue: #3b82f6;
@@ -80,7 +80,7 @@
     <label>API Secret</label>
     <input type="password" id="apiSecret" placeholder="••••••••">
     <div style="display:flex;align-items:center;gap:8px;margin-top:8px;justify-content:center">
-        <input type="checkbox" id="remember-me" checked style="width:16px;height:16px;cursor:pointer">
+        <input type="checkbox" id="remember-me" checked="" style="width:16px;height:16px;cursor:pointer">
         <label for="remember-me" style="color:var(--muted);font-size:13px;cursor:pointer">זכור אותי</label>
     </div>
     <button class="btn" id="loginBtn" onclick="connect()" style="margin-top:10px">התחבר למערכת</button>
@@ -96,11 +96,11 @@
 
     <!-- Tabs -->
     <div class="nav-tabs" style="grid-template-columns:repeat(5,1fr);display:grid;gap:4px;margin-bottom:14px">
-        <div class="nav-tab active" onclick="switchTab('tab-home',this)" style="font-size:10px;padding:7px 1px">🏠 בית</div>
-        <div class="nav-tab" onclick="switchTab('tab-activity',this)" style="font-size:10px;padding:7px 1px">🏃 פעילות</div>
-        <div class="nav-tab" onclick="switchTab('tab-reports',this)" style="font-size:10px;padding:7px 1px">📊 דוחות</div>
-        <div class="nav-tab" onclick="switchTab('tab-ns',this)" style="font-size:10px;padding:7px 1px">🌐 NS</div>
-        <div class="nav-tab" onclick="switchTab('tab-logs',this)" style="font-size:10px;padding:7px 1px">📋 לוגים</div>
+        <div class="nav-tab active" onclick="switchTab(&#39;tab-home&#39;,this)" style="font-size:10px;padding:7px 1px">🏠 בית</div>
+        <div class="nav-tab" onclick="switchTab(&#39;tab-activity&#39;,this)" style="font-size:10px;padding:7px 1px">🏃 פעילות</div>
+        <div class="nav-tab" onclick="switchTab(&#39;tab-reports&#39;,this)" style="font-size:10px;padding:7px 1px">📊 דוחות</div>
+        <div class="nav-tab" onclick="switchTab(&#39;tab-ns&#39;,this)" style="font-size:10px;padding:7px 1px">🌐 NS</div>
+        <div class="nav-tab" onclick="switchTab(&#39;tab-logs&#39;,this)" style="font-size:10px;padding:7px 1px">📋 לוגים</div>
     </div>
 
     <!-- TAB: בית -->
@@ -137,7 +137,7 @@
 
         <div id="activity-banner"></div>
         <div class="omni-row">
-            <input type="text" id="omnibox" class="omnibox" placeholder="שאל: מה המצב? / כמה להזריק על פיתה?" onkeydown="if(event.key==='Enter') askOmnibox()">
+            <input type="text" id="omnibox" class="omnibox" placeholder="שאל: מה המצב? / כמה להזריק על פיתה?" onkeydown="if(event.key===&#39;Enter&#39;) askOmnibox()">
             <button class="btn omni-send" onclick="askOmnibox()">שלח</button>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:0">
@@ -157,11 +157,9 @@
         <div style="background:#0a0a14;border-radius:10px;padding:12px;margin-bottom:14px">
             <div style="font-size:12px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">⚙️ הגדרות חיפוש לוז</div>
             <label>כתובת מייל</label>
-            <input type="email" id="user-email" placeholder="your@gmail.com" style="margin-bottom:8px"
-                oninput="localStorage.setItem('loopie_email', this.value)">
+            <input type="email" id="user-email" placeholder="your@gmail.com" style="margin-bottom:8px" oninput="localStorage.setItem(&#39;loopie_email&#39;, this.value)">
             <label>מילות חיפוש חוגים (מופרדות בפסיק)</label>
-            <input type="text" id="activity-keywords" value="חוג,mma,קראטה,כדורגל,שחייה,צופים,כושר,אימון,ריצה,gym,yoga,יוגה,פילאטיס"
-                style="margin-bottom:8px" oninput="localStorage.setItem('loopie_keywords', this.value)">
+            <input type="text" id="activity-keywords" value="חוג,mma,קראטה,כדורגל,שחייה,צופים,כושר,אימון,ריצה,gym,yoga,יוגה,פילאטיס" style="margin-bottom:8px" oninput="localStorage.setItem(&#39;loopie_keywords&#39;, this.value)">
             <button class="btn" onclick="showGmailSetup()" style="font-size:12px;padding:9px;background:rgba(234,67,53,0.15);color:#ea4335;border:1px solid rgba(234,67,53,0.3);margin-bottom:6px">
                 📧 חבר Gmail וייבא חוגים
             </button>
@@ -200,7 +198,7 @@
 
         <select id="act-intensity">
             <option value="low">עצימות נמוכה (יוגה, הליכה)</option>
-            <option value="medium" selected>עצימות בינונית (שחייה, אופניים)</option>
+            <option value="medium" selected="">עצימות בינונית (שחייה, אופניים)</option>
             <option value="high">עצימות גבוהה (MMA, ריצה, HIIT)</option>
         </select>
 
@@ -213,7 +211,7 @@
     <!-- TAB: דוחות -->
     <div id="tab-reports" class="hidden">
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
-            <button class="btn report-btn" onclick="generateReport(7)"  style="font-size:12px;padding:10px 4px">📊 7 ימים</button>
+            <button class="btn report-btn" onclick="generateReport(7)" style="font-size:12px;padding:10px 4px">📊 7 ימים</button>
             <button class="btn report-btn" onclick="generateReport(14)" style="font-size:12px;padding:10px 4px">📊 14 ימים</button>
             <button class="btn report-btn" onclick="generateReport(30)" style="font-size:12px;padding:9px 4px">📊 30 ימים</button>
         </div>
@@ -223,7 +221,7 @@
     <!-- TAB: NS -->
     <div id="tab-ns" class="hidden">
         <div id="ns-frame-wrap" style="position:relative;width:100%;height:70vh;border-radius:10px;overflow:hidden;background:#000">
-            <iframe id="ns-iframe" src="about:blank" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
+            <iframe id="ns-iframe" src="./index_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
             <div id="ns-frame-msg" style="display:none;position:absolute;inset:0;background:#0a0a14;border-radius:10px;flex-direction:column;align-items:center;justify-content:center;color:#888;font-size:14px;text-align:center;padding:20px">
                 <div style="font-size:36px;margin-bottom:12px">🔒</div>
                 <b style="color:var(--text);margin-bottom:8px">NS חוסם iframe</b><br>
@@ -239,10 +237,10 @@
     <!-- TAB: לוגים -->
     <div id="tab-logs" class="hidden">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">
-            <button class="btn" onclick="loadLogs('all')"    style="font-size:12px;padding:8px">📋 הכל</button>
-            <button class="btn" onclick="loadLogs('food')"   style="font-size:12px;padding:8px">🍽️ ארוחות</button>
-            <button class="btn" onclick="loadLogs('rescue')" style="font-size:12px;padding:8px">🔵 חילוץ</button>
-            <button class="btn" onclick="loadLogs('sport')"  style="font-size:12px;padding:8px">🏃 ספורט</button>
+            <button class="btn" onclick="loadLogs(&#39;all&#39;)" style="font-size:12px;padding:8px">📋 הכל</button>
+            <button class="btn" onclick="loadLogs(&#39;food&#39;)" style="font-size:12px;padding:8px">🍽️ ארוחות</button>
+            <button class="btn" onclick="loadLogs(&#39;rescue&#39;)" style="font-size:12px;padding:8px">🔵 חילוץ</button>
+            <button class="btn" onclick="loadLogs(&#39;sport&#39;)" style="font-size:12px;padding:8px">🏃 ספורט</button>
             <button class="btn" onclick="exportLogs()" style="font-size:12px;padding:8px;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-dim);grid-column:span 2">📤 ייצוא CSV</button>
         </div>
         <input type="text" id="logs-search" placeholder="חיפוש..." oninput="filterLogs()" style="margin-bottom:8px">
@@ -5742,5 +5740,6 @@ async function askOmnibox() {
     input.value = '';
 }
 </script>
-</body>
-</html>
+
+
+</body></html>
