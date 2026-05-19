@@ -471,6 +471,25 @@ async function saveMemory(key, value) {
 // • ISF — כמה mg/dL יורד הסוכר לכל יחידת אינסולין
 // • בזאלי — קצב הרקע לשמירה על יציבות בין ארוחות
 // ההמלצות הן כלי עזר בלבד ואינן תחליף לייעוץ אנדוקרינולוג.
+// ========= פרופיל לילה =========
+var NIGHT_PROFILE = {
+    fromHour: 22,
+    toHour: 6,
+    targetBG: 115,           // יעד גבוה יותר — מניעת היפו בשינה
+    targetBGRange: '110-130',
+    crAdjust: 0.85,          // CR × 0.85 = 15% פחות פחמימות לאינסולין (ספיגה איטית)
+    isfAdjust: 1.2,          // ISF × 1.2 = תיקון עדין יותר (50% מתיקון רגיל)
+    correctionFactor: 0.5,   // תיקון לילה = 50% מהתיקון הרגיל
+    diaFactor: 1.2,          // DIA יעיל ארוך ב-20%
+    splitPct: 55,            // 55/45 — ספיגה איטית
+    note: 'לילה — ספיגה איטית, סיכון היפו מוגבר'
+};
+
+function isNightProfile() {
+    var h = new Date().getHours();
+    return h >= NIGHT_PROFILE.fromHour || h < NIGHT_PROFILE.toHour;
+}
+
 // ========= פרופיל ביה"ס =========
 var SCHOOL_PROFILE = {
     enabled: true,
@@ -1520,7 +1539,10 @@ async function recommendDose(inputText) {
 
     // תיקון סוכר: (סוכר נוכחי - מטרה) ÷ ISF
     var corrInsulinRaw = (sgv - targetBG) / isf;
-    var corrInsulin    = Math.max(0, corrInsulinRaw);
+    var corrInsulin    = Math.max(0, corrInsulinRaw * (typeof nightCorrFactor !== 'undefined' ? nightCorrFactor : 1.0));
+
+    // תיקון לפי ניבוי — יחושב אחרי שloop predicted יטען
+    var eventualCorrInsulin = corrInsulin; // יעודכן בהמשך
 
     // תוספת priming אם פוד הוחלף לאחרונה
     var primingAddon = carbsToCalc > 0 ? getPrimingAddon() : 0;
@@ -1528,12 +1550,33 @@ async function recommendDose(inputText) {
     // === הקשר ביה"ס ===
     var schoolCtx = getSchoolContext();
     if (schoolCtx && carbsToCalc > 0) {
-        // עדכן פיצול לפי הקשר ביה"ס
         if (schoolCtx.splitPct !== undefined && schoolCtx.splitPct !== smartNowPct) {
             smartNowPct = schoolCtx.splitPct;
             smartLaterPct = 100 - smartNowPct;
             if (schoolCtx.label) splitFactors.push(schoolCtx.label);
         }
+    }
+
+    // === פרופיל לילה ===
+    var usingNightProfile = isNightProfile();
+    if (usingNightProfile) {
+        // עדכן יעד
+        targetBG = Math.max(targetBG, NIGHT_PROFILE.targetBG);
+        // עדכן CR ו-ISF
+        if (!usingSchoolProfile) { // לא לשלב עם פרופיל ביה"ס
+            crNow = crNow / NIGHT_PROFILE.crAdjust;  // CR גדול = פחות אינסולין
+            isf   = isf   * NIGHT_PROFILE.isfAdjust;
+        }
+        // הפחת תיקון לילה
+        var nightCorrFactor = NIGHT_PROFILE.correctionFactor;
+        // עדכן פיצול — ספיגה איטית
+        if (smartNowPct > NIGHT_PROFILE.splitPct && carbsToCalc > 0 && nowH >= 22) {
+            smartNowPct  = NIGHT_PROFILE.splitPct;
+            smartLaterPct = 100 - smartNowPct;
+            splitFactors.push("🌙 לילה — ספיגה איטית, פיצול " + smartNowPct + "/" + smartLaterPct);
+        }
+    } else {
+        var nightCorrFactor = 1.0;
     }
 
     // בדיקת אימון קרוב — תוך 3 שעות
@@ -1576,7 +1619,9 @@ async function recommendDose(inputText) {
         }
     }
 
-    var totalRaw = (carbInsulin + corrInsulin) * actFactor * upcomingFactor - iob + primingAddon;
+    // לתיקון בלבד — השתמש ב-eventual BG prediction
+    var corrToUse = (carbsToCalc === 0 && predictedFinalBG !== null) ? eventualCorrInsulin : corrInsulin;
+    var totalRaw = (carbInsulin + corrToUse) * actFactor * upcomingFactor - iob + primingAddon;
     var total    = Math.max(0, totalRaw);
     var totalR   = (Math.round(total * 2) / 2).toFixed(1);
 
@@ -1585,16 +1630,47 @@ async function recommendDose(inputText) {
     try {
         var dev2 = fullHistory.devStatus;
         if (dev2) {
-            // נסה כמה מיקומים
             var lb = dig(dev2,'loop.recommendedBolus') ||
                      dig(dev2,'loop.recommendation.bolus') ||
-                     dig(dev2,'openaps.suggested.bolus') ||
-                     dig(dev2,'openaps.enacted.bolus');
+                     dig(dev2,'openaps.suggested.bolus');
             if (lb !== null && lb !== undefined) loopActual = parseFloat(lb);
         }
     } catch(e) {}
-    // אם לא נמצא — חשב כמו Loop (ללא split, עם IOB)
-    var loopSuggestion = loopActual !== null ? loopActual : Math.max(0, carbInsulin + corrInsulin - iob);
+
+    // === חישוב תיקון מבוסס ניבוי (כמו Loop) ===
+    // Loop משתמש ב-eventual BG (סוכר צפוי אחרי ספיגת IOB) ולא בסוכר נוכחי
+    var predictedFinalBG = null;
+    try {
+        var predVals = null;
+        var dev3b = fullHistory.devStatus;
+        if (dev3b) {
+            var predObj2 = dig(dev3b, 'loop.predicted');
+            if (predObj2 && predObj2.values) predVals = predObj2.values;
+            else if (predObj2 && Array.isArray(predObj2)) predVals = predObj2;
+        }
+        if (predVals && predVals.length > 0) {
+            // הסוכר הצפוי ב-30 דק' (6 נקודות × 5 דק')
+            var pred30idx = Math.min(6, predVals.length - 1);
+            // הסוכר הצפוי בסוף (eventual BG)
+            predictedFinalBG = predVals[predVals.length - 1];
+            var predicted30min = predVals[pred30idx];
+            console.log("Predicted 30min:", predicted30min, "Eventual:", predictedFinalBG);
+        }
+    } catch(e) {}
+
+    // חישוב תיקון לפי סוכר צפוי (eventual BG)
+    var eventualCorrInsulin = corrInsulin; // ברירת מחדל
+    if (predictedFinalBG !== null) {
+        var eventualCorr = (predictedFinalBG - targetBG) / isf;
+        eventualCorrInsulin = Math.max(0, eventualCorr);
+        if (Math.abs(eventualCorrInsulin - corrInsulin) > 0.1) {
+            console.log("Correction adjusted by prediction:", corrInsulin.toFixed(2), "→", eventualCorrInsulin.toFixed(2));
+        }
+    }
+
+    // אם לא נמצא recommendedBolus — חשב כמו Loop
+    var loopSuggestion = loopActual !== null ? loopActual :
+        Math.max(0, carbInsulin + eventualCorrInsulin - iob);
     var loopR = (Math.round(loopSuggestion * 2) / 2).toFixed(1);
 
     // חלוקת מינון — תמיד לפי הגדרות (70/30)
@@ -1693,6 +1769,15 @@ async function recommendDose(inputText) {
                 html += "</div>";
             }
         } catch(e6) {}
+    }
+
+    // בדג פרופיל לילה
+    if (usingNightProfile) {
+        html += "<div style='background:rgba(59,130,246,0.1);border:1px solid #3b82f6;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;display:flex;justify-content:space-between;align-items:center'>";
+        html += "<span>🌙 פרופיל לילה פעיל</span>";
+        html += "<span style='color:#3b82f6'>יעד: <b>" + NIGHT_PROFILE.targetBGRange + "</b></span>";
+        html += "</div>";
+        html += "<div style='font-size:11px;color:#888;margin-bottom:8px'>תיקון 50% · ספיגה איטית · פיצול " + NIGHT_PROFILE.splitPct + "/" + (100-NIGHT_PROFILE.splitPct) + "</div>";
     }
 
     // בדג פרופיל ביה"ס
@@ -1939,10 +2024,13 @@ async function recommendDose(inputText) {
 
     html += "<div style='font-size:11px;color:#888;margin-top:8px'>";
     if (carbsToCalc > 0) html += carbsToCalc + "g ÷ " + effectiveCR.toFixed(1) + " = " + carbInsulin.toFixed(2) + "U";
-    if (corrInsulin > 0.05) html += " + " + corrInsulin.toFixed(2) + "U תיקון";
-    else if (carbsToCalc === 0) html += "(" + sgv + "-" + targetBG + ") ÷ " + isf + " = " + corrInsulin.toFixed(2) + "U";
+    if (corrToUse > 0.05) html += " + " + corrToUse.toFixed(2) + "U תיקון";
+    else if (carbsToCalc === 0) html += "(" + (predictedFinalBG||sgv) + "-" + targetBG + ") ÷ " + isf + " = " + corrToUse.toFixed(2) + "U";
     if (iob > 0.05) html += " − " + iob + "U IOB";
     html += " = <b style='color:" + cardColor + "'>" + totalR + "U</b>";
+    if (predictedFinalBG !== null && carbsToCalc === 0) {
+        html += "<br>📊 סוכר צפוי (eventual): <b>" + Math.round(predictedFinalBG) + "</b> mg/dL";
+    }
     html += "</div></div>";
 
     // === פיצול חכם ===
@@ -4696,7 +4784,9 @@ async function askOmnibox() {
     var nonFoodWords = ['פוד','pod','חיישן','סנסור','ציוד','בזאלי','isf','cr','iob','cob',
                         'תיקון','ספורט','אימון','ים','בריכה','smb','זיכרון','דוח','לוגים',
                         'ניתוח','מצב','סטטוס','status','פרופיל','profile','מה המצב',
-                        'היסטוריה','מאכלים','רשימה','חילוץ','היפו','נמוך','גבוה'];
+                        'היסטוריה','מאכלים','רשימה','חילוץ','היפו','נמוך','גבוה',
+                        'המלצות','המלצה','ניתוח','הצע','הצג','הראה','רשימת','מה אכלתי',
+                        'ביהס','ביה"ס','בית ספר','לוח','פעילות','חוג','כשל','בדוק'];
     var isNonFood = nonFoodWords.some(function(w){ return ql === w || ql.startsWith(w+' ') || ql.endsWith(' '+w); });
 
     // זיהוי ישיר של שם מאכל ללא מילות שאלה
