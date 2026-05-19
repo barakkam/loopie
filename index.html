@@ -107,7 +107,7 @@
     <div id="tab-home">
         <div class="bg-display">
             <div class="bg-value" id="current-bg">--</div>
-            <div id="trend-label" style="font-size:14px;color:var(--muted)">טוען...</div>
+            <div id="trend-label" style="font-size:28px;font-weight:700;color:var(--muted);letter-spacing:-2px">→</div>
         </div>
         <div id="override-banner" style="display:none;background:rgba(59,130,246,0.15);border:1px solid var(--blue);border-radius:8px;padding:6px 12px;margin-bottom:8px;font-size:13px;text-align:center;color:var(--blue)"></div>
         <div id="battery-warn" style="display:none;background:rgba(239,68,68,0.1);border:1px solid #ef4444;border-radius:8px;padding:6px 12px;margin-bottom:8px;font-size:12px;text-align:center;color:#ef4444"></div>
@@ -4527,7 +4527,15 @@ async function fetchData() {
                 bgEl.innerText = e0.sgv;
                 bgEl.className = 'bg-value' + (e0.sgv < 70 ? ' low' : e0.sgv > 180 ? ' high' : '');
                 var tm = {1:'↑↑',2:'↑',3:'↗',4:'→',5:'↘',6:'↓',7:'↓↓'};
-                document.getElementById('trend-label').innerText = e0.direction || tm[e0.trend] || '→';
+                var trendMap = {
+                    'DoubleUp':'⬆⬆','SingleUp':'⬆','FortyFiveUp':'↗',
+                    'Flat':'→','FortyFiveDown':'↘','SingleDown':'⬇',
+                    'DoubleDown':'⬇⬇','NONE':'→','NOT COMPUTABLE':'?'
+                };
+                var trendVal = e0.direction || e0.trend || 'Flat';
+                var trendArrow = trendMap[trendVal] || trendVal;
+                var deltaSign = nsData.delta >= 0 ? '+' : '';
+                document.getElementById('trend-label').innerText = trendArrow + ' ' + deltaSign + (nsData.delta || 0);
                 // התרעת מגמת עלייה
                 var isRising = (e0.sgv > INSULIN_CONFIG.alertThreshold && nsData.delta >= INSULIN_CONFIG.alertDelta);
                 var isLow    = (e0.sgv < 80 || (e0.sgv < 100 && nsData.delta <= -3));
