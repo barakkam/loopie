@@ -91,6 +91,7 @@
     <div class="logo" style="margin-bottom:12px">
         <div class="logo-icon" style="width:28px;height:28px;font-size:14px">♾️</div>
         <span id="badge-name" style="font-weight:700">Loopie Active</span>
+        <span id="school-badge" style="display:none;font-size:10px;background:rgba(16,185,129,0.15);color:#10b981;border:1px solid #10b981;border-radius:10px;padding:2px 8px;margin-right:6px">🏫 ביהס</span>
     </div>
 
     <!-- Tabs -->
@@ -161,7 +162,7 @@
             <label>מילות חיפוש חוגים (מופרדות בפסיק)</label>
             <input type="text" id="activity-keywords" value="חוג,mma,קראטה,כדורגל,שחייה,צופים,כושר,אימון,ריצה,gym,yoga,יוגה,פילאטיס"
                 style="margin-bottom:8px" oninput="localStorage.setItem('loopie_keywords', this.value)">
-            <button class="btn" onclick="connectGmail()" style="font-size:12px;padding:9px;background:rgba(234,67,53,0.15);color:#ea4335;border:1px solid rgba(234,67,53,0.3);margin-bottom:6px">
+            <button class="btn" onclick="showGmailSetup()" style="font-size:12px;padding:9px;background:rgba(234,67,53,0.15);color:#ea4335;border:1px solid rgba(234,67,53,0.3);margin-bottom:6px">
                 📧 חבר Gmail וייבא חוגים
             </button>
         </div>
@@ -470,6 +471,119 @@ async function saveMemory(key, value) {
 // • ISF — כמה mg/dL יורד הסוכר לכל יחידת אינסולין
 // • בזאלי — קצב הרקע לשמירה על יציבות בין ארוחות
 // ההמלצות הן כלי עזר בלבד ואינן תחליף לייעוץ אנדוקרינולוג.
+// ========= פרופיל ביה"ס =========
+var SCHOOL_PROFILE = {
+    enabled: true,
+    // יעד סוכר גבוה יותר בביה"ס — מניעת היפו
+    targetBG: 120,           // במקום 100 בבית
+    targetBGRange: '110-130', // טווח בטיחות בביה"ס
+    targetBGHigh: 130,        // גבול עליון להתערבות
+    targetBGLow:  110,        // גבול תחתון — קרוב מדי להיפו
+    // יחס CR מעט גדול יותר בביה"ס (פחות אינסולין)
+    crAdjust: 1.1,            // CR × 1.1 = 10% פחות אינסולין
+    // ISF גבוה יותר (תיקון עדין יותר)
+    isfAdjust: 1.1,           // ISF × 1.1 = תיקון עדין יותר
+    // שעות פרופיל ביה"ס
+    fromHour: 8,
+    toHour: 14,
+    schoolDays: [0,1,2,3,4]  // א-ה
+};
+
+function isSchoolProfile() {
+    var d = new Date();
+    var h = d.getHours();
+    return SCHOOL_PROFILE.enabled &&
+           SCHOOL_PROFILE.schoolDays.indexOf(d.getDay()) >= 0 &&
+           h >= SCHOOL_PROFILE.fromHour &&
+           h < SCHOOL_PROFILE.toHour;
+}
+
+// ========= לוח זמנים ביה"ס =========
+var SCHOOL_SCHEDULE = {
+    // ימים א-ה בלבד (0=ראשון, 4=חמישי)
+    schoolDays: [0, 1, 2, 3, 4],
+    breakfast: { from: '07:00', to: '07:30' },       // א. בוקר בבית
+    arrivalTime: '08:00',                              // הגעה לביה"ס
+    tenOclock: { from: '09:40', to: '10:15' },        // א. עשר + הפסקה
+    endTime: '13:30',                                  // סיום לימודים
+    walkToSchool: 1.0,                                 // ק"מ
+    walkHome: 1.0,                                     // ק"מ
+    walkEffect: 15,                                    // הפחתת סוכר מהליכה (mg/dL)
+    // מאכל עשר קבוע
+    tenOclockFood: 'פיתה',                             // מה אוכל בד"כ
+    tenOclockCarbs: 35,                                // גרם פחמימות
+};
+
+function isSchoolDay() {
+    var day = new Date().getDay();
+    return SCHOOL_SCHEDULE.schoolDays.indexOf(day) >= 0;
+}
+
+function getSchoolContext() {
+    if (!isSchoolDay()) return null;
+    var now = new Date();
+    var h = now.getHours(), m = now.getMinutes();
+    var mins = h * 60 + m;
+
+    // 06:00-07:30 — ארוחת בוקר בבית
+    if (h >= 6 && h < 8) return {
+        phase: 'morning_home',
+        label: '🏠 בוקר בבית',
+        note: 'Dawn Phenomenon — 100% עכשיו, ללא פיצול',
+        splitPct: 100,
+        walkWarning: null
+    };
+
+    // 07:30-08:00 — הליכה/נסיעה לביה"ס
+    if (h === 7 && m >= 30 || h === 8 && m === 0) return {
+        phase: 'commute',
+        label: '🚶 הליכה/נסיעה לביה"ס',
+        note: 'אם הולך ברגל (1ק"מ) — שקול 10g לפני או הפחת 10%',
+        splitPct: 100,
+        walkWarning: '🚶 הליכה לביה"ס — שקול 10g לפני או הפחת 10%'
+    };
+
+    // 09:20-09:40 — לפני א. עשר
+    if (h === 9 && m >= 20 && m < 40) return {
+        phase: 'pre_ten',
+        label: '🍞 לפני א. עשר (פיתה)',
+        note: 'א. עשר בעוד 20 דק — פיצול 70/30, הפסקה ב-10:15',
+        splitPct: 70,
+        walkWarning: null,
+        upcomingRecess: true,
+        recessAt: '10:15'
+    };
+
+    // 09:40-10:15 — א. עשר + הפסקה
+    if ((h === 9 && m >= 40) || (h === 10 && m < 15)) return {
+        phase: 'ten_oclock',
+        label: '🍞 א. עשר + הפסקה',
+        note: 'הפסקה עד 10:15 — פיצול 70/30, ה-30% אחרי הריצה',
+        splitPct: 70,
+        walkWarning: null,
+        upcomingRecess: true,
+        recessAt: '10:15'
+    };
+
+    // 13:00-13:30 — לפני חזרה הביתה
+    if (h === 13 && m >= 0) return {
+        phase: 'pre_home',
+        label: '🏠 לפני חזרה הביתה',
+        note: 'אם הולך ברגל (1ק"מ) — אכול 10-15g לפני',
+        splitPct: 70,
+        walkWarning: '🚶 הליכה הביתה — אכול 10-15g לפני (פתיבר/פרי)'
+    };
+
+    // ימי לימודים רגילים
+    return {
+        phase: 'school',
+        label: '🏫 ביה"ס',
+        note: '',
+        splitPct: 70,
+        walkWarning: null
+    };
+}
+
 var INSULIN_CONFIG = {
     type:       "lyumjev",   // "lyumjev" | "novorapid" | "humalog" | "fiasp" | "apidra"
     splitNow:   70,          // % מהמינון הכולל בהתחלה
@@ -1411,6 +1525,17 @@ async function recommendDose(inputText) {
     // תוספת priming אם פוד הוחלף לאחרונה
     var primingAddon = carbsToCalc > 0 ? getPrimingAddon() : 0;
 
+    // === הקשר ביה"ס ===
+    var schoolCtx = getSchoolContext();
+    if (schoolCtx && carbsToCalc > 0) {
+        // עדכן פיצול לפי הקשר ביה"ס
+        if (schoolCtx.splitPct !== undefined && schoolCtx.splitPct !== smartNowPct) {
+            smartNowPct = schoolCtx.splitPct;
+            smartLaterPct = 100 - smartNowPct;
+            if (schoolCtx.label) splitFactors.push(schoolCtx.label);
+        }
+    }
+
     // בדיקת אימון קרוב — תוך 3 שעות
     var upcomingAct = null;
     var upcomingMins = null;
@@ -1568,6 +1693,29 @@ async function recommendDose(inputText) {
                 html += "</div>";
             }
         } catch(e6) {}
+    }
+
+    // בדג פרופיל ביה"ס
+    if (usingSchoolProfile) {
+        html += "<div style='background:rgba(16,185,129,0.1);border:1px solid #10b981;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;display:flex;justify-content:space-between;align-items:center'>";
+        html += "<span>🏫 פרופיל ביהס פעיל</span>";
+        html += "<span style='color:#10b981'>יעד: <b>" + SCHOOL_PROFILE.targetBGRange + "</b></span>";
+        html += "</div>";
+        html += "<div style='font-size:11px;color:#888;margin-bottom:8px'>CR ×1.1 + ISF ×1.1 — פחות אינסולין למניעת היפו</div>";
+    }
+
+    // הצג הקשר ביה"ס
+    if (schoolCtx && carbsToCalc > 0) {
+        if (schoolCtx.walkWarning) {
+            html += "<div style='background:rgba(245,158,11,0.1);border:1px solid #f59e0b;border-radius:8px;padding:10px;margin-bottom:10px;font-size:13px'>";
+            html += schoolCtx.walkWarning;
+            html += "</div>";
+        }
+        if (schoolCtx.upcomingRecess) {
+            html += "<div style='background:rgba(59,130,246,0.08);border:1px solid var(--blue-dim);border-radius:8px;padding:10px;margin-bottom:10px;font-size:13px'>";
+            html += "🏃 הפסקה ב-" + schoolCtx.recessAt + " — ה-30% יינתן אחרי הריצה";
+            html += "</div>";
+        }
     }
 
     // הצג אזהרת אימון קרוב
@@ -2059,11 +2207,12 @@ function saveActivities() {
 }
 
 function addActivity() {
-    var name  = document.getElementById('act-name').value.trim();
-    var day   = parseInt(document.getElementById('act-day').value);
-    var from  = document.getElementById('act-from').value.trim();
-    var to    = document.getElementById('act-to').value.trim();
-    var intens= document.getElementById('act-intensity').value;
+    var name  = (document.getElementById('act-name')||{}).value ? document.getElementById('act-name').value.trim() : '';
+    var day   = parseInt((document.getElementById('act-day')||{}).value||0);
+    var from  = (document.getElementById('act-from')||{}).value ? document.getElementById('act-from').value.trim() : '';
+    var to    = (document.getElementById('act-to')||{}).value ? document.getElementById('act-to').value.trim() : '';
+    var intens= (document.getElementById('act-intensity')||{}).value || 'medium';
+    console.log("addActivity:", name, day, from, to, intens);
 
     // וידוא
     if (!name) { showPopup("⚠️ שגיאה", "נא למלא שם פעילות"); return; }
@@ -4150,6 +4299,80 @@ async function drawMiniChart() {
     } catch(e) { console.error('chart:', e); }
 }
 
+// Gmail setup — stub until OAuth configured
+function showGmailSetup() {
+    showPopup("📧 Gmail — הגדרה נדרשת", [
+        "<div style='font-size:13px'>",
+        "כדי לייבא חוגים ממייל צריך להגדיר Google OAuth:<br><br>",
+        "<b>שלב 1:</b> גש ל-<a href='https://console.cloud.google.com' target='_blank' style='color:var(--blue)'>console.cloud.google.com</a><br>",
+        "<b>שלב 2:</b> Enable Gmail API<br>",
+        "<b>שלב 3:</b> Create OAuth 2.0 Client ID<br>",
+        "<b>שלב 4:</b> שלח את ה-Client ID ל-Loopie<br><br>",
+        "<b>בינתיים</b> — הוסף חוגים ידנית דרך האומניבוקס:<br>",
+        "<small style='color:#888'>דוגמה: 'הוסף חוג כדורגל יום שני 16:00-17:00'</small>",
+        "</div>"
+    ].join(''));
+}
+
+// connectGmail — needs OAuth client ID
+function connectGmail() { showGmailSetup(); }
+
+// זיהוי פוד/חיישן חדש מ-CAGE/SAGE
+var _lastKnownCage = null;
+var _lastKnownSage = null;
+
+async function autoDetectNewDevices() {
+    // שלוף CAGE/SAGE מ-DeviceStatus
+    try {
+        var dsRes = await nsGet('/api/v1/devicestatus.json?count=1');
+        if (!dsRes.ok) return;
+        var dsArr = await dsRes.json();
+        var ds = Array.isArray(dsArr) ? dsArr[0] : dsArr;
+        if (!ds) return;
+
+        // CAGE — גיל פוד בשעות
+        var cageVal = null;
+        var dsStr = JSON.stringify(ds);
+        var cMatch = dsStr.match(/"cage"\s*:\s*([\d.]+)/i);
+        if (cMatch) cageVal = parseFloat(cMatch[1]);
+
+        // SAGE — גיל חיישן בשעות  
+        var sageVal = null;
+        var sMatch = dsStr.match(/"sage"\s*:\s*([\d.]+)/i);
+        if (sMatch) sageVal = parseFloat(sMatch[1]);
+
+        // זיהוי פוד חדש — CAGE ירד (החלפה)
+        if (cageVal !== null && _lastKnownCage !== null) {
+            if (_lastKnownCage > 2 && cageVal < 2) {
+                // פוד הוחלף!
+                console.log("New pod detected! CAGE:", cageVal, "h");
+                INSULIN_CONFIG.primingActive = true;
+                INSULIN_CONFIG.primingTime   = Date.now() - cageVal * 3600000;
+                setTimeout(function(){ INSULIN_CONFIG.primingActive = false; }, 30*60000);
+                // הצג בנר
+                var bannerEl = document.getElementById('activity-banner');
+                if (bannerEl) {
+                    bannerEl.innerHTML = '🔄 <b>פוד חדש זוהה!</b> — priming פעיל (0.2+0.2U יתוסף להזרקה הבאה)';
+                    bannerEl.style.display = 'block';
+                    setTimeout(function(){ if(bannerEl) bannerEl.style.display='none'; }, 10*60000);
+                }
+                sendNotification("🔄 פוד חדש זוהה!", "CAGE = " + cageVal.toFixed(1) + "h — priming פעיל", {tag:'loopie-pod-new'});
+            }
+        }
+
+        // זיהוי חיישן חדש — SAGE ירד
+        if (sageVal !== null && _lastKnownSage !== null) {
+            if (_lastKnownSage > 24 && sageVal < 3) {
+                console.log("New sensor detected! SAGE:", sageVal, "h");
+                sendNotification("📡 חיישן חדש זוהה!", "SAGE = " + sageVal.toFixed(1) + "h — זכור: 24ש' ראשונות פחות מדויק", {tag:'loopie-sensor-new'});
+            }
+        }
+
+        _lastKnownCage = cageVal;
+        _lastKnownSage = sageVal;
+    } catch(e) { console.error("autoDetect:", e); }
+}
+
 async function connect() {
     var btn = document.getElementById('loginBtn');
     // שמור/טעין אוטומטית
@@ -4303,7 +4526,18 @@ async function fetchData() {
                 }
                 nsData.cob = cobRaw !== null ? parseFloat(parseFloat(cobRaw).toFixed(1)) : 0;
 
-                // בזאלי בפועל
+                // loop.enacted קיים! נצל אותו
+                var enacted = dig(dev, 'loop.enacted');
+                if (enacted) {
+                    if (enacted.rate !== undefined && enacted.rate !== null) {
+                        nsData.basal = parseFloat(enacted.rate).toFixed(3);
+                        console.log("Basal from loop.enacted.rate:", nsData.basal);
+                    }
+                    if (enacted.bolusVolume) nsData.loopEnactedBolus = parseFloat(enacted.bolusVolume);
+                    if (enacted.duration) nsData.enactedDuration = enacted.duration;
+                }
+
+                // בזאלי בפועל — fallback
                 var basalPaths = [
                     'openaps.enacted.rate', 'openaps.suggested.rate',
                     'loop.recommendedTempBasal.rate', 'loop.enacted.rate',
@@ -4316,6 +4550,9 @@ async function fetchData() {
                 }
                 nsData.basal = basalRaw !== null ? basalRaw : "0.0";
                 document.getElementById('stat-basal').innerText = nsData.basal;
+                // בדג ביה"ס
+                var schoolBadge = document.getElementById('school-badge');
+                if (schoolBadge) schoolBadge.style.display = isSchoolProfile() ? 'inline' : 'none';
 
                 // Override banner
                 var ovEl = document.getElementById('override-banner');
@@ -4374,6 +4611,9 @@ async function fetchData() {
         checkPendingDose();
         checkPodFailure();
         try { checkSensorHealth(); } catch(e) { console.error('sensorHealth:', e); }
+
+        // זיהוי פוד/חיישן חדש מ-CAGE/SAGE
+        try { autoDetectNewDevices(); } catch(e) {}
     } catch(e) { console.error("fetchData error:", e); }
 }
 
@@ -4611,6 +4851,38 @@ async function askOmnibox() {
         }
     }
 
+    // --- לוח זמנים ביה"ס ---
+    else if (ql.includes("ביה") || ql.includes("בית ספר") || ql.includes("הפסקה") || ql.includes("לוח זמנים")) {
+        var sc = getSchoolContext();
+        var isSD = isSchoolDay();
+        var html_sc = "<div style='font-size:13px'>";
+        var spActive = isSchoolProfile();
+        html_sc += "<b>" + (isSD ? "📚 יום לימודים" : "🏖️ לא יום לימודים") + "</b>";
+        if (spActive) html_sc += " <span style='color:#10b981;font-size:11px'>🏫 פרופיל ביהס פעיל</span>";
+        html_sc += "<br><br>";
+        if (spActive) {
+            html_sc += "<div style='background:rgba(16,185,129,0.08);border-radius:8px;padding:8px;margin-bottom:8px;font-size:12px'>";
+            html_sc += "🎯 יעד סוכר: <b>" + SCHOOL_PROFILE.targetBGRange + "</b> (בבית: 100-120)<br>";
+            html_sc += "💉 CR: +10% (פחות אינסולין) | ISF: +10% (תיקון עדין)<br>";
+            html_sc += "🛡️ מטרה: מניעת היפו בזמן לימודים";
+            html_sc += "</div>";
+        }
+        if (isSD && sc) {
+            html_sc += "📍 שלב נוכחי: <b>" + sc.label + "</b><br>";
+            if (sc.note) html_sc += "💡 " + sc.note + "<br>";
+            if (sc.walkWarning) html_sc += "<br>⚠️ " + sc.walkWarning + "<br>";
+        }
+        html_sc += "<br><b>לוח יומי:</b><br>";
+        html_sc += "• 07:00 🏠 א. בוקר בבית (100% עכשיו)<br>";
+        html_sc += "• 07:30 🚶 יציאה לביהס (הליכה 1קמ = הפחת 10%)<br>";
+        html_sc += "• 09:40 🍞 א. עשר — פיתה 35g (70/30)<br>";
+        html_sc += "• 09:40–10:15 🏃 הפסקה (ה-30% אחרי)<br>";
+        html_sc += "• 13:30 🏠 חזרה הביתה (הליכה = אכול 10-15g לפני)<br>";
+        html_sc += "</div>";
+        showPopup("📚 לוח ביהס", html_sc);
+        input.value = ''; return;
+    }
+
     // --- SMB / מיקרובולוס ---
     else if (ql.includes("smb") || ql.includes("מיקרובולוס") || ql.includes("micro")) {
         resp_html_needed = true;
@@ -4786,7 +5058,7 @@ async function askOmnibox() {
 
         // === חיפוש חיישן ===
         // 1. חיפוש לפי keywords ב-eventType
-        var sKeys = ['sensor start','sensor change','sensor','cgm','dexcom','libre','g6','g7','חיישן','סנסור'];
+        var sKeys = ['Sensor Start','sensor start','Sensor Change','sensor change','sensor','cgm','dexcom','libre','g6','g7','חיישן','סנסור'];
         var sensor = tr.find(function(t){
             var ev = (t.eventType||'').toLowerCase();
             return sKeys.some(function(k){ return ev.includes(k); });
