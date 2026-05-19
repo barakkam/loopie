@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0052)file:///C:/Users/barak/Downloads/loopie-ultra_8.html -->
+<!-- saved from url=(0052)file:///C:/Users/barak/Downloads/loopie-ultra_9.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1123,7 +1123,7 @@ async function analyzeMeal(mealName) {
 
             return {
                 date:     new Date(m.created_at).toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'}),
-                time:     new Date(m.created_at).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}),
+                time:     new Date(m.created_at).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false}),
                 carbs:    m.carbs  || 0,
                 insulin:  m.insulin ? parseFloat(m.insulin).toFixed(1) : 0,
                 extended: m.extended ? parseFloat(m.extended).toFixed(1) : null,
@@ -2318,7 +2318,7 @@ function addActivity() {
     document.getElementById('act-from').value = '';
     document.getElementById('act-to').value   = '';
 
-    showPopup("✅ נשמר!", "פעילות <b>" + name + "</b> נוספה:<br>יום " + DAYS_HE[day] + " | " + from + "–" + to + "<br><b>" + INTENSITY_LABELS[intens] + "</b>");
+    showPopup("✅ נשמר!", "פעילות <b>" + name + "</b> נוספה:<br>יום " + DAYS_HE[day] + " " + from + "–" + to + "<br><b>" + INTENSITY_LABELS[intens] + "</b>");
 }
 
 function deleteActivity(id) {
@@ -2975,7 +2975,7 @@ async function checkNSActions() {
 async function analyzeNewTreatment(t) {
     var ins   = parseFloat(t.insulin) || 0;
     var carbs = t.carbs || 0;
-    var time  = new Date(t.created_at).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+    var time  = new Date(t.created_at).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false});
     var evType = t.eventType || 'Bolus';
     var notes  = t.notes || '';
 
@@ -3912,7 +3912,7 @@ function renderLogs(logs) {
     if (!logs.length) { listEl.innerHTML = "<div style='color:#888;text-align:center;padding:20px'>אין לוגים</div>"; return; }
 
     var html = logs.map(function(l) {
-        var date = new Date(l.date).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+        var date = new Date(l.date).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
         var color = '#888';
         var icon  = '📋';
         var detail = '';
@@ -4763,12 +4763,15 @@ async function askOmnibox() {
             var allFound2 = true;
             qParts.forEach(function(part) {
                 // חלץ כמות מתחילת המחרוזת
-                var qtyMatch = part.match(/^(\d+\.?\d*)\s*/);
-                var qty2 = qtyMatch ? parseFloat(qtyMatch[1]) : 1;
-                var fname2 = qtyMatch ? part.replace(qtyMatch[0],'').trim() : part;
+                var qtyMatchM = part.match(/^(\d+\.?\d*)\s+/); // מספר בהתחלה = כמות
+                var carbsMatchM = part.match(/\s+(\d+\.?\d*)g?$/); // מספר בסוף = פחמימות
+                var qty2 = 1, manualCarbsM = null;
+                var fname2 = part;
+                if (qtyMatchM) { qty2 = parseFloat(qtyMatchM[1]); fname2 = part.replace(qtyMatchM[0],'').trim(); }
+                else if (carbsMatchM) { manualCarbsM = parseFloat(carbsMatchM[1]); fname2 = part.replace(carbsMatchM[0],'').trim(); }
                 var fd2 = findFood(fname2);
                 if (fd2) {
-                    var c2 = fd2.data.carbs * qty2;
+                    var c2 = manualCarbsM !== null ? manualCarbsM : fd2.data.carbs * qty2;
                     totalCarbs2 += c2;
                     if (fd2.data.durationH > maxDur2) maxDur2 = fd2.data.durationH;
                     foodNames2.push(qty2 > 1 ? qty2 + ' ' + fd2.key : fd2.key);
@@ -4792,7 +4795,8 @@ async function askOmnibox() {
                         'ניתוח','מצב','סטטוס','status','פרופיל','profile','מה המצב',
                         'היסטוריה','מאכלים','רשימה','חילוץ','היפו','נמוך','גבוה',
                         'המלצות','המלצה','ניתוח','הצע','הצג','הראה','רשימת','מה אכלתי',
-                        'ביהס','ביה"ס','בית ספר','לוח','פעילות','חוג','כשל','בדוק'];
+                        'ביהס','בית ספר','לוח','פעילות','חוג','כשל','בדוק',
+                        'הוסף','הכנס','הזן','מחק','הסר','בימי','בשעות','עד שעה'];
     var isNonFood = nonFoodWords.some(function(w){ return ql === w || ql.startsWith(w+' ') || ql.endsWith(' '+w); });
 
     // זיהוי ישיר של שם מאכל ללא מילות שאלה
@@ -4857,13 +4861,21 @@ async function askOmnibox() {
     }
 
     // --- ניהול חוגים דרך אומניבוקס ---
-    else if (/הוסף|הכנס|הזן|מחק|הסר|בטל/i.test(q) && /חוג|אימון|שיעור/i.test(q)) {
+    else if (/הוסף|הכנס|הזן|צור/i.test(q) && (/חוג|אימון|שיעור|פעילות|mma|כדורגל|כדורסל|שחייה|ריצה|צופים|קראטה|כושר/i.test(q) || /בימי|בשעות|בשעה/i.test(q))) {
         var actResult = handleActivityCommand(q);
-        if (actResult) { ans = actResult; }
-        else { ans = "לא הצלחתי לפרסר. נסה: 'הוסף חוג כדורגל יום שני 16:00-17:00'"; }
+        if (actResult) { resp_html_needed = true; ans = actResult; }
+        else { ans = "לא הצלחתי לפרסר.<br>נסה: <b>'הוסף חוג MMA יום ראשון 15:30-17:30'</b>"; }
+        input.value = '';
     }
 
-    else if (ql.includes("חוגים") && (ql.includes("רשימה") || ql.includes("הצג") || ql.includes("כל"))) {
+    else if (/מחק|הסר|בטל|delete/i.test(q) && (/חוג|אימון|פעילות/i.test(q) || ACTIVITIES.some(function(a){ return q.toLowerCase().includes(a.name.toLowerCase()); }))) {
+        var delResult = handleActivityCommand(q);
+        if (delResult) { ans = delResult; }
+        else { ans = "לא נמצא חוג. שאל 'רשימת חוגים' לרשימה."; }
+        input.value = '';
+    }
+
+    else if (/רשימ|הצג|כל.*חוג|חוג.*כל/i.test(q) && /חוג|פעילות/i.test(q)) {
         ans = handleActivityCommand("רשימה") || "אין חוגים";
     }
 
@@ -5002,7 +5014,7 @@ async function askOmnibox() {
             ans += "• מספר SMB: <b>" + smbs.length + "</b><br>";
             ans += "• סה'כ אינסולין: <b>" + totalSMB + "U</b><br>";
             if (lastSMB) {
-                var lTime = new Date(lastSMB.created_at).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+                var lTime = new Date(lastSMB.created_at).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false});
                 ans += "• SMB אחרון: <b>" + lTime + "</b> — " + parseFloat(lastSMB.insulin).toFixed(2) + "U<br>";
             }
             ans += "</div>";
@@ -5061,7 +5073,7 @@ async function askOmnibox() {
             if (smbs.length > 0) {
                 ans += "<b style='font-size:12px;color:#888'>SMB אחרונים:</b><br>";
                 smbs.slice(0,6).forEach(function(s){
-                    var t = new Date(s.created_at).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+                    var t = new Date(s.created_at).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false});
                     ans += "<span style='font-size:12px;color:#666'>" + t + ": " + parseFloat(s.insulin).toFixed(2) + "U</span><br>";
                 });
             }
@@ -5244,7 +5256,7 @@ async function askOmnibox() {
             ans += "• גיל חיישן (SAGE): <b>" + sAgeDays + "d " + sAgeHrs + "h</b><br>";
             ans += "• נותרו: <b style='color:" + (sLeft2<24?"#ef4444":sLeft2<48?"#f59e0b":"#10b981") + "'>" + Math.floor(sLeft2/24) + "d " + Math.round(sLeft2%24) + "h (~" + (sLeft2/24).toFixed(1) + " ימים)</b><br>";
             var sNextMs = Date.now() + sLeft2*3600000;
-            ans += "• החלפה הבאה: <b>" + new Date(sNextMs).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) + "</b><br>";
+            ans += "• החלפה הבאה: <b>" + new Date(sNextMs).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}) + "</b><br>";
             ans += "<small style='color:#888'>מקור: SAGE מ-DeviceStatus</small>";
         } else {
             ans += "<span style='color:#f59e0b'>לא נמצא רישום החלפת חיישן.</span><br>";
@@ -5276,7 +5288,7 @@ async function askOmnibox() {
             ans += "• גיל פוד/קנולה (CAGE): <b>" + cAgeDays + "d " + cAgeHrs + "h</b><br>";
             ans += "• נותרו: <b style='color:" + (cLeft<12?"#ef4444":cLeft<24?"#f59e0b":"#10b981") + "'>" + Math.floor(cLeft/24) + "d " + Math.round(cLeft%24) + "h</b><br>";
             var cNextMs = Date.now() + cLeft*3600000;
-            ans += "• החלפה הבאה: <b>" + new Date(cNextMs).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) + "</b>";
+            ans += "• החלפה הבאה: <b>" + new Date(cNextMs).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}) + "</b>";
         } else {
             ans += "<span style='color:#f59e0b'>לא נמצא רישום החלפת פוד/אתר.</span><br>";
             ans += "<small style='color:#888'>💡 רשום ב-NS: Site Change / Pod Change</small>";
@@ -5303,7 +5315,7 @@ async function askOmnibox() {
                         var sLeft3 = Math.max(0, 240-sh2);
                         ans = ans.replace("לא נמצא רישום החלפת חיישן.", "");
                         ans += "<br>📡 נמצא ב-6 חודשים: <b>" + sFound2.eventType + "</b><br>";
-                        ans += "• הוחלף: " + new Date(sFound2.created_at).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) + "<br>";
+                        ans += "• הוחלף: " + new Date(sFound2.created_at).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}) + "<br>";
                         ans += "• נותרו: <b>" + sLeft3.toFixed(0) + "h</b>";
                     } else {
                         // הצג את כל ה-eventTypes שיש
@@ -5426,7 +5438,7 @@ async function askOmnibox() {
             ans = "<b>" + mealTitle + ":</b><br><br>";
             ans += filtered.map(function(m){
                 var mealTime = new Date(m.created_at).getTime();
-                var time     = new Date(m.created_at).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+                var time     = new Date(m.created_at).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false});
                 var name     = m.notes || m.foodType || m.reason || m.eventType || (m.carbs ? 'ארוחה' : 'בולוס');
 
                 // אינסולין
