@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<!-- saved from url=(0053)file:///C:/Users/barak/Downloads/loopie-ultra_13.html -->
+<!-- saved from url=(0053)file:///C:/Users/barak/Downloads/loopie-ultra_14.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Loopie v37 - 202605202300</title>
-    <!-- v202605192224 -->
+    <title>Loopie v37 - 202605202100</title>
+    <!-- v202605202100 -->
     <style>
         :root {
             --bg: #0e0e12; --card: #16161e; --border: #2a2a38; --blue: #3b82f6;
@@ -142,8 +142,8 @@
         </div>
         <div style="display:flex;gap:8px;margin-bottom:0">
         <button class="btn" id="refreshBtn" onclick="doRefresh()" style="flex:1">🔄 רענן</button>
-        <button class="btn" onclick="askGeminiAdvisor(document.getElementById(&#39;omnibox&#39;).value || &#39;מה המצב עכשיו ומה לעשות?&#39;)" style="width:100%;background:rgba(99,102,241,0.15);color:#818cf8;border:1px solid rgba(99,102,241,0.3);margin-bottom:8px">🤖 ייעוץ Gemini AI</button>
-        <button class="btn" onclick="showMemoryHistory()" style="flex:1;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-dim)">🧠 זיכרון</button>
+        <button class="btn" onclick="askGeminiAdvisor(document.getElementById(&#39;omnibox&#39;).value||&#39;מה המצב עכשיו?&#39;)" style="background:rgba(99,102,241,0.15);color:#818cf8;border:1px solid rgba(99,102,241,0.3);margin-bottom:8px;width:100%">🤖 ייעוץ Gemini AI</button>
+                <button class="btn" onclick="showMemoryHistory()" style="flex:1;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-dim)">🧠 זיכרון</button>
     </div>
         <button class="btn" style="background:transparent;border:1px solid var(--border);color:var(--muted);margin-top:8px" onclick="location.reload()">התנתקות</button>
     </div>
@@ -4460,383 +4460,32 @@ async function autoDetectNewDevices() {
     } catch(e) { console.error("autoDetect:", e); }
 }
 
-// ========= Gemini AI Advisor =========
-// Claude קורא את הנתונים, Gemini מייעץ
-
-async function buildNSContext() {
-    // בנה הקשר מלא מ-NS
-    var ctx = {
-        patient: "ילד בן 9, T1D טיפוס 1, אינסולין ליומגב, Omnipod, Loop AID",
-        sgv:     nsData.currentSgv || 0,
-        trend:   nsData.trend || 'Flat',
-        delta:   nsData.delta || 0,
-        iob:     parseFloat(nsData.iob) || 0,
-        cob:     parseFloat(nsData.cob) || 0,
-        basal:   nsData.basal || 0,
-        cr:      nsData.cr || 15.1,
-        isf:     nsData.isf || 120,
-        targetBG: 100,
-        profile:  isNightProfile() ? 'לילה' : isSchoolProfile() ? 'ביהס' : 'בית',
-        time:     new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false}),
-        day:      ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'][new Date().getDay()]
-    };
-
-    // תחזית Loop
-    try {
-        var dev = fullHistory.devStatus;
-        if (dev) {
-            var predObj = dig(dev, 'loop.predicted');
-            if (predObj && predObj.values) {
-                var vals = predObj.values;
-                ctx.predicted30 = vals[Math.min(6, vals.length-1)];
-                ctx.predicted60 = vals[Math.min(12, vals.length-1)];
-                ctx.predictedEventual = vals[vals.length-1];
-            }
-            ctx.loopRecommended = dig(dev,'loop.recommendedBolus');
-        }
-    } catch(e) {}
-
-    // ארוחות אחרונות (3 שעות)
-    try {
-        var since3h = new Date(Date.now()-3*3600000).toISOString();
-        var tr = await (await nsGet('/api/v1/treatments.json?find[created_at][$gte]='+since3h+'&count=10')).json();
-        ctx.recentMeals = tr.filter(function(t){ return t.carbs>0; }).map(function(t){
-            var minsAgo = Math.round((Date.now()-new Date(t.created_at).getTime())/60000);
-            return (t.notes||t.eventType||"ארוחה") + " " + t.carbs + "g לפני " + minsAgo + " דק";
-        });
-        ctx.recentBoluses = tr.filter(function(t){ return parseFloat(t.insulin||0)>0.5; }).map(function(t){
-            var minsAgo = Math.round((Date.now()-new Date(t.created_at).getTime())/60000);
-            return parseFloat(t.insulin).toFixed(1) + 'U לפני ' + minsAgo + " דק";
-        });
-    } catch(e) {}
-
-    return ctx;
-}
-
-function buildGeminiPrompt(ctx, userQuestion) {
-    // === רקע קבוע של המטופל + כל חוקי הבית ===
-    var background = [
-        "אתה יועץ רפואי מומחה לסוכרת נעורים T1D עם 30 שנות ניסיון קליני.",
-        "תמיד ענה בעברית, קצר וברור, עם המלצה מעשית מיידית.",
-        "",
-        "=== פרופיל מטופל: דניאל ===",
-        "גיל: 9 | סוכרת T1D מסוג 1",
-        "אינסולין: ליומגב (Lyumjev) ultra-rapid | שיא: 30 דק | DIA: 5 שעות",
-        "מכשיר: Omnipod 5 | מערכת: Loop AID (סוגרת לולאה אוטומטית)",
-        "חיישן: Dexcom G6/G7",
-        "",
-        "=== פרמטרי בסיס ===",
-        "CR (יחס פחמימות): 15.1 g/U",
-        "ISF (רגישות אינסולין): 120 mg/dL per U",
-        "בזאלי: 0.45-0.6 U/hr לפי שעה",
-        "יעד בסיס: 100 mg/dL | ביהס: 120 | לילה: 115",
-        "",
-        "=== חוקי הבית הקבועים ===",
-        "",
-        "חוק 1 — חוק ה-3 ימים:",
-        "כל שינוי פרמטר (CR, ISF, בזאלי) לוקח 3 ימים להשפיע.",
-        "לא לשנות יותר מ-2 פרמטרים בשבוע. תמיד המתן 3 ימים לפני הערכה.",
-        "",
-        "חוק 2 — פרופילים יומיים:",
-        "06:00-10:00 Dawn Phenomenon: תנגודת גבוהה, 100% אינסולין עכשיו, ללא פיצול",
-        "07:00 ארוחת בוקר בבית (Dawn מלא)",
-        "08:00-14:00 ימי לימוד א-ה: CR×1.1, ISF×1.1, יעד 120 (פרופיל ביהס)",
-        "09:40 ארוחת עשר (פיתה): פיצול 70/30 — הפסקה 09:45-10:15",
-        "13:30 חזרה מביהס: הליכה 1קמ = אכול 10-15g קודם",
-        "22:00-06:00 לילה: ספיגה איטית, תיקון 50% בלבד, פיצול 55/45",
-        "",
-        "חוק 3 — לוגיקת פיצול לפי מאכל:",
-        "פסטה/מלאווח/ג'חנון (6+ שעות): פיצול 50/50 — ספיגה איטית מאוד",
-        "פיצה מסעדה/המבורגר (5 שעות): פיצול 60/40",
-        "פיתה/לחם (3 שעות): פיצול 70/30",
-        "פרי/דגנים (1.5-2 שעות): פיצול 80/20",
-        "סוכר מהיר/גלוקוז (30 דק'): 100% עכשיו",
-        "",
-        "חוק 4 — ספורט ואימונים:",
-        "MMA / ריצה / כדורגל (עצימות גבוהה):",
-        "  כניסה: סוכר 165+ (ביציב) או 140+ (בעלייה), IOB מקס 0.5U",
-        "  בזאלי: -80% שעה לפני + בזמן האימון",
-        "  אחרי: -30% למשך 4 שעות (סיכון היפו מאוחר)",
-        "שחייה / ים / אופניים (עצימות בינונית):",
-        "  כניסה: סוכר 150+, IOB מקס 0.7U",
-        "  בזאלי: -50%",
-        "  אחרי: -20% למשך 3 שעות",
-        "MMA מחולק לשעתיים: לפני שעתיים — הפחת מינון 25%, שעה — הפחת 40%, 30 דק' — הפחת 60%",
-        "",
-        "חוק 5 — מחלה / אימפטיגו / עקות:",
-        "מחלה = תנגודת אינסולין גבוהה, סוכר יעלה למרות Loop",
-        "מחלה קלה: הגדל בזאלי ב-20-30%, בדוק סוכר כל שעה",
-        "מחלה עם חום (38+): הגדל בזאלי ב-40-50%, שתיית נוזלים הכרחית",
-        "אימפטיגו / זיהום עור: תנגודת דומה למחלה, עלול להימשך ימים",
-        "כל מחלה: בדוק קטונים אם סוכר >250 ואין ירידה אחרי 2 שעות",
-        "",
-        "חוק 6 — בטיחות ילד בן 9:",
-        "תמיד שמרנות — עדיף גבוה מהיפו",
-        "Loop מנהל SMBs — אל תתנגש איתו",
-        "תיקון לילה: 50% מהתיקון הרגיל",
-        "לפני שינה: וודא סוכר 120+ עם מגמה יציבה",
-        "חילוץ: 15g גלוקוז מהיר + פתיבר",
-        "",
-        "חוק 7 — החלפת ציוד:",
-        "פוד חדש: 2×0.2U priming לפני ארוחה ראשונה",
-        "חיישן חדש: 24 שעות ראשונות פחות מדויק",
-        "פוד כשל: SGV>250 + IOB גבוה + לא יורד = החלף אתר ונסה ידנית",
-        ""
-    ].join("\n");
-
-        var lines = [
-        background,
-        "=== נתונים בזמן אמת (" + ctx.time + ", יום " + ctx.day + ") ===",
-        "נתונים עכשיו (" + ctx.time + ", יום " + ctx.day + "):",
-        "סוכר: " + ctx.sgv + " mg/dL מגמה: " + ctx.trend + " (delta " + (ctx.delta>=0?"+":"") + ctx.delta + ")",
-        "IOB: " + ctx.iob + "U | COB: " + ctx.cob + "g | בזאלי: " + ctx.basal + " U/hr",
-        "CR: " + ctx.cr + "g/U | ISF: " + ctx.isf + " | פרופיל: " + ctx.profile
-    ];
-    if (ctx.predicted30) {
-        lines.push("תחזית Loop: 30min=" + Math.round(ctx.predicted30) + " | 60min=" + Math.round(ctx.predicted60) + " | eventual=" + Math.round(ctx.predictedEventual));
-    }
-    if (ctx.loopRecommended !== null && ctx.loopRecommended !== undefined) {
-        lines.push("Loop ממליץ: " + ctx.loopRecommended + "U");
-    }
-    if (ctx.recentMeals && ctx.recentMeals.length) {
-        lines.push("ארוחות אחרונות: " + ctx.recentMeals.join(", "));
-    }
-    if (ctx.recentBoluses && ctx.recentBoluses.length) {
-        lines.push("הזרקות אחרונות: " + ctx.recentBoluses.join(", "));
-    }
-    lines.push("", "שאלת המשתמש: " + userQuestion, "");
-    lines.push("ענה בעברית, קצר וברור (3-5 שורות), עם המלצה מעשית מיידית.");
-    lines.push("אם נדרשת הזרקה ציין כמה יחידות ולמה. אם לא ציין מה לעשות.");
-    lines.push("זכור: ילד בן 9 - שמרן עם תיקונים, הימנע מהיפו.");
-    return lines.join("\n");
-}
-
-async function askGeminiAdvisor(userQuestion) {
-    // הצג spinner
-    showPopup("🧠 Gemini מנתח...", "<div style='text-align:center;padding:20px'><div class='spinner'></div><br><small style='color:#888'>קורא נתונים מ-NS...</small></div>");
-
-    try {
-        // שלב 1: בנה הקשר מ-NS
-        var ctx = await buildNSContext();
-
-        // שלב 2: בנה prompt
-        var prompt = buildGeminiPrompt(ctx, userQuestion);
-
-        // שלב 3: טען היסטוריית שיחה מFirebase
-        var chatHistory = [];
-        try {
-            var mem8 = await loadMemory();
-            var hist8 = mem8['gemini_chat_history'];
-            if (hist8 && hist8.value && Array.isArray(hist8.value)) {
-                // שמור רק 5 שיחות אחרונות (לא לחרוג ממגבלת טוקנים)
-                chatHistory = hist8.value.slice(-5);
-            }
-        } catch(e8) {}
-
-        // בנה contents עם היסטוריה
-        var contents = [];
-        // הוסף שיחות קודמות
-        chatHistory.forEach(function(turn) {
-            contents.push({ role: "user",  parts: [{ text: turn.q }] });
-            contents.push({ role: "model", parts: [{ text: turn.a }] });
-        });
-        // הוסף שאלה נוכחית
-        contents.push({ role: "user", parts: [{ text: prompt }] });
-
-        // שלח לGemini עם system instruction
-        var response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyDBI95wYKtfw0idRIUlxDmgBICbKsZYgFA", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                system_instruction: {
-                    parts: [{ text: "אתה יועץ סוכרת T1D אישי לדניאל, בן 9. זכור את כל השיחות הקודמות איתנו. תן המלצות עקביות עם מה שהמלצת קודם, אלא אם יש סיבה רפואית לשנות." }]
-                },
-                contents: contents,
-                generationConfig: { maxOutputTokens: 400, temperature: 0.3 }
-            })
-        });
-
-        if (!response.ok) {
-            var errData = await response.json();
-            throw new Error("Gemini " + response.status + ": " + (errData.error&&errData.error.message||''));
-        }
-
-        var data = await response.json();
-        var answer = data.candidates[0].content.parts[0].text.trim();
-
-        // שמור שיחה בהיסטוריה ב-Firebase
-        try {
-            var mem9 = await loadMemory();
-            var hist9 = (mem9['gemini_chat_history'] && mem9['gemini_chat_history'].value) || [];
-            hist9.push({
-                date: new Date().toISOString(),
-                q: userQuestion,
-                a: answer.substring(0, 500), // חסוך במקום
-                sgv: ctx.sgv, iob: ctx.iob,
-                profile: ctx.profile
-            });
-            // שמור רק 20 שיחות אחרונות
-            if (hist9.length > 20) hist9 = hist9.slice(-20);
-            await saveMemory('gemini_chat_history', hist9);
-        } catch(e) {}
-
-        // הצג תשובה
-        var html = "<div style='font-size:13px;line-height:1.6'>";
-        // המר markdown בסיסי
-        answer = answer.replace(/\n/g,"<br>");
-        html += answer;
-        html += "<br><br><small style='color:#555'>🤖 Gemini 2.0 | נתונים: " + ctx.time + "</small>";
-        html += "</div>";
-
-        closePopup();
-        showPopup("🧠 ייעוץ Gemini", html);
-
-    } catch(e) {
-        closePopup();
-        if (e.message.includes('429')) {
-            showPopup("⚠️ Gemini עמוס", "מכסה נגמרה. נסה שוב בעוד דקה.");
-        } else {
-            showPopup("שגיאה", "Gemini: " + e.message);
-        }
-    }
-}
-
-function showStatus(msg, type) {
-    var el = document.getElementById('login-status');
-    if (!el) return;
-    el.textContent = msg;
-    el.className = 'status ' + (type || '');
-}
-
-async function fetchData() {
-    try {
-        // שלוף נתוני NS
-        var eRes = await nsGet('/api/v1/entries.json?count=3');
-        if (!eRes.ok) return;
-        var entries = await eRes.json();
-        if (!entries.length) return;
-        var e0 = entries[0];
-        nsData.currentSgv = e0.sgv;
-        nsData.delta = e0.delta || 0;
-        nsData.trend = e0.direction || 'Flat';
-
-        // DeviceStatus
-        var dRes = await nsGet('/api/v1/devicestatus.json?count=1');
-        if (dRes.ok) {
-            var dArr = await dRes.json();
-            var dev = Array.isArray(dArr) ? dArr[0] : dArr;
-            if (dev) {
-                fullHistory.devStatus = dev;
-                var iobVal = dig(dev,'loop.iob.iob');
-                if (iobVal !== null) nsData.iob = parseFloat(iobVal).toFixed(2);
-                var cobVal = dig(dev,'loop.cob.cob');
-                if (cobVal !== null) nsData.cob = parseFloat(cobVal).toFixed(1);
-                var basalVal = dig(dev,'loop.enacted.rate');
-                if (basalVal !== null) nsData.basal = parseFloat(basalVal).toFixed(3);
-                var predObj = dig(dev,'loop.predicted');
-                if (predObj && predObj.values) {
-                    nsData.loopPredicted = predObj.values;
-                    window._predStartTime = predObj.startDate ? new Date(predObj.startDate).getTime() : Date.now();
-                }
-                var recBolus = dig(dev,'loop.recommendedBolus');
-                if (recBolus !== null) nsData.loopRecommended = parseFloat(recBolus);
-
-                // Log
-                console.log("=== DeviceStatus top keys:", Object.keys(dev));
-                var predObj2 = dig(dev,'loop.predicted');
-                if (predObj2) {
-                    console.log("loop.predicted keys:", Object.keys(predObj2));
-                    console.log("loop.predicted.startDate:", predObj2.startDate);
-                    console.log("loop.predicted.values length:", predObj2.values ? predObj2.values.length : 'N/A');
-                }
-                console.log("pump.battery:", dig(dev,'pump.battery'));
-                console.log("uploader.battery:", dig(dev,'uploader.battery'));
-                console.log("override:", dig(dev,'override'));
-
-                var loopKeys = dig(dev,'loop');
-                if (loopKeys) console.log("loop keys:", Object.keys(loopKeys));
-                console.log("IOB found at: loop.iob.iob =", dig(dev,'loop.iob.iob'));
-                console.log("COB found at: loop.cob.cob =", dig(dev,'loop.cob.cob'));
-                var enacted = dig(dev,'loop.enacted');
-                if (enacted) console.log("Basal from loop.enacted.rate:", enacted.rate);
-                console.log("Basal found at: loop.enacted.rate =", dig(dev,'loop.enacted.rate'));
-
-                // Profile
-                var profRes = await nsGet('/api/v1/profile.json');
-                if (profRes.ok) {
-                    var profData = await profRes.json();
-                    if (profData && profData.store) {
-                        var storeName = profData.defaultProfile || Object.keys(profData.store)[0];
-                        console.log("Profile store:", storeName);
-                        fullHistory.profile = profData.store[storeName];
-                        var prof = fullHistory.profile;
-                        if (prof) {
-                            var h = new Date().getHours();
-                            nsData.cr  = parseFloat(profileValueAt(prof.carbratio, h) || prof.carbratio) || 15.1;
-                            nsData.isf = parseFloat(profileValueAt(prof.sens, h) || prof.sens) || 120;
-                        }
-                    }
-                }
-            }
-        }
-
-        // עדכן תצוגה
-        // עדכן תצוגה ראשית
-        var sgvEl = document.getElementById('sgv-value') || document.getElementById('sgv-num');
-        if (sgvEl) sgvEl.textContent = nsData.currentSgv || '--';
-        var iobEl = document.getElementById('stat-iob');
-        if (iobEl) iobEl.textContent = nsData.iob || '0.0';
-        var basalEl = document.getElementById('stat-basal');
-        if (basalEl) basalEl.textContent = nsData.basal || '0.0';
-        // עדכן מגמה
-        var trendMap = {'DoubleUp':'⬆⬆','SingleUp':'⬆','FortyFiveUp':'↗','Flat':'→','FortyFiveDown':'↘','SingleDown':'⬇','DoubleDown':'⬇⬇'};
-        var trendEl = document.getElementById('trend-label');
-        if (trendEl) {
-            var ta = trendMap[nsData.trend] || '→';
-            var ds = nsData.delta >= 0 ? '+' : '';
-            trendEl.textContent = ta + ' ' + ds + (nsData.delta || 0);
-        }
-        // צבע סוכר
-        var sgvDisp = document.getElementById('sgv-display') || document.getElementById('sgv-value');
-        if (sgvDisp && nsData.currentSgv) {
-            sgvDisp.style.color = nsData.currentSgv < 70 ? '#3b82f6' : nsData.currentSgv > 180 ? '#f59e0b' : '#10b981';
-            sgvDisp.textContent = nsData.currentSgv;
-        }
-        checkAlerts();
-        try { autoDetectNewDevices(); } catch(e) {}
-        try { checkPodFailure(); } catch(e) {}
-
-    } catch(e) { console.error("fetchData error:", e); }
-}
-
 async function connect() {
     var btn = document.getElementById('loginBtn');
+    // שמור/טעין אוטומטית
     var remEl = document.getElementById('remember-me');
     var remember = !remEl || remEl.checked;
-    var urlEl    = document.getElementById('nsUrl');
-    var secretEl = document.getElementById('apiSecret');
-    if (!urlEl || !secretEl) return;
-    var url    = urlEl.value.trim().replace(/\/+$/, '');
-    var secret = secretEl.value.trim();
-    if (!url) { showStatus('הכנס כתובת Nightscout', 'error'); return; }
-    if (btn) { btn.disabled = true; btn.textContent = 'מתחבר...'; }
-    showStatus('מתחבר ל-Nightscout...', '');
+    if (!nsUrl() || !nsSecret()) return;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> מתחבר...';
     try {
-        NS_URL    = url;
-        API_TOKEN = secret;
-        var r = await nsGet('/api/v1/status.json');
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        var st = await r.json();
-        if (remember) {
-            localStorage.setItem('loopie_ns_url',    url);
-            localStorage.setItem('loopie_ns_secret', secret);
-        }
+        var res = await nsGet('/api/v1/status.json');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('main-screen').classList.remove('hidden');
-        showStatus('מחובר ✅', 'success');
+        if (remember) {
+            var nu = document.getElementById('nsUrl'); var as = document.getElementById('apiSecret');
+            if (nu) localStorage.setItem('loopie_ns_url', nu.value.trim());
+            if (as) localStorage.setItem('loopie_ns_secret', as.value.trim());
+        }
+        fetchData();
+        refreshTimer = setInterval(fetchData, 60000);
         startNSMonitor();
         loadEmojiMap();
-        // טען פעילויות מFirebase
+        // הצג גרף
+        setTimeout(drawMiniChart, 2000);
+        setInterval(drawMiniChart, 60000);
+        // טען פעילויות מ-Firebase
         loadMemory().then(function(mem){
             if (mem['activities'] && mem['activities'].value && Array.isArray(mem['activities'].value)) {
                 if (mem['activities'].value.length > ACTIVITIES.length) {
@@ -4846,22 +4495,1267 @@ async function connect() {
                 }
             }
         }).catch(function(){});
-        await fetchData();
-        if ('Notification' in window && Notification.permission === 'default') {
-            Notification.requestPermission().then(function(p){ _notifPermission = p; });
-        } else if ('Notification' in window) {
-            _notifPermission = Notification.permission;
-        }
-        setTimeout(drawMiniChart, 2000);
-        setInterval(drawMiniChart, 60000);
+        // טעינת הגדרות שמורות
+        var savedEmail = localStorage.getItem('loopie_email');
+        if (savedEmail) { var el = document.getElementById('user-email'); if (el) el.value = savedEmail; }
+        var savedKw = localStorage.getItem('loopie_keywords');
+        if (savedKw) { var kl = document.getElementById('activity-keywords'); if (kl) kl.value = savedKw; }
     } catch(e) {
-        showStatus('שגיאת חיבור: ' + e.message, 'error');
-    } finally {
-        if (btn) { btn.disabled = false; btn.textContent = 'התחבר למערכת'; }
+        btn.disabled = false;
+        btn.innerText = "שגיאת חיבור (" + e.message + ")";
     }
 }
 
+async function fetchData() {
+    try {
+        var [entRes, devRes, profRes] = await Promise.all([
+            nsGet('/api/v1/entries.json?count=2'),
+            nsGet('/api/v1/devicestatus.json?count=1'),
+            nsGet('/api/v1/profile.json')
+        ]);
+
+        // --- סוכר + דלתא ---
+        if (entRes.ok) {
+            var ed = await entRes.json();
+            var entries = Array.isArray(ed) ? ed : [ed];
+            var e0 = entries[0], e1 = entries[1];
+            if (e0 && e0.sgv) {
+                nsData.currentSgv = e0.sgv;
+                nsData.delta = e1 ? (e0.sgv - e1.sgv) : 0;
+                var bgEl = document.getElementById('current-bg');
+                bgEl.innerText = e0.sgv;
+                bgEl.className = 'bg-value' + (e0.sgv < 70 ? ' low' : e0.sgv > 180 ? ' high' : '');
+                var tm = {1:'↑↑',2:'↑',3:'↗',4:'→',5:'↘',6:'↓',7:'↓↓'};
+                var trendMap = {
+                    'DoubleUp':'⬆⬆','SingleUp':'⬆','FortyFiveUp':'↗',
+                    'Flat':'→','FortyFiveDown':'↘','SingleDown':'⬇',
+                    'DoubleDown':'⬇⬇','NONE':'→','NOT COMPUTABLE':'?'
+                };
+                var trendVal = e0.direction || e0.trend || 'Flat';
+                var trendArrow = trendMap[trendVal] || trendVal;
+                var deltaSign = nsData.delta >= 0 ? '+' : '';
+                document.getElementById('trend-label').innerText = trendArrow + ' ' + deltaSign + (nsData.delta || 0);
+                // התרעת מגמת עלייה
+                var isRising = (e0.sgv > INSULIN_CONFIG.alertThreshold && nsData.delta >= INSULIN_CONFIG.alertDelta);
+                var isLow    = (e0.sgv < 80 || (e0.sgv < 100 && nsData.delta <= -3));
+                var existing = document.getElementById('rising-alert');
+
+                if (isLow && !existing) {
+                    // התרעת נמוך — הצג חילוץ
+                    var alertDiv = document.createElement('div');
+                    alertDiv.id = 'rising-alert';
+                    alertDiv.style.cssText = 'background:rgba(59,130,246,0.15);border:1px solid #3b82f6;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;cursor:pointer';
+                    alertDiv.innerHTML = '🔵 סוכר <b>' + e0.sgv + '</b>' + (nsData.delta < 0 ? ' ויורד ' + nsData.delta + '/5דק' : '') + ' — <b style="color:#3b82f6">לחץ לתוכנית חילוץ</b>';
+                    alertDiv.onclick = function(){ document.getElementById('omnibox').value='חילוץ'; askOmnibox(); };
+                    var grid = document.querySelector('.stats-grid');
+                    if (grid) grid.parentNode.insertBefore(alertDiv, grid.nextSibling);
+                } else if (isRising && !existing) {
+                    alertHigh(e0.sgv, nsData.delta); // Push notification
+                    var alertDiv = document.createElement('div');
+                    alertDiv.id = 'rising-alert';
+                    alertDiv.style.cssText = 'background:rgba(245,158,11,0.15);border:1px solid #f59e0b;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;cursor:pointer';
+                    alertDiv.innerHTML = '📈 סוכר <b>' + e0.sgv + '</b> ועולה +' + nsData.delta + '/5דק — <b style="color:#f59e0b">לחץ לבדיקת תיקון</b>';
+                    alertDiv.onclick = function(){ recommendDose("תיקון"); };
+                    var grid = document.querySelector('.stats-grid');
+                    if (grid) grid.parentNode.insertBefore(alertDiv, grid.nextSibling);
+                } else if (!isRising && !isLow && existing) {
+                    existing.remove();
+                }
+            }
+        }
+
+        // --- DeviceStatus: IOB + COB + בזאלי ---
+        if (devRes.ok) {
+            var dd = await devRes.json();
+            var dev = Array.isArray(dd) ? dd[0] : dd;
+            if (dev) {
+                fullHistory.devStatus = dev;
+                console.log("=== DeviceStatus top keys:", Object.keys(dev));
+                // log loop prediction details
+                var pred2 = dig(dev, 'loop.predicted');
+                if (pred2) {
+                    console.log("loop.predicted keys:", Object.keys(pred2));
+                    console.log("loop.predicted.startDate:", pred2.startDate);
+                    console.log("loop.predicted.values length:", pred2.values ? pred2.values.length : 'N/A');
+                }
+                var forecast2 = dig(dev, 'loop.forecast') || dig(dev, 'openaps.suggested.predBGs');
+                if (forecast2) console.log("forecast available:", Object.keys(forecast2));
+                console.log("pump.battery:", dig(dev,'pump.battery'));
+                console.log("uploader.battery:", dig(dev,'uploader.battery'));
+                console.log("override:", dig(dev,'override'));
+                if (dev.openaps) console.log("openaps keys:", Object.keys(dev.openaps));
+                if (dev.loop)    console.log("loop keys:", Object.keys(dev.loop));
+
+                // IOB — רשימת מיקומים אפשריים
+                var iobPaths = [
+                    'openaps.iob.iob', 'openaps.suggested.IOB', 'openaps.enacted.IOB',
+                    'loop.iob.iob', 'loop.iob.value',
+                    'pump.iob.bolusiob', 'pump.iob'
+                ];
+                var iobRaw = null;
+                for (var i = 0; i < iobPaths.length; i++) {
+                    iobRaw = dig(dev, iobPaths[i]);
+                    if (iobRaw !== null) { console.log("IOB found at:", iobPaths[i], "=", iobRaw); break; }
+                }
+                nsData.iob = iobRaw !== null ? parseFloat(iobRaw).toFixed(2) : "0.00";
+                document.getElementById('stat-iob').innerText = nsData.iob;
+
+                // COB — רשימת מיקומים אפשריים
+                var cobPaths = [
+                    'openaps.iob.activity', 'openaps.meal.carbs',
+                    'openaps.suggested.COB', 'openaps.enacted.COB',
+                    'loop.cob.cob', 'loop.cob',
+                    'cob', 'COB'
+                ];
+                var cobRaw = null;
+                for (var j = 0; j < cobPaths.length; j++) {
+                    var cv = dig(dev, cobPaths[j]);
+                    if (cv === null || cv === undefined) continue;
+                    // NS may return {cob:0, timestamp:...}
+                    if (typeof cv === 'object' && cv.cob !== undefined) cv = cv.cob;
+                    if (typeof cv === 'number' || (typeof cv === 'string' && !isNaN(cv))) {
+                        cobRaw = parseFloat(cv);
+                        console.log("COB found at:", cobPaths[j], "=", cobRaw);
+                        break;
+                    }
+                }
+                nsData.cob = cobRaw !== null ? parseFloat(parseFloat(cobRaw).toFixed(1)) : 0;
+
+                // loop.enacted קיים! נצל אותו
+                var enacted = dig(dev, 'loop.enacted');
+                if (enacted) {
+                    if (enacted.rate !== undefined && enacted.rate !== null) {
+                        nsData.basal = parseFloat(enacted.rate).toFixed(3);
+                        console.log("Basal from loop.enacted.rate:", nsData.basal);
+                    }
+                    if (enacted.bolusVolume) nsData.loopEnactedBolus = parseFloat(enacted.bolusVolume);
+                    if (enacted.duration) nsData.enactedDuration = enacted.duration;
+                }
+
+                // בזאלי בפועל — fallback
+                var basalPaths = [
+                    'openaps.enacted.rate', 'openaps.suggested.rate',
+                    'loop.recommendedTempBasal.rate', 'loop.enacted.rate',
+                    'pump.extended.TBRRate', 'pump.basal.rate'
+                ];
+                var basalRaw = null;
+                for (var k = 0; k < basalPaths.length; k++) {
+                    basalRaw = dig(dev, basalPaths[k]);
+                    if (basalRaw !== null) { console.log("Basal found at:", basalPaths[k], "=", basalRaw); break; }
+                }
+                nsData.basal = basalRaw !== null ? basalRaw : "0.0";
+                document.getElementById('stat-basal').innerText = nsData.basal;
+                // בדג ביה"ס
+                var schoolBadge = document.getElementById('school-badge');
+                if (schoolBadge) schoolBadge.style.display = isSchoolProfile() ? 'inline' : 'none';
+
+                // Override banner
+                var ovEl = document.getElementById('override-banner');
+                if (ovEl) {
+                    if (nsData.overrideActive) {
+                        ovEl.style.display = 'block';
+                        ovEl.innerText = '🔄 ' + (nsData.overrideName || 'Override פעיל');
+                    } else {
+                        ovEl.style.display = 'none';
+                    }
+                }
+
+                // אזהרות סוללה
+                var batWarnEl = document.getElementById('battery-warn');
+                if (batWarnEl) {
+                    var batWarns = [];
+                    if (nsData.pumpBattery !== undefined && nsData.pumpBattery < 25) {
+                        batWarns.push('🔋 משאבה: ' + nsData.pumpBattery + '%');
+                    }
+                    if (nsData.phoneBattery !== undefined && nsData.phoneFamily < 20) {
+                        batWarns.push('📱 טלפון: ' + nsData.phoneFamily + '%');
+                    }
+                    if (batWarns.length) {
+                        batWarnEl.style.display = 'block';
+                        batWarnEl.innerText = batWarns.join(' | ');
+                        if (nsData.pumpBattery < 15) {
+                            sendNotification('🔋 סוללת משאבה נמוכה!', nsData.pumpBattery + '% — טען עכשיו', {tag:'loopie-battery',requireInteraction:true});
+                        }
+                    } else {
+                        batWarnEl.style.display = 'none';
+                    }
+                }
+            }
+        }
+
+        // --- פרופיל ---
+        if (profRes.ok) {
+            var pd = await profRes.json();
+            var prof = Array.isArray(pd) ? pd[0] : pd;
+            if (prof && prof.store) {
+                var sName = prof.defaultProfile || Object.keys(prof.store)[0];
+                fullHistory.profile = prof.store[sName];
+                console.log("Profile store:", sName);
+                // אם בזאלי עדיין 0 — קח מהפרופיל
+                if (!parseFloat(nsData.basal)) {
+                    var bNow = profileValueAt(fullHistory.profile.basal, new Date().getHours());
+                    if (bNow) { nsData.basal = bNow; document.getElementById('stat-basal').innerText = bNow; }
+                }
+            } else if (prof) {
+                fullHistory.profile = prof;
+            }
+        }
+
+        loadHistory();
+        checkActiveActivity();
+        checkPendingDose();
+        checkPodFailure();
+        try { checkSensorHealth(); } catch(e) { console.error('sensorHealth:', e); }
+
+        // זיהוי פוד/חיישן חדש מ-CAGE/SAGE
+        try { autoDetectNewDevices(); } catch(e) {}
+    } catch(e) { console.error("fetchData error:", e); }
+}
+
+async function loadHistory() {
+    try {
+        var dayAgo   = new Date(Date.now() - 86400000).toISOString();
+        var mo3Ago   = new Date(Date.now() - 90*86400000).toISOString();
+
+        var [ent, treat, equip] = await Promise.all([
+            nsGet('/api/v1/entries.json?find[dateString][$gte]=' + dayAgo + '&count=500').then(function(r){return r.json();}).catch(function(){return [];}),
+            nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + dayAgo + '&count=200').then(function(r){return r.json();}).catch(function(){return [];}),
+            nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + mo3Ago + '&count=500').then(function(r){return r.json();}).catch(function(){return [];})
+        ]);
+
+        var merged = treat.concat(equip.filter(function(e){ return !treat.find(function(t){return t._id===e._id;}); }));
+        fullHistory.entries    = ent;
+        fullHistory.treatments = merged;
+
+        // הדפס eventTypes לדיאגנוז
+        var types = {};
+        merged.forEach(function(t){ if(t.eventType) types[t.eventType]=(types[t.eventType]||0)+1; });
+        console.log("=== Treatment eventTypes:", JSON.stringify(types));
+    } catch(e) { console.error("loadHistory error:", e); }
+}
+
+async function askOmnibox() {
+    var input = document.getElementById('omnibox');
+    var q     = input.value.trim();
+    var ql    = q.toLowerCase();
+    if (!q) return;
+    // מציג "מנתח..." בפופאפ בינוני
+    showPopup("Loopie 🧠", "<div style='text-align:center;padding:20px;color:#888'>מנתח... 🧠</div>");
+
+    var tr   = fullHistory.treatments || [];
+    var ent  = fullHistory.entries    || [];
+    var prof = fullHistory.profile;
+    var dev  = fullHistory.devStatus;
+    var ans  = "";
+    var nowH = new Date().getHours();
+
+    // === מספר מאכלים ביחד (מופרדים ב-ו/,/+) ===
+    var multiSep = /\s+ו[-]?\s*|\s*,\s*|\s*\+\s*/;
+    var qParts = q.split(multiSep).map(function(p){ return p.trim(); }).filter(function(p){ return p.length > 1; });
+    if (qParts.length > 1) {
+        // בדוק שכולם מאכלים (לא פקודות)
+        var allFoods = qParts.every(function(p){
+            var pl = p.toLowerCase();
+            var nonF = ['פוד','חיישן','ציוד','בזאלי','isf','cr','iob','cob','תיקון','ספורט','smb'];
+            return !nonF.some(function(w){ return pl === w; });
+        });
+        if (allFoods) {
+            var totalCarbs2 = 0, maxDur2 = 0, foodNames2 = [];
+            var allFound2 = true;
+            qParts.forEach(function(part) {
+                // חלץ כמות מתחילת המחרוזת
+                var qtyMatchM = part.match(/^(\d+\.?\d*)\s+/); // מספר בהתחלה = כמות
+                var carbsMatchM = part.match(/\s+(\d+\.?\d*)g?$/); // מספר בסוף = פחמימות
+                var qty2 = 1, manualCarbsM = null;
+                var fname2 = part;
+                if (qtyMatchM) { qty2 = parseFloat(qtyMatchM[1]); fname2 = part.replace(qtyMatchM[0],'').trim(); }
+                else if (carbsMatchM) { manualCarbsM = parseFloat(carbsMatchM[1]); fname2 = part.replace(carbsMatchM[0],'').trim(); }
+                var fd2 = findFood(fname2);
+                if (fd2) {
+                    var c2 = manualCarbsM !== null ? manualCarbsM : fd2.data.carbs * qty2;
+                    totalCarbs2 += c2;
+                    if (fd2.data.durationH > maxDur2) maxDur2 = fd2.data.durationH;
+                    foodNames2.push(qty2 > 1 ? qty2 + ' ' + fd2.key : fd2.key);
+                } else {
+                    allFound2 = false;
+                }
+            });
+            if (allFound2 && totalCarbs2 > 0) {
+                LAST_FOOD_QUERY = foodNames2.join(' + ');
+                closePopup();
+                recommendDose(foodNames2.join(' + ') + ' __carbs__' + Math.round(totalCarbs2) + '__dur__' + maxDur2);
+                input.value = '';
+                return;
+            }
+        }
+    }
+
+    // === חסימה מוקדמת — מילים שאינן מאכל ===
+    var nonFoodWords = ['פוד','pod','חיישן','סנסור','ציוד','בזאלי','isf','cr','iob','cob',
+                        'תיקון','ספורט','אימון','ים','בריכה','smb','זיכרון','דוח','לוגים',
+                        'ניתוח','מצב','סטטוס','status','פרופיל','profile','מה המצב',
+                        'היסטוריה','מאכלים','רשימה','חילוץ','היפו','נמוך','גבוה',
+                        'המלצות','המלצה','ניתוח','הצע','הצג','הראה','רשימת','מה אכלתי',
+                        'ביהס','בית ספר','לוח','פעילות','חוג','כשל','בדוק',
+                        'הוסף','הכנס','הזן','מחק','הסר','בימי','בשעות','עד שעה'];
+    var isNonFood = nonFoodWords.some(function(w){ return ql === w || ql.startsWith(w+' ') || ql.endsWith(' '+w); });
+
+    // זיהוי ישיר של שם מאכל ללא מילות שאלה
+    var directFood = isNonFood ? null : detectFoodName(q);
+    var knownInDB  = directFood ? findFood(directFood) : null;
+    var knownEmoji = directFood && Object.values(EMOJI_MAP).some(function(v){
+        return v && v.toLowerCase() === directFood.toLowerCase();
+    });
+    var isKnownFood  = !!(knownInDB || knownEmoji);
+    var isUnknownFood = directFood && !isKnownFood && directFood.length >= 2;
+
+    var hasKeyword = ql.includes("להזריק") || ql.includes("כמה אינסולין") ||
+        ql.includes("מינון") || ql.includes("לתקן") || ql.includes("correction") ||
+        (ql.includes("כמה") && (ql.includes("יחידות") || ql.includes("יח'"))) ||
+        (ql.includes("תיקון") && !ql.includes("isf") && !ql.includes("רגישות") && !ql.includes("פרופיל"));
+
+    // --- המלצת מינון על מאכל מוכר ---
+    if (hasKeyword || isKnownFood) {
+        closePopup();
+        var corrOnly = (ql.includes("תיקון") || ql.includes("לתקן")) && !ql.includes("על ");
+        if (directFood) LAST_FOOD_QUERY = directFood;
+        recommendDose(corrOnly ? "__correction__" : (directFood || q));
+        input.value = '';
+        return;
+    }
+
+    // --- מאכל לא מוכר — שלח ל-AI אוטומטית ---
+    if (isUnknownFood) {
+        LAST_FOOD_QUERY = directFood;
+        closePopup();
+        lookupFoodAI(directFood);
+        input.value = '';
+        return;
+    }
+
+    // --- תחזית ---
+    else if (ql.includes("עוד") || ql.includes("תחזית") || ql.includes("יהיה")) {
+        var nm = ql.match(/(\d+(?:\.\d+)?)/);
+        var hrs = nm ? parseFloat(nm[1]) : 1;
+        var pred = predictBG(hrs);
+        ans = pred
+            ? "📈 תחזית " + (hrs===1?"עוד שעה":"עוד "+hrs+" שעות") + ":<br><b style='font-size:1.4em'>" + pred + " mg/dL</b>" + bgStatus(pred) + "<br><small style='color:#888'>מגמה: " + (nsData.delta>=0?"+":"") + nsData.delta + "/5דק' | IOB: " + nsData.iob + "U</small>"
+            : "אין מספיק נתונים לתחזית.";
+    }
+
+    // --- מצב נוכחי ---
+    else if (ql.includes("מצב") || ql.includes("כעת") || ql.includes("עכשיו") || ql.includes("מה קורה")) {
+        ans = "📊 <b>מצב נוכחי:</b><br>" +
+            "• סוכר: <b>" + nsData.currentSgv + " mg/dL</b> " + bgStatus(nsData.currentSgv) + "<br>" +
+            "• מגמה: " + (nsData.delta>=0?"+":"") + nsData.delta + " ב-5 דק'<br>" +
+            "• IOB: <b>" + nsData.iob + " U</b><br>" +
+            "• COB: <b>" + nsData.cob + " g</b><br>" +
+            "• בזאלי: <b>" + nsData.basal + " U/hr</b>";
+    }
+
+    // --- COB ---
+    else if (ql.includes("cob") || ql.includes("פחמימות פעילות") || ql.includes("פחמימה פעיל")) {
+        ans = "🍞 <b>COB (פחמימות פעילות): " + nsData.cob + "g</b><br>";
+        // מחפש גם ב-DeviceStatus לנתונים נוספים
+        var cobDetailed = dig(dev, 'openaps.meal') || dig(dev, 'loop.cob');
+        if (cobDetailed) ans += "<small style='color:#888'>" + JSON.stringify(cobDetailed) + "</small>";
+    }
+
+    // --- ניהול חוגים דרך אומניבוקס ---
+    else if (/הוסף|הכנס|הזן|צור/i.test(q) && (/חוג|אימון|שיעור|פעילות|mma|כדורגל|כדורסל|שחייה|ריצה|צופים|קראטה|כושר/i.test(q) || /בימי|בשעות|בשעה/i.test(q))) {
+        var actResult = handleActivityCommand(q);
+        if (actResult) { resp_html_needed = true; ans = actResult; }
+        else { ans = "לא הצלחתי לפרסר.<br>נסה: <b>'הוסף חוג MMA יום ראשון 15:30-17:30'</b>"; }
+        input.value = '';
+    }
+
+    else if (/מחק|הסר|בטל|delete/i.test(q) && (/חוג|אימון|פעילות/i.test(q) || ACTIVITIES.some(function(a){ return q.toLowerCase().includes(a.name.toLowerCase()); }))) {
+        var delResult = handleActivityCommand(q);
+        if (delResult) { ans = delResult; }
+        else { ans = "לא נמצא חוג. שאל 'רשימת חוגים' לרשימה."; }
+        input.value = '';
+    }
+
+    else if (/רשימ|הצג|כל.*חוג|חוג.*כל/i.test(q) && /חוג|פעילות/i.test(q)) {
+        ans = handleActivityCommand("רשימה") || "אין חוגים";
+    }
+
+    // --- חילוץ / סוכר נמוך ---
+    else if (ql.includes("חילוץ") || ql.includes("היפו") || ql.includes("פתיבר") ||
+             ql.includes("גלוקוז") || (ql.includes("מיץ") && !ql.includes("להזריק")) ||
+             ql.includes("כמה לאכול") || ql.includes("מה לאכול") || ql.includes("לא טוב") ||
+             (ql.includes("נמוך") && !ql.includes("בזאלי") && !ql.includes("cr") && !ql.includes("isf"))) {
+
+        var sgvNow3  = nsData.currentSgv;
+        var iobNow3  = parseFloat(nsData.iob) || 0;
+        var prof3    = fullHistory.profile;
+        var isfNow3  = prof3 ? parseFloat(profileValueAt(prof3.sens||prof3.sensitivity, nowH)||50) : 50;
+        var carbsNeeded3 = calcRescueCarbs(sgvNow3, 120, iobNow3, isfNow3);
+
+        if (carbsNeeded3 === 0 && sgvNow3 > 100) {
+            ans = "✅ סוכר " + sgvNow3 + " — אין צורך בחילוץ כרגע.";
+        } else {
+            carbsNeeded3 = carbsNeeded3 || 15;
+            var rescue = buildRescuePlan(carbsNeeded3, sgvNow3, iobNow3);
+
+            ans  = "<div style='background:rgba(59,130,246,0.12);border:1px solid #3b82f6;border-radius:8px;padding:10px;margin-bottom:10px'>";
+            // היפוגליקמיה ב-T1D: טיפול לפי כלל 15-15
+            // 15g פחמימות מהירות → בדיקה אחרי 15 דק' → חזרה במידת הצורך.
+            // חשוב: IOB גבוה = היפו ממושכת יותר — לכן גם פחמימות מייצבות.
+            ans += "🔵 <b>חילוץ — סוכר " + (sgvNow3||'?');
+            if (iobNow3 > 0) ans += " | IOB: " + iobNow3 + "U";
+            ans += "</b> | נדרש: ~" + carbsNeeded3 + "g</div>";
+
+            rescue.plans.forEach(function(p, i){
+                ans += "<div style='background:#0a0a14;border-radius:8px;padding:10px;margin-bottom:8px;border-right:3px solid " + p.color + "'>";
+                ans += "<b style='color:" + p.color + "'>" + (i===0 ? "⭐ מומלץ" : "אפשרות " + (i+1)) + ":</b> " + p.label + "<br>";
+                p.items.forEach(function(item){
+                    ans += "• " + item.name + (item.fast ? " <span style='color:#f59e0b'>⚡ מהיר</span>" : " <span style='color:#10b981'>🐢 מייצב</span>") + "<br>";
+                });
+                ans += "<small style='color:#888'>סה\"כ: " + p.totalCarbs + "g</small></div>";
+            });
+
+            ans += "<div style='background:rgba(59,130,246,0.06);border:1px solid var(--blue-dim);border-radius:8px;padding:10px;font-size:13px'>";
+            ans += rescue.loopNote + "</div>";
+            ans += "<br><small style='color:#888'>בדוק סוכר אחרי 15 דק'. אם לא עלה — חזור על הטיפול.</small>";
+
+            // המלצת רישום ב-Loop עם הכמות המדויקת
+            var _rCarbs = carbsNeeded3;
+            // חישוב מה לרשום ב-Loop לפי מה שממליצים
+            // אם ממליצים על פתיבר (7.5g) — לרשום רק 4g (חלק הפחמימות הספיגות)
+            // כלל: רשום ב-Loop רק פחמימות מהירות (מיץ/גלוקוז), לא פתיבר
+            var _rFastCarbs = 0;
+            var _rSlowCarbs = 0;
+            if (rescue && rescue.plans && rescue.plans[0]) {
+                rescue.plans[0].items.forEach(function(item){
+                    if (item.fast) _rFastCarbs += item.carbs;
+                    else _rSlowCarbs += item.carbs;
+                });
+            } else {
+                _rFastCarbs = Math.min(_rCarbs, 15);
+                _rSlowCarbs = _rCarbs - _rFastCarbs;
+            }
+
+            ans += "<div style='background:rgba(59,130,246,0.08);border:1px solid var(--blue-dim);border-radius:10px;padding:12px;margin-top:10px'>";
+            ans += "<b style='font-size:13px'>📱 מה לרשום ב-Loop?</b><br><br>";
+
+            if (_rFastCarbs > 0 && _rSlowCarbs > 0) {
+                ans += "• <b>רשום רק " + _rFastCarbs + "g</b> (פחמימות מהירות — מיץ/גלוקוז)<br>";
+                ans += "• <b>אל תרשום</b> את הפתיבר (" + _rSlowCarbs + "g) — Loop יחשב יותר מדי<br>";
+                ans += "<small style='color:#888'>הפתיבר מייצב ולא גורם לעלייה חדה</small>";
+            } else if (_rFastCarbs > 0) {
+                ans += "• <b>רשום " + _rFastCarbs + "g</b> ב-Loop<br>";
+            } else {
+                ans += "• <b>לא חייב לרשום</b> ב-Loop (פתיבר בלבד)";
+            }
+            ans += "</div>";
+
+            // כפתור אחד: "לקחתי ולא עידכנתי Loop" — שמור ב-DB ועקוב
+            // אם עידכנו Loop — NS monitor יזהה זאת אוטומטית
+            ans += "<br><div style='display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px'>";
+            ans += "<button onclick='saveRescue(" + _rCarbs + "," + _rFastCarbs + ",false)' style='padding:10px;background:rgba(16,185,129,0.15);border:1px solid #10b981;border-radius:8px;cursor:pointer;color:#10b981;font-size:12px;font-weight:600'>✅ לקחתי<br><small>לא עידכנתי Loop</small></button>";
+            ans += "<button onclick='saveRescue(" + _rCarbs + "," + _rFastCarbs + ",true)' style='padding:10px;background:rgba(59,130,246,0.15);border:1px solid var(--blue);border-radius:8px;cursor:pointer;color:var(--blue);font-size:12px;font-weight:600'>✅ לקחתי<br><small>עידכנתי " + _rFastCarbs + "g ב-Loop</small></button>";
+            ans += "</div>";
+            ans += "<div style='font-size:11px;color:#666;text-align:center;margin-top:6px'>המערכת תבדוק אוטומטית אם דווח ב-Loop</div>";
+        }
+    }
+
+    // --- לוח זמנים ביה"ס ---
+    else if (ql.includes("ביה") || ql.includes("בית ספר") || ql.includes("הפסקה") || ql.includes("לוח זמנים")) {
+        var sc = getSchoolContext();
+        var isSD = isSchoolDay();
+        var html_sc = "<div style='font-size:13px'>";
+        var spActive = isSchoolProfile();
+        html_sc += "<b>" + (isSD ? "📚 יום לימודים" : "🏖️ לא יום לימודים") + "</b>";
+        if (spActive) html_sc += " <span style='color:#10b981;font-size:11px'>🏫 פרופיל ביהס פעיל</span>";
+        html_sc += "<br><br>";
+        if (spActive) {
+            html_sc += "<div style='background:rgba(16,185,129,0.08);border-radius:8px;padding:8px;margin-bottom:8px;font-size:12px'>";
+            html_sc += "🎯 יעד סוכר: <b>" + SCHOOL_PROFILE.targetBGRange + "</b> (בבית: 100-120)<br>";
+            html_sc += "💉 CR: +10% (פחות אינסולין) | ISF: +10% (תיקון עדין)<br>";
+            html_sc += "🛡️ מטרה: מניעת היפו בזמן לימודים";
+            html_sc += "</div>";
+        }
+        if (isSD && sc) {
+            html_sc += "📍 שלב נוכחי: <b>" + sc.label + "</b><br>";
+            if (sc.note) html_sc += "💡 " + sc.note + "<br>";
+            if (sc.walkWarning) html_sc += "<br>⚠️ " + sc.walkWarning + "<br>";
+        }
+        html_sc += "<br><b>לוח יומי:</b><br>";
+        html_sc += "• 07:00 🏠 א. בוקר בבית (100% עכשיו)<br>";
+        html_sc += "• 07:30 🚶 יציאה לביהס (הליכה 1קמ = הפחת 10%)<br>";
+        html_sc += "• 09:40 🍞 א. עשר — פיתה 35g (70/30)<br>";
+        html_sc += "• 09:40–10:15 🏃 הפסקה (ה-30% אחרי)<br>";
+        html_sc += "• 13:30 🏠 חזרה הביתה (הליכה = אכול 10-15g לפני)<br>";
+        html_sc += "</div>";
+        showPopup("📚 לוח ביהס", html_sc);
+        input.value = ''; return;
+    }
+
+    // --- SMB / מיקרובולוס ---
+    else if (ql.includes("smb") || ql.includes("מיקרובולוס") || ql.includes("micro")) {
+        resp_html_needed = true;
+        try {
+            var since2h = new Date(Date.now() - 2*3600000).toISOString();
+            var smbRes  = await nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + since2h + '&count=50');
+            var smbData = smbRes.ok ? await smbRes.json() : [];
+
+            // מיקרובולוסים = SMB או בולוסים קטנים בלי פחמימות < 0.5U
+            var smbs = smbData.filter(function(t){
+                var ev = (t.eventType||'').toLowerCase();
+                return (ev.includes('smb') || ev.includes('microbolus') ||
+                       (t.insulin > 0 && t.insulin < 0.5 && !t.carbs));
+            });
+
+            var totalSMB = smbs.reduce(function(a,t){return a+(parseFloat(t.insulin)||0);},0).toFixed(2);
+            var lastSMB  = smbs[0];
+
+            ans  = "<b>🔬 מיקרובולוסים (SMB) — 2 שעות אחרונות:</b><br><br>";
+            ans += "<div style='background:#0a0a14;border-radius:10px;padding:12px;margin-bottom:10px;font-size:13px'>";
+            ans += "• מספר SMB: <b>" + smbs.length + "</b><br>";
+            ans += "• סה'כ אינסולין: <b>" + totalSMB + "U</b><br>";
+            if (lastSMB) {
+                var lTime = new Date(lastSMB.created_at).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false});
+                ans += "• SMB אחרון: <b>" + lTime + "</b> — " + parseFloat(lastSMB.insulin).toFixed(2) + "U<br>";
+            }
+            ans += "</div>";
+
+            // המלצות להפחתת עומס Loop
+            var loopWorkloadRecs = [];
+            var sgvNow2 = nsData.currentSgv || 0;
+            var iobNow2 = parseFloat(nsData.iob) || 0;
+            var prof4   = fullHistory.profile;
+            var nowH4   = new Date().getHours();
+            var crNow4  = prof4 ? parseFloat(profileValueAt(prof4.carbratio||prof4.carbRatio||prof4.ic, nowH4)||10) : 10;
+            var basalNow4 = parseFloat(nsData.basal) || 0;
+
+            // הלופ עובד קשה מדי?
+            if (smbs.length > 8) {
+                loopWorkloadRecs.push("📈 Loop הזריק " + smbs.length + " SMB ב-2ש' — עובד קשה!");
+            }
+            if (parseFloat(totalSMB) > iobNow2 * 0.6) {
+                loopWorkloadRecs.push("💉 רוב ה-IOB (" + iobNow2 + "U) מגיע מ-SMB — ייתכן שהבזאלי נמוך מדי");
+            }
+            if (sgvNow2 > 160 && smbs.length > 5) {
+                loopWorkloadRecs.push("📊 סוכר " + sgvNow2 + " עם " + smbs.length + " SMB — שקול הזרקת correction ידנית");
+            }
+
+            if (loopWorkloadRecs.length) {
+                ans += "<div style='background:rgba(245,158,11,0.08);border:1px solid #f59e0b;border-radius:10px;padding:12px;margin-bottom:10px'>";
+                ans += "<b>💡 המלצות להקלה על Loop:</b><br><br>";
+                loopWorkloadRecs.forEach(function(r){ ans += "• " + r + "<br>"; });
+                ans += "<br>";
+
+                // המלצות ספציפיות
+                if (sgvNow2 > 180) {
+                    var manualCorr = Math.floor(Math.max(0, (sgvNow2-120)/(prof4?parseFloat(profileValueAt(prof4.sens||prof4.sensitivity,nowH4)||50):50) - iobNow2*0.5));
+                    if (manualCorr > 0) {
+                        ans += "• 💉 הזרקה ידנית של <b>" + manualCorr + "U</b> תעצור את SMB-storm<br>";
+                    }
+                }
+                if (parseFloat(totalSMB) > 2) {
+                    var curBasal4 = parseFloat(nsData.basal) || 0;
+                    if (curBasal4 > 0) {
+                        var newBasal4 = basalUp(curBasal4);
+                        ans += "• ⬆️ שקול הגדלת בזאלי: " + curBasal4 + " → <b>" + newBasal4 + " U/hr</b> (+0.05) כדי ש-Loop יפחית SMB<br>";
+                    } else {
+                        ans += "• ⬆️ שקול הגדלת בזאלי ב-0.05 U/hr כדי ש-Loop יפחית SMB<br>";
+                    }
+                }
+                ans += "• 🎯 ודא שיעד הסוכר ב-Loop מוגדר נכון (לא נמוך מדי)";
+                ans += "</div>";
+            } else if (smbs.length > 0) {
+                ans += "<div style='background:rgba(16,185,129,0.08);border:1px solid #10b981;border-radius:8px;padding:10px;font-size:13px'>";
+                ans += "✅ Loop עובד בצורה סבירה — " + smbs.length + " SMB ב-2ש' זה נורמלי";
+                ans += "</div>";
+            }
+
+            // רשימת SMB אחרונים
+            if (smbs.length > 0) {
+                ans += "<b style='font-size:12px;color:#888'>SMB אחרונים:</b><br>";
+                smbs.slice(0,6).forEach(function(s){
+                    var t = new Date(s.created_at).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false});
+                    ans += "<span style='font-size:12px;color:#666'>" + t + ": " + parseFloat(s.insulin).toFixed(2) + "U</span><br>";
+                });
+            }
+        } catch(e) {
+            ans = "שגיאה בשליפת SMB: " + e.message;
+        }
+    }
+
+    // --- IOB ---
+    else if (ql.includes("iob") || ql.includes("אינסולין פעיל") || q === "IOB") {
+        ans = "💉 IOB: <b>" + nsData.iob + " יחידות</b>.";
+    }
+
+    // --- בזאלי + לוח ---
+    else if (ql.includes("בזאלי") || ql.includes("basal")) {
+        ans = "💧 <b>בזאלי בפועל: " + nsData.basal + " U/hr</b><br><br>";
+        if (prof && prof.basal) {
+            ans += "פרופיל כעת (" + nowH + ":00): <b>" + profileValueAt(prof.basal, nowH) + " U/hr</b><br><br>";
+            ans += "<b>לוח בזאלי יומי:</b><br>" + buildSchedule(prof.basal, "U/hr");
+        }
+    }
+
+    // --- ISF ---
+    else if (ql.includes("isf") || ql.includes("תיקון") || ql.includes("רגישות")) {
+        if (prof) {
+            var isfArr = prof.sens || prof.sensitivity || prof.isfProfile;
+            var isfNumM = ql.match(/(\d+)/);
+            var isfNum  = isfNumM ? parseInt(isfNumM[1]) : null;
+            var isfH = nowH, isfLabel = "כעת (" + nowH + ":00)";
+            if (isfNum !== null) {
+                if (ql.includes("עוד"))       { isfH = (nowH + isfNum) % 24; isfLabel = "עוד " + isfNum + " שעות (" + isfH + ":00)"; }
+                else if (ql.includes("לפני")) { isfH = (nowH - isfNum + 24) % 24; isfLabel = "לפני " + isfNum + " שעות (" + isfH + ":00)"; }
+                else                           { isfH = isfNum % 24; isfLabel = "בשעה " + isfH + ":00"; }
+            }
+            var isfVal = Array.isArray(isfArr) ? profileValueAt(isfArr, isfH) : isfArr;
+            ans = "🎯 ISF " + isfLabel + ": <b>" + isfVal + " mg/dL/U</b>";
+            if (isfNum === null && Array.isArray(isfArr) && isfArr.length > 1)
+                ans += "<br><br><b>לוח ISF יומי:</b><br>" + buildSchedule(isfArr, "mg/dL/U");
+        } else { ans = "לא נמצא ISF בפרופיל."; }
+    }
+
+    // --- CR ---
+    else if (ql.includes("cr") || ql.includes("יחס פחמימה") || ql.includes("carb ratio")) {
+        if (prof) {
+            var crArr  = prof.carbratio || prof.carbRatio || prof.ic;
+            var crNumM = ql.match(/(\d+)/);
+            var crNum  = crNumM ? parseInt(crNumM[1]) : null;
+            var crH = nowH, crLabel = "כעת (" + nowH + ":00)";
+            if (crNum !== null) {
+                if (ql.includes("עוד"))       { crH = (nowH + crNum) % 24; crLabel = "עוד " + crNum + " שעות (" + crH + ":00)"; }
+                else if (ql.includes("לפני")) { crH = (nowH - crNum + 24) % 24; crLabel = "לפני " + crNum + " שעות (" + crH + ":00)"; }
+                else                           { crH = crNum % 24; crLabel = "בשעה " + crH + ":00"; }
+            }
+            var crVal = Array.isArray(crArr) ? profileValueAt(crArr, crH) : crArr;
+            ans = "🍞 CR " + crLabel + ": <b>" + crVal + " g/U</b>";
+            if (crNum === null && Array.isArray(crArr) && crArr.length > 1)
+                ans += "<br><br><b>לוח CR יומי:</b><br>" + buildSchedule(crArr, "g/U");
+        } else { ans = "לא נמצא CR בפרופיל."; }
+    }
+
+    // --- פרופיל מלא ---
+    else if (ql.includes("פרופיל") || ql.includes("הגדרות")) {
+        if (prof) {
+            var crA2 = prof.carbratio || prof.carbRatio || prof.ic;
+            var sfA2 = prof.sens || prof.sensitivity;
+            ans = "📋 <b>פרופיל (" + nowH + ":00):</b><br>" +
+                "• בזאלי: <b>" + (profileValueAt(prof.basal, nowH)||nsData.basal) + " U/hr</b><br>" +
+                "• CR: <b>" + (Array.isArray(crA2) ? profileValueAt(crA2,nowH) : crA2) + " g/U</b><br>" +
+                "• ISF: <b>" + (Array.isArray(sfA2) ? profileValueAt(sfA2,nowH) : sfA2) + " mg/dL/U</b><br>" +
+                "• יחידות: " + (prof.units||'mg/dL');
+        } else { ans = "לא נמצא פרופיל. בדוק שפלאגין Profile מופעל ב-NS."; }
+    }
+
+    // --- בדיקת חיישן בריאות ---
+    else if ((ql.includes("חיישן") || ql.includes("סנסור")) && (ql.includes("בדוק") || ql.includes("כשל") || ql.includes("לא מדוייק") || ql.includes("בריאות") || ql.includes("health"))) {
+        SENSOR_ALERT_SENT = false;
+        checkSensorHealth();
+        input.value = '';
+        return;
+    }
+
+    // --- ציוד — חיפוש רחב מ-NS treatments + DeviceStatus ---
+    else if (ql.includes("חיישן") || ql.includes("סנסור") || ql.includes("פוד") || q.toLowerCase() === "pod" || ql.includes("משאבה") ||
+             ql.includes("גיל") || ql.includes("ציוד") || ql.includes("החלפ") || ql.includes("site")) {
+
+        // כל eventTypes שיש בNS — לדיאגנוז ולמידה
+        var allTypes = {};
+        tr.forEach(function(t){ if(t.eventType) allTypes[t.eventType]=true; });
+        var allTypesList = Object.keys(allTypes);
+
+        // === חיפוש חיישן ===
+        // 1. חיפוש לפי keywords ב-eventType
+        var sKeys = ['Sensor Start','sensor start','Sensor Change','sensor change','sensor','cgm','dexcom','libre','g6','g7','חיישן','סנסור'];
+        var sensor = tr.find(function(t){
+            var ev = (t.eventType||'').toLowerCase();
+            return sKeys.some(function(k){ return ev.includes(k); });
+        });
+
+        // 2. שלוף SAGE/CAGE מ-NS — ה-API המיוחד /api/v2/properties
+        var sageFromDev = null;
+        var cageFromDev = null;
+        try {
+            // נסה /api/v2/properties שמכיל sage/cage מחושבים
+            var propRes = await nsGet('/api/v2/properties/sage,cage,iob,cob');
+            if (propRes.ok) {
+                var props = await propRes.json();
+                console.log("NS properties:", JSON.stringify(props).substring(0,300));
+                if (props.sage && props.sage.display !== undefined) {
+                    // sage.display = "4d 3h" — נמיר לשעות
+                    var sageDisplay = props.sage.display || '';
+                    var sageDMatch = sageDisplay.match(/(\d+)d\s*(\d+)h/);
+                    var sageHMatch = sageDisplay.match(/(\d+)h/);
+                    if (sageDMatch) sageFromDev = parseInt(sageDMatch[1])*24 + parseInt(sageDMatch[2]);
+                    else if (sageHMatch) sageFromDev = parseInt(sageHMatch[1]);
+                    else if (props.sage.value !== undefined) sageFromDev = parseFloat(props.sage.value);
+                }
+                if (props.cage && props.cage.display !== undefined) {
+                    var cageDisplay = props.cage.display || '';
+                    var cageDMatch = cageDisplay.match(/(\d+)d\s*(\d+)h/);
+                    var cageHMatch = cageDisplay.match(/(\d+)h/);
+                    if (cageDMatch) cageFromDev = parseInt(cageDMatch[1])*24 + parseInt(cageDMatch[2]);
+                    else if (cageHMatch) cageFromDev = parseInt(cageHMatch[1]);
+                    else if (props.cage.value !== undefined) cageFromDev = parseFloat(props.cage.value);
+                }
+                console.log("SAGE hours:", sageFromDev, "CAGE hours:", cageFromDev);
+            }
+        } catch(e) { console.error("properties fetch:", e); }
+
+        // fallback — נסה devicestatus ישיר
+        if (sageFromDev === null) {
+            try {
+                var dsRes2 = await nsGet('/api/v1/devicestatus.json?count=1');
+                if (dsRes2.ok) {
+                    var dsArr2 = await dsRes2.json();
+                    var ds2 = Array.isArray(dsArr2) ? dsArr2[0] : dsArr2;
+                    if (ds2) {
+                        console.log("DeviceStatus keys:", Object.keys(ds2));
+                        // חיפוש sage/cage בכל רמות ה-JSON
+                        var dsStr = JSON.stringify(ds2);
+                        var sageMatch = dsStr.match(/"sage"\s*:\s*([\d.]+)/i);
+                        var cageMatch = dsStr.match(/"cage"\s*:\s*([\d.]+)/i);
+                        if (sageMatch) sageFromDev = parseFloat(sageMatch[1]);
+                        if (cageMatch) cageFromDev = parseFloat(cageMatch[1]);
+                        console.log("DeviceStatus sage:", sageFromDev, "cage:", cageFromDev);
+                    }
+                }
+            } catch(e2) {}
+        }
+
+        // === חיפוש פוד/משאבה ===
+        var pKeys = ['pod','site change','cannula','infusion','reservoir','omnipod','פוד','משאבה','site'];
+        var pod = tr.find(function(t){
+            var ev = (t.eventType||'').toLowerCase();
+            return pKeys.some(function(k){ return ev.includes(k); });
+        });
+
+        // === בניית תשובה ===
+        ans = "<b>📟 מצב ציוד:</b><br><br>";
+
+        // --- חיישן ---
+        ans += "<div style='background:#0a0a14;border-radius:10px;padding:12px;margin-bottom:10px'>";
+        ans += "<div style='font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px'>📡 חיישן CGM</div>";
+
+        if (sensor) {
+            var sh = (Date.now() - new Date(sensor.created_at)) / 3600000;
+            var sLeft = Math.max(0, 240 - sh);
+            var sChanged  = new Date(sensor.created_at).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+            var sNextDate = new Date(new Date(sensor.created_at).getTime() + 240*3600000);
+            var sNext     = sNextDate.toLocaleString('he-IL',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+            ans += "• הוחלף: <b>" + sChanged + "</b> (לפני " + timeAgo(sensor.created_at) + ")<br>";
+            ans += "• סוג רישום: " + sensor.eventType + "<br>";
+            ans += "• נותרו: <b style='color:" + (sLeft<24?"#ef4444":sLeft<48?"#f59e0b":"#10b981") + "'>" + sLeft.toFixed(0) + " שעות (~" + (sLeft/24).toFixed(1) + " ימים)</b><br>";
+            ans += "• החלפה הבאה: <b>" + sNext + "</b>";
+        } else if (sageFromDev !== null) {
+            // sage מ-NS הוא בשעות
+            var sAgeH  = sageFromDev;
+            var sLeft2 = Math.max(0, 240 - sAgeH);
+            var sAgeDays = Math.floor(sAgeH/24);
+            var sAgeHrs  = Math.round(sAgeH % 24);
+            ans += "• גיל חיישן (SAGE): <b>" + sAgeDays + "d " + sAgeHrs + "h</b><br>";
+            ans += "• נותרו: <b style='color:" + (sLeft2<24?"#ef4444":sLeft2<48?"#f59e0b":"#10b981") + "'>" + Math.floor(sLeft2/24) + "d " + Math.round(sLeft2%24) + "h (~" + (sLeft2/24).toFixed(1) + " ימים)</b><br>";
+            var sNextMs = Date.now() + sLeft2*3600000;
+            ans += "• החלפה הבאה: <b>" + new Date(sNextMs).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}) + "</b><br>";
+            ans += "<small style='color:#888'>מקור: SAGE מ-DeviceStatus</small>";
+        } else {
+            ans += "<span style='color:#f59e0b'>לא נמצא רישום החלפת חיישן.</span><br>";
+            ans += "<small style='color:#888'>סוגי אירועים קיימים: " + (allTypesList.join(", ") || "אין") + "</small><br>";
+            ans += "<small style='color:#888'>💡 רשום ב-NS: Sensor Change / Sensor Start</small>";
+        }
+        ans += "</div>";
+
+        // --- פוד/משאבה ---
+        ans += "<div style='background:#0a0a14;border-radius:10px;padding:12px'>";
+        ans += "<div style='font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px'>💊 פוד / קנולה (CAGE)</div>";
+
+        if (pod) {
+            var ph = (Date.now() - new Date(pod.created_at)) / 3600000;
+            var pLeft = Math.max(0, 72 - ph);
+            var pChanged  = new Date(pod.created_at).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+            var pNextDate = new Date(new Date(pod.created_at).getTime() + 72*3600000);
+            var pNext     = pNextDate.toLocaleString('he-IL',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+            ans += "• הוחלף: <b>" + pChanged + "</b> (לפני " + timeAgo(pod.created_at) + ")<br>";
+            ans += "• סוג רישום: " + pod.eventType + "<br>";
+            ans += "• נותרו: <b style='color:" + (pLeft<12?"#ef4444":pLeft<24?"#f59e0b":"#10b981") + "'>" + pLeft.toFixed(0) + " שעות (~" + (pLeft/24).toFixed(1) + " ימים)</b><br>";
+            ans += "• החלפה הבאה: <b>" + pNext + "</b>";
+        } else if (cageFromDev !== null) {
+            // cage מ-NS הוא בשעות
+            var cAgeH = cageFromDev;
+            var cLeft = Math.max(0, 72 - cAgeH);
+            var cAgeDays = Math.floor(cAgeH/24);
+            var cAgeHrs  = Math.round(cAgeH % 24);
+            ans += "• גיל פוד/קנולה (CAGE): <b>" + cAgeDays + "d " + cAgeHrs + "h</b><br>";
+            ans += "• נותרו: <b style='color:" + (cLeft<12?"#ef4444":cLeft<24?"#f59e0b":"#10b981") + "'>" + Math.floor(cLeft/24) + "d " + Math.round(cLeft%24) + "h</b><br>";
+            var cNextMs = Date.now() + cLeft*3600000;
+            ans += "• החלפה הבאה: <b>" + new Date(cNextMs).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}) + "</b>";
+        } else {
+            ans += "<span style='color:#f59e0b'>לא נמצא רישום החלפת פוד/אתר.</span><br>";
+            ans += "<small style='color:#888'>💡 רשום ב-NS: Site Change / Pod Change</small>";
+        }
+        ans += "</div>";
+
+        // אם עדיין לא נמצא — נסה לשלוף treatments עם count גדול יותר וגם Sensor Start
+        if (!sensor) {
+            try {
+                var mo6Ago = new Date(Date.now() - 180*86400000).toISOString();
+                // נסה גם חיפוש ספציפי לפי eventType
+                var sRes2 = await nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + mo6Ago + '&count=1000');
+                if (sRes2.ok) {
+                    var sTreats2 = await sRes2.json();
+                    console.log("All treatment eventTypes (6mo):", JSON.stringify(
+                        sTreats2.reduce(function(a,t){ if(t.eventType) a[t.eventType]=(a[t.eventType]||0)+1; return a; }, {})
+                    ));
+                    var sFound2 = sTreats2.find(function(t){
+                        var ev = (t.eventType||'').toLowerCase();
+                        return sKeys.some(function(k){ return ev.includes(k); });
+                    });
+                    if (sFound2) {
+                        var sh2 = (Date.now()-new Date(sFound2.created_at))/3600000;
+                        var sLeft3 = Math.max(0, 240-sh2);
+                        ans = ans.replace("לא נמצא רישום החלפת חיישן.", "");
+                        ans += "<br>📡 נמצא ב-6 חודשים: <b>" + sFound2.eventType + "</b><br>";
+                        ans += "• הוחלף: " + new Date(sFound2.created_at).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}) + "<br>";
+                        ans += "• נותרו: <b>" + sLeft3.toFixed(0) + "h</b>";
+                    } else {
+                        // הצג את כל ה-eventTypes שיש
+                        var allEv2 = sTreats2.reduce(function(a,t){ if(t.eventType) a[t.eventType]=true; return a; }, {});
+                        ans += "<br><small style='color:#666'>כל ה-eventTypes ב-6 חודשים: " + Object.keys(allEv2).join(", ") + "</small>";
+                    }
+                }
+            } catch(e) { console.error("6mo sensor lookup:", e); }
+        }
+    }
+
+    // --- AI חיפוש מאכל לא מוכר ---
+    else if (ql.includes("כמה פחמימות") || ql.includes("מה הערך") || ql.includes("כמה יש ב") ||
+             (ql.includes("כמה להזריק") && !findFood(q.replace(/כמה להזריק (על )?/gi,'').trim()))) {
+        var foodQ = q.replace(/כמה\s+(פחמימות\s+)?(יש\s+)?(ב|על|ב-)?/gi,'')
+                     .replace(/כמה\s+להזריק\s+(על\s+)?/gi,'').trim();
+        if (foodQ.length > 1) {
+            closePopup();
+            lookupFoodAI(foodQ);
+            input.value = '';
+            return;
+        }
+    }
+
+    // --- ניתוח ארוחה ספציפית ---
+    else if (ql.includes("נתח") || ql.includes("בדוק") || ql.includes("פיצ") || ql.includes("פית") || ql.includes("המבורג") || ql.includes("תוצאות") ||
+             (ql.includes("איך") && (ql.includes("הזרקה") || ql.includes("ארוחה") || ql.includes("היה")))) {
+        // חלץ שם הארוחה מהשאלה
+        var mealKeywords = ['נתח', 'בדוק', 'תוצאות', 'איך', 'הייתה', 'ההזרקה', 'על', 'ה', 'את'];
+        var mealQuery = q;
+        mealKeywords.forEach(function(k){ mealQuery = mealQuery.replace(new RegExp(k, 'gi'), '').trim(); });
+        var mealName2 = mealQuery.trim() || "ארוחה";
+        closePopup();
+        analyzeMeal(mealName2);
+        input.value = '';
+        return;
+    }
+
+    // --- ארוחות ---
+    else if (ql.includes("אכלתי") || ql.includes("אוכל") || ql.includes("ארוחה") || ql.includes("הזרק") || ql.includes("carbs")) {
+        // בנה מפת בולוסים לפי זמן (לקישור עם פחמימות)
+        var bolusMap2 = {};
+        tr.forEach(function(t){
+            var ins2 = parseFloat(t.insulin||0);
+            if (ins2 >= 0.5) { // בולוס משמעותי
+                var tKey = Math.round(new Date(t.created_at).getTime() / 600000); // 10 דק'
+                if (!bolusMap2[tKey] || ins2 > parseFloat(bolusMap2[tKey].insulin||0)) {
+                    bolusMap2[tKey] = t;
+                }
+            }
+        });
+
+        var smbKeys = ['smb','microbolus','super micro'];
+        var allMeals = tr.filter(function(t){
+            var ev = (t.eventType||'').toLowerCase();
+            if (smbKeys.some(function(k){ return ev.includes(k); })) return false;
+            if (t.carbs > 0) return true;
+            if (parseFloat(t.insulin||0) >= 0.5 && (t.notes||t.foodType)) return true;
+            return false;
+        }).map(function(t){
+            // אם פחמימות בלי אינסולין — חפש בולוס קרוב (תוך 30 דק')
+            if (t.carbs > 0 && !(parseFloat(t.insulin||0) >= 0.5)) {
+                var tMs = new Date(t.created_at).getTime();
+                var best = null, bestDiff = 30*60000;
+                // חפש בכל treatments (לא רק bolusMap2)
+                tr.forEach(function(b){
+                    if (parseFloat(b.insulin||0) < 0.1) return;
+                    var diff = Math.abs(new Date(b.created_at).getTime() - tMs);
+                    if (diff < bestDiff) { bestDiff = diff; best = b; }
+                });
+                if (best) {
+                    console.log("Matched bolus:", best.insulin + "U to carbs:", t.carbs + "g diff:", Math.round(bestDiff/60000) + "min");
+                    return Object.assign({}, t, { insulin: best.insulin, extended: best.extended, duration: best.duration, _matchedBolus: true });
+                }
+            }
+            return t;
+        });
+        var mealNumM = ql.match(/(\d+)/);
+        var mealNum  = mealNumM ? parseInt(mealNumM[1]) : null;
+        var filtered = allMeals;
+        var mealTitle = "טיפולים ב-24 שעות אחרונות";
+
+        // סינון לפי "לפני X שעות" — חלון ±45 דקות
+        if (mealNum !== null && ql.includes("לפני")) {
+            var targetMs = Date.now() - (mealNum * 3600000);
+            var window45 = 45 * 60000;
+            filtered = allMeals.filter(function(t){
+                return Math.abs(new Date(t.created_at).getTime() - targetMs) <= window45;
+            });
+            mealTitle = "טיפולים לפני ~" + mealNum + " שעות";
+            // אם לא נמצא בחלון ±45 דק' — הרחב ל-±90 דק'
+            if (!filtered.length) {
+                filtered = allMeals.filter(function(t){
+                    return Math.abs(new Date(t.created_at).getTime() - targetMs) <= 90*60000;
+                });
+                if (filtered.length) mealTitle += " (±90 דק')";
+            }
+        }
+        // "בשעה X" — חלון ±30 דק' סביב השעה הנתונה
+        else if (mealNum !== null && (ql.includes("שעה") || ql.includes(":"))) {
+            var todayBase = new Date(); todayBase.setHours(mealNum, 0, 0, 0);
+            filtered = allMeals.filter(function(t){
+                return Math.abs(new Date(t.created_at).getTime() - todayBase.getTime()) <= 30*60000;
+            });
+            mealTitle = "טיפולים בשעה " + mealNum + ":00";
+        }
+        // ללא שעה — הצג רק 3 אחרונות
+        else {
+            filtered = allMeals.slice(0, 3);
+            mealTitle = "3 טיפולים אחרונים";
+        }
+
+        if (filtered.length) {
+            var prof5 = fullHistory.profile;
+            var nowH5 = new Date().getHours();
+            var ins5  = getInsulinProfile();
+            var dia5  = ins5.dia; // משך פעולה בדקות
+            console.log("DIA for meals:", dia5, "ins type:", ins5.name);
+
+            ans = "<b>" + mealTitle + ":</b><br><br>";
+            ans += filtered.map(function(m){
+                var mealTime = new Date(m.created_at).getTime();
+                var time     = new Date(m.created_at).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false});
+                var name     = m.notes || m.foodType || m.reason || m.eventType || (m.carbs ? 'ארוחה' : 'בולוס');
+
+                // אינסולין
+                var insNorm = m.insulin  ? parseFloat(m.insulin)  : 0;
+                var insExt  = m.extended ? parseFloat(m.extended) : 0;
+                var insTot  = insNorm + insExt;
+                var durMin  = m.duration || 0;
+
+                // כמה זמן עבר מאז ההזרקה
+                var minsAgo = (Date.now() - mealTime) / 60000;
+                var hoursAgo = minsAgo / 60;
+
+                // חישוב כמה נספג (IOB decay — linear approximation over DIA)
+                // DIA = dia5 דקות. נספג = min(100%, minsAgo/dia5 * 100)
+                var diaMins = dia5; // ב-דקות מ-profile
+                var absorbedPct = Math.min(100, (minsAgo / diaMins) * 100);
+                var absorbedU   = (insTot * absorbedPct / 100).toFixed(2);
+                var remainingU  = Math.max(0, insTot - parseFloat(absorbedU)).toFixed(2);
+                var absorbedPctR = Math.round(absorbedPct);
+
+                // צבע לפי כמה נספג
+                var absColor = absorbedPct >= 95 ? '#10b981' : absorbedPct > 50 ? '#f59e0b' : '#3b82f6';
+
+                // בנה שורת אינסולין
+                var insLine = "";
+                if (insNorm > 0 && insExt > 0) {
+                    insLine = insNorm.toFixed(2) + "U עכשיו + " + insExt.toFixed(2) + "U מורחב";
+                    if (durMin) insLine += " (" + durMin + " דק')";
+                } else if (insNorm > 0) {
+                    insLine = insNorm.toFixed(2) + "U 💉";
+                    if (durMin) insLine += " (" + durMin + " דק')";
+                } else if (insExt > 0) {
+                    insLine = insExt.toFixed(2) + "U מורחב (" + (durMin||"?") + " דק')";
+                }
+
+                // בנה כרטיסייה
+                var html3  = "<div style='background:#0a0a14;border-radius:10px;padding:10px;margin-bottom:8px;border-right:3px solid #333'>";
+                // שורת כותרת
+                html3 += "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px'>";
+                html3 += "<b style='font-size:14px'>" + name + "</b>";
+                html3 += "<span style='font-size:11px;color:#666'>" + time + " (לפני " + (hoursAgo < 1 ? Math.round(minsAgo) + " דק'" : hoursAgo.toFixed(1) + "ש'") + ")</span>";
+                html3 += "</div>";
+
+                // פרטים
+                html3 += "<div style='display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:12px'>";
+
+                // פחמימות
+                html3 += "<div style='background:#111120;border-radius:6px;padding:6px;text-align:center'>";
+                html3 += "<div style='color:#888;font-size:10px;margin-bottom:2px'>🍞 פחמימות</div>";
+                html3 += "<b style='color:#f59e0b'>" + (m.carbs || 0) + "g</b>";
+                html3 += "</div>";
+
+                // אינסולין + משך
+                html3 += "<div style='background:#111120;border-radius:6px;padding:6px;text-align:center'>";
+                html3 += "<div style='color:#888;font-size:10px;margin-bottom:2px'>💉 אינסולין</div>";
+                html3 += "<b style='color:#10b981'>" + insTot.toFixed(1) + "U</b>";
+                if (durMin > 0) html3 += "<div style='color:#666;font-size:10px'>" + durMin + " דק'</div>";
+                html3 += "</div>";
+
+                // נספג
+                html3 += "<div style='background:#111120;border-radius:6px;padding:6px;text-align:center'>";
+                html3 += "<div style='color:#888;font-size:10px;margin-bottom:2px'>⚡ נספג</div>";
+                if (insTot > 0) {
+                    html3 += "<b style='color:" + absColor + "'>" + absorbedU + "U</b>";
+                    html3 += "<div style='color:" + absColor + ";font-size:10px'>" + absorbedPctR + "%</div>";
+                } else {
+                    html3 += "<span style='color:#555'>—</span>";
+                }
+                html3 += "</div>";
+                html3 += "</div>"; // grid
+
+                // שורת פירוט אם יש extended
+                if (insNorm > 0 && insExt > 0) {
+                    html3 += "<div style='font-size:11px;color:#666;margin-top:4px'>" + insLine + "</div>";
+                }
+
+                // פחמימות שנספגו — לפי מודל ספיגה
+                if (m.carbs > 0) {
+                    // חשב ספיגה לפי משך המאכל (foodDurH)
+                    var mealDurMins = (m.duration || (ins5 && ins5.dia ? ins5.dia * 0.6 : 180));
+                    // אם יש notes עם שעות — השתמש בהם
+                    var durFromDB = null;
+                    if (m.notes || m.foodType) {
+                        var fname5 = (m.notes||m.foodType||'').toLowerCase();
+                        Object.keys(FOOD_DB).forEach(function(k){
+                            if (fname5.includes(k.toLowerCase())) durFromDB = FOOD_DB[k].durationH * 60;
+                        });
+                    }
+                    var effectiveDurMins = durFromDB || mealDurMins;
+                    var carbAbsorbPct2  = Math.min(100, (minsAgo / effectiveDurMins) * 100);
+                    var carbsAbsorbed2  = Math.min(m.carbs, parseFloat((m.carbs * carbAbsorbPct2 / 100).toFixed(1)));
+                    var carbsRemain2    = parseFloat(Math.max(0, m.carbs - carbsAbsorbed2).toFixed(1));
+                    var carbColor3      = carbsRemain2 === 0 ? '#10b981' : carbsRemain2 < m.carbs * 0.25 ? '#f59e0b' : '#3b82f6';
+
+                    html3 += "<div style='background:#1a1a28;border-radius:3px;height:4px;margin-top:6px'>";
+                    html3 += "<div style='background:" + carbColor3 + ";width:" + Math.round(carbAbsorbPct2) + "%;height:100%;border-radius:3px'></div>";
+                    html3 += "</div>";
+                    html3 += "<div style='font-size:11px;color:#888;margin-top:3px'>";
+                    if (carbsRemain2 > 0) {
+                        html3 += "🍞 נספג: <b style='color:" + carbColor3 + "'>" + carbsAbsorbed2 + "g</b> | נותר: <b style='color:#f59e0b'>" + carbsRemain2 + "g</b>";
+                    } else {
+                        html3 += "🍞 נספג: <b style='color:#10b981'>" + m.carbs + "g ✅</b>";
+                    }
+                    if (insTot > 0 && minsAgo < diaMins) {
+                        html3 += " | IOB: <b style='color:" + absColor + "'>" + remainingU + "U</b>";
+                    }
+                    html3 += "</div>";
+
+                    // אזהרה אם הוזנו פחות פחמימות ממה שנאכל בפועל
+                    if (m.carbs < 15 && minsAgo < 120 && !m._matchedBolus) {
+                        html3 += "<div style='font-size:10px;color:#f59e0b;margin-top:2px'>⚠️ פחות מ-15g — האם הוזן נכון?</div>";
+                    }
+                } else if (insTot > 0) {
+                    html3 += "<div style='font-size:11px;color:#888;margin-top:3px'>";
+                    html3 += "💉 IOB: <b style='color:" + (minsAgo < diaMins ? absColor : '#10b981') + "'>" + (minsAgo < diaMins ? remainingU : '0') + "U</b>";
+                    html3 += "</div>";
+                }
+
+                html3 += "</div>"; // card
+                return html3;
+            }).join("");
+        } else {
+            ans = "לא נמצאו רישומים " + (mealNum ? "לפני " + mealNum + " שעות" : "ב-24 שעות האחרונות") + ".";
+        }
+    }
+
+    // --- TIR ---
+    else if (ql.includes("tir") || ql.includes("טווח") || ql.includes("מאוזן") || ql.includes("איך")) {
+        if (ent.length > 10) {
+            var tir  = (ent.filter(function(e){return e.sgv>=70&&e.sgv<=180;}).length/ent.length*100).toFixed(0);
+            var avg  = (ent.reduce(function(a,b){return a+b.sgv;},0)/ent.length).toFixed(0);
+            var low  = ent.filter(function(e){return e.sgv<70;}).length;
+            var high = ent.filter(function(e){return e.sgv>180;}).length;
+            ans = "📊 24 שעות:<br>• TIR: <b>"+tir+"%</b><br>• ממוצע: "+avg+"<br>• נמוך: "+low+" | גבוה: "+high+"<br>"+(tir>75?"🌟 מצוין!":"📈 יש מקום לשיפור.");
+        } else { ans = "אין מספיק נתונים. לחץ 'רענן הכל'."; }
+    }
+
+    // --- תוכנית ספורט ---
+    else if (ql.includes("ספורט") || ql.includes("פעילות") || ql.includes("activity") || ql.includes("יעד") || ql.includes("אימון") || ql.includes("לפני ספורט") || ql.includes("טמפ") || ql.includes("ים") || ql.includes("בריכה") || ql.includes("שחייה") || ql.includes("שחי") || ql.includes("ריצה") || ql.includes("אופניים") || ql.includes("כדורגל") || ql.includes("כדורסל") || ql.includes("mma") || ql.includes("כושר")) {
+        var now2  = new Date();
+        var dayN2 = now2.getDay();
+        var nowM2 = now2.getHours()*60 + now2.getMinutes();
+        var nextAct = null;
+        ACTIVITIES.forEach(function(a){
+            if (a.day !== dayN2) return;
+            var fm2 = parseInt(a.from.split(':')[0])*60+parseInt(a.from.split(':')[1]);
+            if (nowM2 <= fm2 + 60 && (!nextAct || fm2 < (parseInt(nextAct.from.split(':')[0])*60+parseInt(nextAct.from.split(':')[1]))))
+                nextAct = a;
+        });
+        if (nextAct) {
+            showSportPlan(String(nextAct.id));
+            input.value = '';
+            return;
+        }
+        // ים/בריכה/שחייה — תוכנית מיידית
+        if (ql.includes("ים") || ql.includes("בריכה") || ql.includes("שחי") || ql.includes("ריצה") || ql.includes("כדורגל")) {
+            var actName2 = ql.includes("בריכה") ? "בריכה" : ql.includes("שחי") ? "שחייה" : ql.includes("ריצה") ? "ריצה" : ql.includes("כדורגל") ? "כדורגל" : "ים";
+            var sp2 = (ql.includes("ריצה") || ql.includes("כדורגל")) ? SPORT_PLANS.high : SPORT_PLANS.medium;
+            var curBW2 = parseFloat(nsData.basal) || 0;
+            var redBW2 = curBW2 > 0 ? roundBasal(curBW2*(1-sp2.basalReduction/100)) : null;
+            var hw = "<div style='background:#0a0a14;border-radius:10px;padding:12px;margin-bottom:10px;font-size:13px'>🏊 <b>" + actName2 + "</b> | " + sp2.label + "</div>";
+            hw += "<div style='background:rgba(245,158,11,0.08);border:1px solid #f59e0b;border-radius:10px;padding:12px;margin-bottom:10px'><b style='color:#f59e0b'>⏰ לפני:</b><br><br>";
+            if (curBW2>0) hw += "• בזאלי: ⬇️ "+curBW2+" → <b>"+redBW2+" U/hr</b><br>";
+            hw += "• יעד כניסה: <b>140–160 mg/dL</b><br>• אם מתחת 120 — אכול 15g<br>• הזרק 20-30% פחות על ארוחה לפני</div>";
+            hw += "<div style='background:rgba(16,185,129,0.08);border:1px solid #10b981;border-radius:10px;padding:12px;margin-bottom:10px'><b style='color:#10b981'>🏊 בזמן:</b><br><br>• יעד: <b>"+sp2.targetBGRange+"</b><br>• בדוק כל 45 דק'<br>• מתחת 100: 15g מהיר + פתיבר<br>• ⛔ אל תזריק בזמן פעילות</div>";
+            hw += "<div style='background:rgba(59,130,246,0.08);border:1px solid var(--blue);border-radius:10px;padding:12px'><b style='color:var(--blue)'>✅ אחרי ("+sp2.postDurationH+"ש'):</b><br><br>• הפחת "+sp2.postReduction+"% לכל הזרקה<br>• ⚠️ ירידת סוכר מאוחרת — בדוק לפני שינה</div>";
+            showPopup("🏊 תוכנית " + actName2, hw);
+            input.value=''; return;
+        }
+        ans = "לא נמצאה פעילות מתוכננת היום.<br>עבור ללשונית 🏃 <b>פעילות</b> להוספת חוג.";
+    }
+
+    // --- ניתוח והמלצות ---
+    else if (ql.includes("המלצ") || ql.includes("ניתוח") || ql.includes("מסקנ") || ql.includes("מה לעשות") || ql.includes("טיפול")) {
+        var sgv  = nsData.currentSgv;
+        var iob  = parseFloat(nsData.iob)  || 0;
+        var cob  = parseFloat(nsData.cob)  || 0;
+        var dlt  = nsData.delta || 0;
+        var prof2 = fullHistory.profile;
+        var nowH2 = new Date().getHours();
+        var isf  = prof2 ? (profileValueAt(prof2.sens || prof2.sensitivity, nowH2) || 50) : 50;
+        var cr   = prof2 ? (profileValueAt(prof2.carbratio || prof2.carbRatio || prof2.ic, nowH2) || 10) : 10;
+        var pred1h = predictBG(1);
+        var pred2h = predictBG(2);
+
+        var warnings = [];
+        var notes    = [];
+        var actions  = [];
+
+        // --- ניתוח מצב נוכחי ---
+
+        // 1. סוכר נמוך / מתקרב לנמוך
+        if (sgv < 70) {
+            warnings.push("⚠️ <b>היפוגליקמיה!</b> סוכר " + sgv + " mg/dL — נדרש טיפול מיידי");
+            var carbsNeeded = Math.round((90 - sgv) / 0.05 / parseFloat(cr));
+            actions.push("🍬 שקול " + Math.max(15, carbsNeeded) + "g פחמימות מהירות");
+        } else if (sgv < 85 && dlt < 0) {
+            warnings.push("⚠️ סוכר " + sgv + " ויורד (" + dlt + "/5דק') — מגמה לנמוך");
+            actions.push("🍬 שקול 10–15g פחמימות מניעתיות");
+        } else if (sgv < 85) {
+            notes.push("📉 סוכר קצת נמוך (" + sgv + ") — עקוב");
+        }
+
+        // 2. סוכר גבוה
+        if (sgv > 250) {
+            warnings.push("⚠️ <b>סוכר גבוה מאוד:</b> " + sgv + " mg/dL");
+            if (iob < 1) {
+                var corrUnits = ((sgv - 120) / parseFloat(isf)).toFixed(1);
+                actions.push("💉 שקול " + corrUnits + "U תיקון (לפי ISF=" + isf + ")");
+            } else {
+                notes.push("💉 יש " + iob + "U IOB — המתן לפירוק לפני תיקון נוסף");
+            }
+        } else if (sgv > 180 && dlt > 2) {
+            notes.push("📈 סוכר " + sgv + " ועולה — מגמת עלייה");
+            if (iob < 0.5) {
+                var corrU2 = ((sgv - 120) / parseFloat(isf)).toFixed(1);
+                actions.push("💉 שקול " + corrU2 + "U תיקון קל");
+            }
+        }
+
+        // 3. IOB גבוה ביחס לסוכר
+        if (iob > 2 && sgv < 120 && cob < 15) {
+            warnings.push("⚠️ IOB גבוה (" + iob + "U) עם סוכר " + sgv + " ו-COB נמוך (" + cob + "g)");
+            actions.push("🍬 שקול " + Math.round(iob * parseFloat(cr) * 0.3) + "–" + Math.round(iob * parseFloat(cr) * 0.5) + "g פחמימות מניעתיות");
+        }
+
+        // 4. COB גבוה
+        if (cob > 30 && dlt < 1) {
+            notes.push("🍞 COB=" + cob + "g — פחמימות פעילות שעדיין לא העלו סוכר");
+            notes.push("ממתין לעלייה — אל תוסיף אינסולין עדיין");
+        }
+
+        // 5. מגמה חדה
+        if (dlt <= -4) {
+            warnings.push("📉 ירידה חדה: " + dlt + " mg/dL ב-5 דק' — " + (dlt*12).toFixed(0) + "/שעה");
+        } else if (dlt >= 4) {
+            notes.push("📈 עלייה מהירה: +" + dlt + " mg/dL ב-5 דק'");
+        }
+
+        // 6. תחזית
+        if (pred1h !== null) {
+            var pred1str = "עוד שעה: <b>" + pred1h + "</b>" + bgStatus(pred1h);
+            var pred2str = "עוד 2ש': <b>" + pred2h + "</b>" + bgStatus(pred2h);
+            notes.push("📈 " + pred1str + " | " + pred2str);
+            if (pred1h < 70) actions.push("🍬 תחזית נמוך בעוד שעה — שקול מניעה");
+            if (pred1h > 240) actions.push("💉 תחזית גבוה מאוד בעוד שעה — בדוק Loop");
+        }
+
+        // 7. כל תקין
+        if (!warnings.length && !actions.length) {
+            notes.push("✅ מצב נראה יציב ובטווח");
+        }
+
+        // --- בניית תשובה ---
+        ans = "🧠 <b>ניתוח מצב נוכחי:</b><br>";
+        ans += "<small style='color:#888'>סוכר " + sgv + " | IOB " + iob + "U | COB " + cob + "g | Δ" + (dlt>=0?"+":"") + dlt + "/5דק'</small><br><br>";
+
+        if (warnings.length) ans += warnings.map(function(w){ return w; }).join("<br>") + "<br><br>";
+        if (notes.length)    ans += notes.map(function(n){ return n; }).join("<br>") + "<br><br>";
+        if (actions.length) {
+            ans += "<b>המלצות לשיקול דעת:</b><br>" + actions.map(function(a){ return a; }).join("<br>");
+        }
+        ans += "<br><br><small style='color:#555'>⚕️ זהו ניתוח עזר בלבד — לא תחליף לשיקול רפואי.</small>";
+    }
+
+    // --- מאגר מאכלים ---
+    else if (ql.includes("מאכלים") || ql.includes("מאכל") || ql.includes("רשימה") || ql.includes("מה אפשר לשאול")) {
+        var dbList = Object.keys(FOOD_DB).map(function(k){
+            var d = FOOD_DB[k];
+            return "• <b>" + k + "</b>" + (d.perUnit?" ("+d.perUnit+")":"") + ": " + d.carbs + "g / " + d.durationH + "ש'" + (d.notes?" — "+d.notes:"");
+        }).join("<br>");
+        ans = "<b>📋 מאגר מאכלים:</b><br><br>" + dbList +
+              "<br><br><small style='color:#888'>שאל: 'כמה להזריק על פיתה?', 'כמה להזריק על 2 חתיכות פיצה ביתית?'</small>";
+    }
+
+    // זיכרון
+    else if (ql.includes("זיכרון") || ql.includes("מה למדת") || ql.includes("היסטוריה")) {
+        showMemoryHistory();
+        input.value = '';
+        return;
+    }
+
+    // --- פוד חדש / הוחלף ---
+    else if ((ql.includes("פוד") || ql.includes("pod")) &&
+             (ql.includes("חדש") || ql.includes("הוחלף") || ql.includes("החלפתי") || ql.includes("התקנתי") || ql.includes("priming"))) {
+        podChanged();
+        input.value = '';
+        return;
+    }
+
+    // --- כשל פוד ---
+    else if (ql.includes("פוד") && (ql.includes("לא עובד") || ql.includes("כשל") || ql.includes("תקול") || ql.includes("בעיה") || ql.includes("החלף"))) {
+        POD_ALERT_SENT = false; // reset
+        checkPodFailure();
+        input.value = '';
+        return;
+    }
+
+    // --- ניתוח פוד/חיישן/פרמטרים ---
+    else if (ql.includes("ניתוח פוד") || ql.includes("כשל פוד") || ql.includes("היסטוריה") ||
+             ql.includes("ניתוח חיישן") || ql.includes("ניתוח פרמטר") || ql.includes("שינויים")) {
+        analyzeFailureHistory();
+        input.value = ''; return;
+    }
+
+    else {
+        // כל שאלה שלא זוהתה → Gemini עם נתוני NS
+    askGeminiAdvisor(q);
+    input.value = ''; return;
+    }
+
+    showPopup("Loopie 🧠", ans);
+    input.value = '';
+}
 </script>
+
 
 
 </body></html>
