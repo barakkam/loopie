@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0053)file:///C:/Users/barak/Downloads/loopie-ultra_15.html -->
+<!-- saved from url=(0053)file:///C:/Users/barak/Downloads/loopie-ultra_16.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -3272,7 +3272,7 @@ async function lookupFoodAI(foodQuery) {
     try {
         console.log("Calling Gemini for:", foodQuery);
         // Gemini API — תומך ב-CORS מ-browser
-        var response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyDBI95wYKtfw0idRIUlxDmgBICbKsZYgFA", {
+        var response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyAzaGEs6r_fs8hKfrnfxxr78zpzmNEfdes", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -4039,7 +4039,7 @@ async function importFromGmail(token) {
             '\nאם אין מידע על שעה — דלג על הפריט.' +
             '\n\nמיילים:\n' + found.map(function(f,i){ return (i+1) + '. ' + f.subject; }).join('\n');
 
-        var aiRes = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyDBI95wYKtfw0idRIUlxDmgBICbKsZYgFA', {
+        var aiRes = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyAzaGEs6r_fs8hKfrnfxxr78zpzmNEfdes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -5822,7 +5822,7 @@ async function askGeminiAdvisor(userQuestion) {
     try {
         var ctx = await buildNSContext();
         var prompt = buildGeminiPrompt(ctx, userQuestion);
-        var response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyDBI95wYKtfw0idRIUlxDmgBICbKsZYgFA", {
+        var response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyAzaGEs6r_fs8hKfrnfxxr78zpzmNEfdes", {
             method:"POST",
             headers:{"Content-Type":"application/json"},
             body:JSON.stringify({
@@ -5847,6 +5847,17 @@ async function askGeminiAdvisor(userQuestion) {
     }
 
 }
+function showStatus(msg, type) {
+    var el = document.getElementById('login-status');
+    if (!el) return;
+    el.textContent = msg;
+    el.className = 'status ' + (type||'');
+}
+
+function rescueCarbs() {
+    showPopup("🔵 תוכנית חילוץ", "<div style='font-size:13px'><b>סוכר נמוך — פעל עכשיו:</b><br><br>1. קח <b>15g גלוקוז מהיר</b><br>2. המתן 15 דקות<br>3. בדוק שוב<br><br><small style='color:#888'>Loop הפחית בזאלי אוטומטית</small></div>");
+}
+
 </script>
 
 
