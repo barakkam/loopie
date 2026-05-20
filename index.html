@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0053)file:///C:/Users/barak/Downloads/loopie-ultra_11.html -->
+<!-- saved from url=(0053)file:///C:/Users/barak/Downloads/loopie-ultra_12.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -4701,6 +4701,57 @@ async function askGeminiAdvisor(userQuestion) {
     }
 }
 
+async function connect() {
+    var btn = document.getElementById('loginBtn');
+    var remEl = document.getElementById('remember-me');
+    var remember = !remEl || remEl.checked;
+    var urlEl    = document.getElementById('nsUrl');
+    var secretEl = document.getElementById('apiSecret');
+    if (!urlEl || !secretEl) return;
+    var url    = urlEl.value.trim().replace(/\/+$/, '');
+    var secret = secretEl.value.trim();
+    if (!url) { showStatus('הכנס כתובת Nightscout', 'error'); return; }
+    if (btn) { btn.disabled = true; btn.textContent = 'מתחבר...'; }
+    showStatus('מתחבר ל-Nightscout...', '');
+    try {
+        NS_URL    = url;
+        API_TOKEN = secret;
+        var r = await nsGet('/api/v1/status.json');
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        var st = await r.json();
+        if (remember) {
+            localStorage.setItem('loopie_ns_url',    url);
+            localStorage.setItem('loopie_ns_secret', secret);
+        }
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('main-screen').classList.remove('hidden');
+        showStatus('מחובר ✅', 'success');
+        startNSMonitor();
+        loadEmojiMap();
+        // טען פעילויות מFirebase
+        loadMemory().then(function(mem){
+            if (mem['activities'] && mem['activities'].value && Array.isArray(mem['activities'].value)) {
+                if (mem['activities'].value.length > ACTIVITIES.length) {
+                    ACTIVITIES = mem['activities'].value;
+                    localStorage.setItem('loopie_activities', JSON.stringify(ACTIVITIES));
+                    renderActivities();
+                }
+            }
+        }).catch(function(){});
+        await fetchData();
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission().then(function(p){ _notifPermission = p; });
+        } else if ('Notification' in window) {
+            _notifPermission = Notification.permission;
+        }
+        setTimeout(drawMiniChart, 2000);
+        setInterval(drawMiniChart, 60000);
+    } catch(e) {
+        showStatus('שגיאת חיבור: ' + e.message, 'error');
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'התחבר למערכת'; }
+    }
+}
 
 </script>
 
