@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0053)file:///C:/Users/barak/Downloads/loopie-ultra_12.html -->
+<!-- saved from url=(0053)file:///C:/Users/barak/Downloads/loopie-ultra_13.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -4699,6 +4699,114 @@ async function askGeminiAdvisor(userQuestion) {
             showPopup("שגיאה", "Gemini: " + e.message);
         }
     }
+}
+
+function showStatus(msg, type) {
+    var el = document.getElementById('login-status');
+    if (!el) return;
+    el.textContent = msg;
+    el.className = 'status ' + (type || '');
+}
+
+async function fetchData() {
+    try {
+        // שלוף נתוני NS
+        var eRes = await nsGet('/api/v1/entries.json?count=3');
+        if (!eRes.ok) return;
+        var entries = await eRes.json();
+        if (!entries.length) return;
+        var e0 = entries[0];
+        nsData.currentSgv = e0.sgv;
+        nsData.delta = e0.delta || 0;
+        nsData.trend = e0.direction || 'Flat';
+
+        // DeviceStatus
+        var dRes = await nsGet('/api/v1/devicestatus.json?count=1');
+        if (dRes.ok) {
+            var dArr = await dRes.json();
+            var dev = Array.isArray(dArr) ? dArr[0] : dArr;
+            if (dev) {
+                fullHistory.devStatus = dev;
+                var iobVal = dig(dev,'loop.iob.iob');
+                if (iobVal !== null) nsData.iob = parseFloat(iobVal).toFixed(2);
+                var cobVal = dig(dev,'loop.cob.cob');
+                if (cobVal !== null) nsData.cob = parseFloat(cobVal).toFixed(1);
+                var basalVal = dig(dev,'loop.enacted.rate');
+                if (basalVal !== null) nsData.basal = parseFloat(basalVal).toFixed(3);
+                var predObj = dig(dev,'loop.predicted');
+                if (predObj && predObj.values) {
+                    nsData.loopPredicted = predObj.values;
+                    window._predStartTime = predObj.startDate ? new Date(predObj.startDate).getTime() : Date.now();
+                }
+                var recBolus = dig(dev,'loop.recommendedBolus');
+                if (recBolus !== null) nsData.loopRecommended = parseFloat(recBolus);
+
+                // Log
+                console.log("=== DeviceStatus top keys:", Object.keys(dev));
+                var predObj2 = dig(dev,'loop.predicted');
+                if (predObj2) {
+                    console.log("loop.predicted keys:", Object.keys(predObj2));
+                    console.log("loop.predicted.startDate:", predObj2.startDate);
+                    console.log("loop.predicted.values length:", predObj2.values ? predObj2.values.length : 'N/A');
+                }
+                console.log("pump.battery:", dig(dev,'pump.battery'));
+                console.log("uploader.battery:", dig(dev,'uploader.battery'));
+                console.log("override:", dig(dev,'override'));
+
+                var loopKeys = dig(dev,'loop');
+                if (loopKeys) console.log("loop keys:", Object.keys(loopKeys));
+                console.log("IOB found at: loop.iob.iob =", dig(dev,'loop.iob.iob'));
+                console.log("COB found at: loop.cob.cob =", dig(dev,'loop.cob.cob'));
+                var enacted = dig(dev,'loop.enacted');
+                if (enacted) console.log("Basal from loop.enacted.rate:", enacted.rate);
+                console.log("Basal found at: loop.enacted.rate =", dig(dev,'loop.enacted.rate'));
+
+                // Profile
+                var profRes = await nsGet('/api/v1/profile.json');
+                if (profRes.ok) {
+                    var profData = await profRes.json();
+                    if (profData && profData.store) {
+                        var storeName = profData.defaultProfile || Object.keys(profData.store)[0];
+                        console.log("Profile store:", storeName);
+                        fullHistory.profile = profData.store[storeName];
+                        var prof = fullHistory.profile;
+                        if (prof) {
+                            var h = new Date().getHours();
+                            nsData.cr  = parseFloat(profileValueAt(prof.carbratio, h) || prof.carbratio) || 15.1;
+                            nsData.isf = parseFloat(profileValueAt(prof.sens, h) || prof.sens) || 120;
+                        }
+                    }
+                }
+            }
+        }
+
+        // עדכן תצוגה
+        // עדכן תצוגה ראשית
+        var sgvEl = document.getElementById('sgv-value') || document.getElementById('sgv-num');
+        if (sgvEl) sgvEl.textContent = nsData.currentSgv || '--';
+        var iobEl = document.getElementById('stat-iob');
+        if (iobEl) iobEl.textContent = nsData.iob || '0.0';
+        var basalEl = document.getElementById('stat-basal');
+        if (basalEl) basalEl.textContent = nsData.basal || '0.0';
+        // עדכן מגמה
+        var trendMap = {'DoubleUp':'⬆⬆','SingleUp':'⬆','FortyFiveUp':'↗','Flat':'→','FortyFiveDown':'↘','SingleDown':'⬇','DoubleDown':'⬇⬇'};
+        var trendEl = document.getElementById('trend-label');
+        if (trendEl) {
+            var ta = trendMap[nsData.trend] || '→';
+            var ds = nsData.delta >= 0 ? '+' : '';
+            trendEl.textContent = ta + ' ' + ds + (nsData.delta || 0);
+        }
+        // צבע סוכר
+        var sgvDisp = document.getElementById('sgv-display') || document.getElementById('sgv-value');
+        if (sgvDisp && nsData.currentSgv) {
+            sgvDisp.style.color = nsData.currentSgv < 70 ? '#3b82f6' : nsData.currentSgv > 180 ? '#f59e0b' : '#10b981';
+            sgvDisp.textContent = nsData.currentSgv;
+        }
+        checkAlerts();
+        try { autoDetectNewDevices(); } catch(e) {}
+        try { checkPodFailure(); } catch(e) {}
+
+    } catch(e) { console.error("fetchData error:", e); }
 }
 
 async function connect() {
