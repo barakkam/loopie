@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0053)file:///C:/Users/barak/Downloads/loopie-ultra_21.html -->
+<!-- saved from url=(0053)file:///C:/Users/barak/Downloads/loopie-ultra_22.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -3272,7 +3272,7 @@ async function lookupFoodAI(foodQuery) {
     try {
         console.log("Calling Gemini for:", foodQuery);
         // Gemini API — תומך ב-CORS מ-browser
-        var response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=AIzaSyAp4643BrD7l_gJjCGXe2V55HnQnP1bIGE", {
+        var response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=AIzaSyAp4643BrD7l_gJjCGXe2V55HnQnP1bIGE", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -4039,7 +4039,7 @@ async function importFromGmail(token) {
             '\nאם אין מידע על שעה — דלג על הפריט.' +
             '\n\nמיילים:\n' + found.map(function(f,i){ return (i+1) + '. ' + f.subject; }).join('\n');
 
-        var aiRes = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=AIzaSyAp4643BrD7l_gJjCGXe2V55HnQnP1bIGE', {
+        var aiRes = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=AIzaSyAp4643BrD7l_gJjCGXe2V55HnQnP1bIGE', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -5822,7 +5822,7 @@ async function askGeminiAdvisor(userQuestion) {
     try {
         var ctx = await buildNSContext();
         var prompt = buildGeminiPrompt(ctx, userQuestion);
-        var response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=AIzaSyAp4643BrD7l_gJjCGXe2V55HnQnP1bIGE", {
+        var response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=AIzaSyAp4643BrD7l_gJjCGXe2V55HnQnP1bIGE", {
             method:"POST",
             headers:{"Content-Type":"application/json"},
             body:JSON.stringify({
