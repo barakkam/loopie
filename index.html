@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0053)file:///C:/Users/barak/Downloads/loopie-ultra_24.html -->
+<!-- saved from url=(0053)file:///C:/Users/barak/Downloads/loopie-ultra_25.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -5744,6 +5744,37 @@ async function askOmnibox() {
         input.value = ''; return;
     }
 
+    else if (!isNonFood) {
+        // מאכלים מוכרים → מיידי
+        var qc = q.replace(/^\d+\s+/, '').trim();
+        var kf = findFood(qc) || findFood(q.trim());
+        if (kf) {
+            var qty4 = q.match(/^(\d+)/) ? parseFloat(q.match(/^(\d+)/)[1]) : 1;
+            var c4 = Math.round(kf.data.carbs * qty4);
+            var d4 = kf.data.durationH;
+            var iob4 = parseFloat(nsData.iob)||0;
+            var sgv4 = nsData.currentSgv||0;
+            var cr4 = nsData.cr||15.1;
+            var isf4 = nsData.isf||120;
+            var tot4 = Math.max(0, c4/cr4 + Math.max(0,(sgv4-100)/isf4) - iob4);
+            var totR4 = (Math.round(tot4*2)/2).toFixed(1);
+            var np4 = d4>=5?60:d4>=3?70:80;
+            var now4 = (Math.round(tot4*np4/100*2)/2).toFixed(1);
+            var lat4 = (Math.round(tot4*(100-np4)/100*2)/2).toFixed(1);
+            var h4 = "<div style='font-size:13px;line-height:1.8'>";
+            h4 += "🍞 <b>"+kf.key+"</b> — <b style='color:#f59e0b'>"+c4+"g פחמימות</b> | "+d4+" שעות<br>";
+            if (kf.data.notes) h4 += "<small style='color:#888'>"+kf.data.notes+"</small><br><br>";
+            h4 += "💉 <b>מינון: "+totR4+"U</b><br>";
+            h4 += "▶ עכשיו: <b>"+now4+"U</b> ("+np4+"%)";
+            if (parseFloat(lat4)>0) h4 += " | ⏳ אחרי: <b>"+lat4+"U</b> ("+(100-np4)+"%)";
+            h4 += "<br><small style='color:#555'>"+c4+"g÷"+cr4.toFixed(1)+" − IOB "+iob4.toFixed(2)+"U = "+totR4+"U</small></div>";
+            showPopup("🍞 "+kf.key, h4);
+            input.value=''; return;
+        }
+        // לא נמצא מקומית → Gemini
+        askGeminiAdvisor(q);
+        input.value=''; return;
+    }
     else {
         askGeminiAdvisor(q);
     input.value = ''; return;
