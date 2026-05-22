@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0053)file:///C:/Users/barak/Downloads/loopie-ultra_18.html -->
+<!-- saved from url=(0053)file:///C:/Users/barak/Downloads/loopie-ultra_19.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -222,7 +222,7 @@
     <!-- TAB: NS -->
     <div id="tab-ns" class="hidden">
         <div id="ns-frame-wrap" style="position:relative;width:100%;height:70vh;border-radius:10px;overflow:hidden;background:#000">
-            <iframe id="ns-iframe" src="./index_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
+            <iframe id="ns-iframe" src="./index37_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
             <div id="ns-frame-msg" style="display:none;position:absolute;inset:0;background:#0a0a14;border-radius:10px;flex-direction:column;align-items:center;justify-content:center;color:#888;font-size:14px;text-align:center;padding:20px">
                 <div style="font-size:36px;margin-bottom:12px">🔒</div>
                 <b style="color:var(--text);margin-bottom:8px">NS חוסם iframe</b><br>
@@ -3272,7 +3272,7 @@ async function lookupFoodAI(foodQuery) {
     try {
         console.log("Calling Gemini for:", foodQuery);
         // Gemini API — תומך ב-CORS מ-browser
-        var response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=AIzaSyAzaGEs6r_fs8hKfrnfxxr78zpzmNEfdes", {
+        var response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyAvuEl_YqcM8AeLhxZuTbEYEx6jIx8mbIo", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -4039,7 +4039,7 @@ async function importFromGmail(token) {
             '\nאם אין מידע על שעה — דלג על הפריט.' +
             '\n\nמיילים:\n' + found.map(function(f,i){ return (i+1) + '. ' + f.subject; }).join('\n');
 
-        var aiRes = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=AIzaSyAzaGEs6r_fs8hKfrnfxxr78zpzmNEfdes', {
+        var aiRes = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyAvuEl_YqcM8AeLhxZuTbEYEx6jIx8mbIo', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -5822,7 +5822,7 @@ async function askGeminiAdvisor(userQuestion) {
     try {
         var ctx = await buildNSContext();
         var prompt = buildGeminiPrompt(ctx, userQuestion);
-        var response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=AIzaSyAzaGEs6r_fs8hKfrnfxxr78zpzmNEfdes", {
+        var response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyAvuEl_YqcM8AeLhxZuTbEYEx6jIx8mbIo", {
             method:"POST",
             headers:{"Content-Type":"application/json"},
             body:JSON.stringify({
