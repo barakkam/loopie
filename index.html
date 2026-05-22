@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0053)file:///C:/Users/barak/Downloads/loopie-ultra_22.html -->
+<!-- saved from url=(0053)file:///C:/Users/barak/Downloads/loopie-ultra_23.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -137,12 +137,11 @@
 
         <div id="activity-banner"></div>
         <div class="omni-row">
-            <input type="text" id="omnibox" class="omnibox" placeholder="שאל: מה המצב? / כמה להזריק על פיתה?" onkeydown="if(event.key===&#39;Enter&#39;) askOmnibox()">
+            <input type="text" id="omnibox" class="omnibox" placeholder="שאל: פיתה / מלאווח / הוסף חוג MMA / מה לעשות?" onkeydown="if(event.key===&#39;Enter&#39;) askOmnibox()">
             <button class="btn omni-send" onclick="askOmnibox()">שלח</button>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:0">
         <button class="btn" id="refreshBtn" onclick="doRefresh()" style="flex:1">🔄 רענן</button>
-        <button class="btn" onclick="askGeminiAdvisor(document.getElementById(&#39;omnibox&#39;).value||&#39;מה המצב עכשיו?&#39;)" style="background:rgba(99,102,241,0.15);color:#818cf8;border:1px solid rgba(99,102,241,0.3);margin-bottom:8px;width:100%">🤖 ייעוץ Gemini AI</button>
         <button class="btn" onclick="showMemoryHistory()" style="flex:1;background:var(--blue-dim);color:var(--blue);border:1px solid var(--blue-dim)">🧠 זיכרון</button>
     </div>
         <button class="btn" style="background:transparent;border:1px solid var(--border);color:var(--muted);margin-top:8px" onclick="location.reload()">התנתקות</button>
@@ -222,7 +221,7 @@
     <!-- TAB: NS -->
     <div id="tab-ns" class="hidden">
         <div id="ns-frame-wrap" style="position:relative;width:100%;height:70vh;border-radius:10px;overflow:hidden;background:#000">
-            <iframe id="ns-iframe" src="./index37_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
+            <iframe id="ns-iframe" src="./index37_1_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
             <div id="ns-frame-msg" style="display:none;position:absolute;inset:0;background:#0a0a14;border-radius:10px;flex-direction:column;align-items:center;justify-content:center;color:#888;font-size:14px;text-align:center;padding:20px">
                 <div style="font-size:36px;margin-bottom:12px">🔒</div>
                 <b style="color:var(--text);margin-bottom:8px">NS חוסם iframe</b><br>
@@ -5812,7 +5811,12 @@ function buildGeminiPrompt(ctx, q) {
     if (ctx.loopRec!=null) lines.push("Loop ממליץ: "+ctx.loopRec+"U");
     if (ctx.meals&&ctx.meals.length) lines.push("ארוחות: "+ctx.meals.join(", "));
     if (ctx.boluses&&ctx.boluses.length) lines.push("הזרקות: "+ctx.boluses.join(", "));
-    lines.push("","שאלה: "+q,"","ענה 3-5 שורות, המלצה מעשית.");
+    lines.push("","שאלה: "+q,"",
+        "חובה לענות בעברית בלבד! תשובה מלאה ולא קצוצה.",
+        "אם שואלים על מאכל: ציין כמה גרם פחמימות, כמה שעות ספיגה, וכמה יחידות אינסולין להזריק עכשיו לפי הנתונים שנתתי (CR, IOB, סוכר נוכחי).",
+        "אם שואלים שאלה כללית: ענה בצורה מלאה עם המלצה מעשית.",
+        "אל תקצץ את התשובה — ענה עד הסוף."
+    );
     return lines.join("\n");
 }
 
@@ -5827,7 +5831,7 @@ async function askGeminiAdvisor(userQuestion) {
             headers:{"Content-Type":"application/json"},
             body:JSON.stringify({
                 contents:[{role:"user",parts:[{text:prompt}]}],
-                generationConfig:{maxOutputTokens:500,temperature:0.3}
+                generationConfig:{maxOutputTokens:1000,temperature:0.3}
             })
         });
         if (!response.ok) {
