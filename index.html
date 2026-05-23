@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0050)file:///C:/Users/barak/Downloads/index37_v5_1.html -->
+<!-- saved from url=(0050)file:///C:/Users/barak/Downloads/index37_v5_2.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1473,10 +1473,9 @@ async function recommendDose(inputText) {
             if (tr90.length < 50) {
                 var from90 = new Date(Date.now() - 90*86400000).toISOString();
                 var tRes = await nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + from90 + '&count=2000');
-                var eRes = await nsGet('/api/v1/entries.json?find[dateString][$gte]=' + from90 + '&count=10000');
                 if (tRes.ok) tr90 = await tRes.json();
-                var allE = eRes.ok ? await eRes.json() : fullHistory.entries;
-            } else { var allE = fullHistory.entries; }
+            }
+            var allE = fullHistory.entries || [];
 
             var keyword = foodName.toLowerCase();
             var matched = tr90.filter(function(t){
@@ -4809,7 +4808,7 @@ async function askOmnibox() {
 
     // === חסימה מוקדמת — מילים שאינן מאכל ===
     var nonFoodWords = ['פוד','pod','חיישן','סנסור','ציוד','בזאלי','isf','cr','iob','cob',
-                        'תיקון','ספורט','אימון','ים','בריכה','smb','זיכרון','דוח','לוגים',
+                        'אינסולין','insulin','תיקון','ספורט','אימון','ים','בריכה','smb','זיכרון','דוח','לוגים',
                         'ניתוח','מצב','סטטוס','status','פרופיל','profile','מה המצב',
                         'היסטוריה','מאכלים','רשימה','חילוץ','היפו','נמוך','גבוה',
                         'המלצות','המלצה','ניתוח','הצע','הצג','הראה','רשימת','מה אכלתי',
@@ -5827,39 +5826,34 @@ async function buildNSContext() {
 
 function buildGeminiPrompt(ctx, q) {
     var lines = [
-        "אתה פרופ' אנדוקרינולוג מומחה לסוכרת נעורים T1D ולמערכת Loop. שמך Loopie.",
-        "ענה תמיד בעברית. תשובה מלאה ולא מקוצצת. המלצה מעשית ברורה.",
+        "מערכת המלצות T1D סוכרת נעורים. ענה בעברית בלבד. קצר וישיר — רק מספרים.",
+        "אסור להציג רקע או הסברים. רק: פחמימות, זמן ספיגה, כמה להזריק, פיצול.",
         "",
-        "=== המטופל ===",
-        "דניאל, בן 9, T1D | Omnipod DASH | Loop iOS | ליומג'ב (Lyumjev)",
-        "CR:" + ctx.cr.toFixed(1) + " | ISF:" + ctx.isf + " | יעד:" + ctx.target + " | בזאלי:" + ctx.basal + "U/ש'",
+        "דניאל, בן 9, T1D | Omnipod | Loop | ליומג'ב",
+        "CR:" + ctx.cr.toFixed(1) + " | ISF:" + ctx.isf + " | יעד:" + ctx.target,
+        "פיצול: פסטה 50/50 | פיצה 60/40 | פיתה 70/30 | פרי 85/15",
+        "Dawn 06-10: הכל עכשיו. ביה\"ס 08-14: CR×1.1, יעד 120. לילה 22-06: פיצול 55/45.",
+        "ילד בן 9 — שמרנות תמיד.",
         "",
-        "=== פרוטוקולים ===",
-        "Dawn 06-10: CR×0.9, הכל עכשיו. ביה\"ס 08-14: CR×1.1 ISF×1.1, יעד 120, שמרני.",
-        "לילה 22-06: יעד 115, תיקון 50%, פיצול 55/45.",
-        "פיצול: פסטה 50/50 | פיצה 60/40 | פיתה 70/30 | פרי 85/15.",
-        "MMA: כניסה 165+, IOB<0.5U, בזאלי -80% לפני ו-30% ל-4ש' אחרי.",
-        "ים/בריכה: כניסה 150+, IOB<0.7U, בזאלי -50%.",
-        "ילד בן 9 — שמרנות! היפו מסוכן יותר מהיפר.",
-        "",
-        "=== מצב עכשיו (" + ctx.time + ", יום " + ctx.day + ") ===",
-        "סוכר: " + ctx.sgv + " " + ctx.trend + " | Δ:" + (ctx.delta>=0?"+":"") + ctx.delta + "/5דק'",
-        "IOB: " + ctx.iob + "U | COB: " + ctx.cob + "g | בזאלי: " + ctx.basal + "U/ש'"
+        "מצב (" + ctx.time + ", יום " + ctx.day + "):",
+        "סוכר:" + ctx.sgv + " " + ctx.trend + " Δ" + (ctx.delta>=0?"+":"") + ctx.delta + " | IOB:" + ctx.iob + "U | COB:" + ctx.cob + "g"
     ];
 
-    if (ctx.p30 != null)        lines.push("תחזית Loop: 30דק'=" + ctx.p30 + " | eventual=" + ctx.pEv);
-    if (ctx.loopRec != null)    lines.push("Loop ממליץ על בולוס: " + ctx.loopRec + "U");
-    if (ctx.loopEnacted != null) lines.push("בזאלי זמני: " + ctx.loopEnacted + "U/ש'");
-    if (ctx.cage != null)       lines.push("גיל פוד (CAGE): " + Math.floor(ctx.cage/24) + "d " + Math.round(ctx.cage%24) + "h");
-    if (ctx.sage != null)       lines.push("גיל חיישן (SAGE): " + Math.floor(ctx.sage/24) + "d " + Math.round(ctx.sage%24) + "h");
-    if (ctx.meals   && ctx.meals.length)   lines.push("ארוחות 3ש': "  + ctx.meals.join(" | "));
+    if (ctx.p30 != null)        lines.push("תחזית: 30דק'=" + ctx.p30 + " eventual=" + ctx.pEv);
+    if (ctx.loopRec != null)    lines.push("Loop ממליץ:" + ctx.loopRec + "U");
+    if (ctx.meals   && ctx.meals.length)   lines.push("ארוחות 3ש': " + ctx.meals.join(" | "));
     if (ctx.boluses && ctx.boluses.length) lines.push("הזרקות 3ש': " + ctx.boluses.join(" | "));
 
     lines.push(
         "",
         "שאלה: " + q,
         "",
-        "אם שאלה על מאכל: ציין כמה Loop ממליץ ולמה הוא מוגבל, וכמה Loopie ממליץ עם נימוק. סיים: 'המלצה סופית: XU'."
+        "ענה בפורמט הזה בלבד:",
+        "🍞 [מאכל]: [X]g פחמימות | ספיגה [Y] שעות",
+        "💉 מינון: [Z]U סה\"כ",
+        "▶ עכשיו: [A]U ([P]%) | ⏳ אחרי [T] דק': [B]U ([Q]%)",
+        "🔵 Loop ממליץ: [L]U (לא יודע על הארוחה — מגיב בדיעבד)",
+        "📝 נימוק: [משפט קצר אחד]"
     );
 
     return lines.join("\n");
@@ -5876,7 +5870,7 @@ async function askGeminiAdvisor(userQuestion) {
             headers:{"Content-Type":"application/json"},
             body:JSON.stringify({
                 contents:[{role:"user",parts:[{text:prompt}]}],
-                generationConfig:{maxOutputTokens:500,temperature:0.3}
+                generationConfig:{maxOutputTokens:800,temperature:0.2}
             })
         });
         if (!response.ok) {
@@ -5916,8 +5910,17 @@ async function showEquipmentStatus() {
 
         function parseHours(prop) {
             if (!prop) return null;
+            // מבנה ישיר: {age: 190}
             if (prop.age !== undefined && prop.age !== null) return parseFloat(prop.age);
             if (prop.value !== undefined && prop.value !== null) return parseFloat(prop.value);
+            // מבנה מקונן: {"Sensor Start": {age: 190}, ...}
+            var keys = Object.keys(prop);
+            for (var ki=0; ki<keys.length; ki++) {
+                var sub = prop[keys[ki]];
+                if (sub && typeof sub === 'object' && sub.found && sub.age !== undefined) {
+                    return parseFloat(sub.age);
+                }
+            }
             if (prop.display) {
                 var m = prop.display.match(/(\d+)d\s*(\d+)h/);
                 if (m) return parseInt(m[1])*24 + parseInt(m[2]);
