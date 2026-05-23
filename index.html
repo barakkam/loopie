@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0050)file:///C:/Users/barak/Downloads/index37_v5_2.html -->
+<!-- saved from url=(0050)file:///C:/Users/barak/Downloads/index37_v5_3.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -222,7 +222,7 @@
     <!-- TAB: NS -->
     <div id="tab-ns" class="hidden">
         <div id="ns-frame-wrap" style="position:relative;width:100%;height:70vh;border-radius:10px;overflow:hidden;background:#000">
-            <iframe id="ns-iframe" src="./index37_2_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
+            <iframe id="ns-iframe" src="./index37_5_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
             <div id="ns-frame-msg" style="display:none;position:absolute;inset:0;background:#0a0a14;border-radius:10px;flex-direction:column;align-items:center;justify-content:center;color:#888;font-size:14px;text-align:center;padding:20px">
                 <div style="font-size:36px;margin-bottom:12px">🔒</div>
                 <b style="color:var(--text);margin-bottom:8px">NS חוסם iframe</b><br>
@@ -5791,7 +5791,11 @@ async function buildNSContext() {
         cage:  _lastKnownCage,
         sage:  _lastKnownSage,
         time:  new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false}),
-        day:   ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'][new Date().getDay()]
+        day:   ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'][new Date().getDay()],
+        insulinName:   getInsulinProfile().name,
+        insulinPreMeal: getInsulinProfile().preMeal,
+        insulinPeak:   getInsulinProfile().peak,
+        insulinOnset:  getInsulinProfile().onset
     };
 
     // תחזית Loop
@@ -5841,6 +5845,7 @@ function buildGeminiPrompt(ctx, q) {
 
     if (ctx.p30 != null)        lines.push("תחזית: 30דק'=" + ctx.p30 + " eventual=" + ctx.pEv);
     if (ctx.loopRec != null)    lines.push("Loop ממליץ:" + ctx.loopRec + "U");
+    lines.push("אינסולין: " + ctx.insulinName + " | שיא:" + ctx.insulinPeak + "דק' | לפני ארוחה:" + ctx.insulinPreMeal + "דק'");
     if (ctx.meals   && ctx.meals.length)   lines.push("ארוחות 3ש': " + ctx.meals.join(" | "));
     if (ctx.boluses && ctx.boluses.length) lines.push("הזרקות 3ש': " + ctx.boluses.join(" | "));
 
@@ -5848,12 +5853,14 @@ function buildGeminiPrompt(ctx, q) {
         "",
         "שאלה: " + q,
         "",
-        "ענה בפורמט הזה בלבד:",
-        "🍞 [מאכל]: [X]g פחמימות | ספיגה [Y] שעות",
-        "💉 מינון: [Z]U סה\"כ",
-        "▶ עכשיו: [A]U ([P]%) | ⏳ אחרי [T] דק': [B]U ([Q]%)",
-        "🔵 Loop ממליץ: [L]U (לא יודע על הארוחה — מגיב בדיעבד)",
-        "📝 נימוק: [משפט קצר אחד]"
+        "כללים נוקשים:",
+        "1. אסור בהחלט להתחיל ב'שלום' או כל פתיחה אחרת.",
+        "2. התחל ישירות עם 🍞 או 💉.",
+        "3. השתמש בפורמט הזה בדיוק:",
+        "🍞 [מאכל]: [X]g | ספיגה [Y]ש'",
+        "💉 [Z]U סה\"כ = [A]U עכשיו ([P]%) + [B]U בעוד [T]דק' ([Q]%)",
+        "🔵 Loop: [L]U (לא רואה את הארוחה)",
+        "📝 [נימוק אחד קצר]"
     );
 
     return lines.join("\n");
@@ -5865,12 +5872,46 @@ async function askGeminiAdvisor(userQuestion) {
     try {
         var ctx = await buildNSContext();
         var prompt = buildGeminiPrompt(ctx, userQuestion);
+        var insName    = ctx.insulinName    || 'ליומג\'ב';
+        var insPreMeal = ctx.insulinPreMeal || 5;
+        var insPeak    = ctx.insulinPeak    || 30;
+
+        var sysPrompt = `אתה עוזר קוגניטיבי ממוקד עבור אפליקציית LOOPIE המנהלת סוכרת מסוג 1 (T1D).
+תפקידך לתת המלצות טיפוליות חדות, קצרות וישר לעניין, ללא שום מילות פתיחה, ללא גינונים, וללא הצגת עצמך. עבור ישר לשורה התחתונה.
+
+חוקי בית קשיחים לחישוב פחמימות וספיגה:
+1. פיתה: דיפולט 50ג' פחמימה | 3 שעות ספיגה.
+2. המבורגר: דיפולט 50ג' פחמימה | 5 שעות ספיגה.
+3. פסטה: 1 כוס = 15ג' פחמימה | 5 שעות ספיגה.
+4. אורז: 1 כף = 5ג' פחמימה | 3 שעות ספיגה.
+5. צ'יפס: 10 יחידות = 15ג' פחמימה | 3 שעות ספיגה.
+6. פתיבר: יחידה = 7.5ג' | 3 שעות (חצי פתיבר = 4ג').
+* כל מאכל אחר: דיפולט 3 שעות ספיגה.
+
+חוק ה-3 לפיצול ארוחות:
+- המלץ תמיד על פיצול: הזרק עכשיו על חלק מהפחמימות, השאר יתרה כחוב.
+- ציין מה הלופ היה ממליץ לפי IOB ו-SGV נוכחיים.
+
+🛡️ חוק תזמון הזרקה דינמי לפי סוג האינסולין (מגיע בנתוני השאילתה):
+- אם Lyumjev או Fiasp: "המתן 2-3 דקות בלבד לפני האוכל (אולטרה-מהיר)".
+- אם Novorapid או Humalog: "חובה להמתין 15-20 דקות לפני האוכל (מהיר רגיל)".
+- אם סוג לא ידוע: המתן 15 דקות ליתר ביטחון.
+
+לוגיקת עמידות: אם סוכר תקוע מעל 180 למרות IOB — המלץ תיקון בעט 0.5-1.0U. אם פוד מעל 48ש' — המלץ להחליף.
+
+פורמט תשובה חובה:
+• 💉 להזריק כעת: [X]U על [Y]ג' פחמימה.
+• ⏳ זמן המתנה ([שם האינסולין]): [הנחיה לפי הסוג].
+• 📋 חוב להשלמה: [Z]ג' פחמימה בהמשך.
+• 📊 הלופ היה מציע: [W]U.`;
+
         var response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key="+geminiKey()+"", {
             method:"POST",
             headers:{"Content-Type":"application/json"},
             body:JSON.stringify({
                 contents:[{role:"user",parts:[{text:prompt}]}],
-                generationConfig:{maxOutputTokens:800,temperature:0.2}
+                systemInstruction:{parts:[{text:sysPrompt}]},
+                generationConfig:{maxOutputTokens:800,temperature:0.1}
             })
         });
         if (!response.ok) {
@@ -5879,11 +5920,13 @@ async function askGeminiAdvisor(userQuestion) {
         }
         var data = await response.json();
         var answer = data.candidates[0].content.parts[0].text.trim();
-        var html = "<div style='font-size:13px;line-height:1.7;text-align:right'>"+
-                   answer.replace(/\n/g,'<br>')+"<br><br>"+
-                   "<small style='color:#555'>🤖 Gemini | "+ctx.time+" | סוכר:"+ctx.sgv+"</small></div>";
+        // הסר פתיחות מיותרות
+        answer = answer.replace(/^(שלום[^!\n]*[!\n]?\s*|היי[^!\n]*[!\n]?\s*|בוודאי[^!\n]*[!\n]?\s*|כמובן[^!\n]*[!\n]?\s*)/i, '');
+        var html = "<div style='font-size:14px;line-height:1.9;text-align:right'>"+
+                   answer.replace(/\n/g,'<br>')+
+                   "<br><small style='color:#555'>Gemini | "+ctx.time+" | "+ctx.sgv+"</small></div>";
         closePopup();
-        showPopup("🤖 Gemini", html);
+        showPopup("💉 המלצה", html);
     } catch(e) {
         closePopup();
         showPopup("⚠️", (e.message||'').includes('429')?"מכסה נגמרה, נסה שוב בעוד דקה.":"שגיאה: "+(e.message||e));
