@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0051)file:///C:/Users/barak/Downloads/index37_v5_10.html -->
+<!-- saved from url=(0051)file:///C:/Users/barak/Downloads/index37_v5_11.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -222,7 +222,7 @@
     <!-- TAB: NS -->
     <div id="tab-ns" class="hidden">
         <div id="ns-frame-wrap" style="position:relative;width:100%;height:70vh;border-radius:10px;overflow:hidden;background:#000">
-            <iframe id="ns-iframe" src="./index38_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
+            <iframe id="ns-iframe" src="./index39_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
             <div id="ns-frame-msg" style="display:none;position:absolute;inset:0;background:#0a0a14;border-radius:10px;flex-direction:column;align-items:center;justify-content:center;color:#888;font-size:14px;text-align:center;padding:20px">
                 <div style="font-size:36px;margin-bottom:12px">🔒</div>
                 <b style="color:var(--text);margin-bottom:8px">NS חוסם iframe</b><br>
@@ -5785,7 +5785,7 @@ async function askOmnibox() {
 }
 
 // ========= Gemini AI Advisor =========
-async function buildNSContext() {
+function buildNSContext() {
     var nowH = new Date().getHours();
     var prof  = fullHistory && fullHistory.profile;
     var dev   = fullHistory && fullHistory.devStatus;
@@ -5825,14 +5825,16 @@ async function buildNSContext() {
         }
     } catch(e) {}
 
-    // ארוחות והזרקות 3 שעות אחרונות
+    // ארוחות והזרקות 3 שעות אחרונות — מנתונים שכבר טעונים
     try {
-        var since = new Date(Date.now()-3*3600000).toISOString();
-        var tr = await (await nsGet('/api/v1/treatments.json?find[created_at][$gte]='+since+'&count=20')).json();
-        ctx.meals = tr.filter(function(t){return t.carbs>0;}).map(function(t){
+        var since3h = Date.now() - 3*3600000;
+        var recentTr = (fullHistory.treatments || []).filter(function(t){
+            return new Date(t.created_at).getTime() > since3h;
+        });
+        ctx.meals = recentTr.filter(function(t){return t.carbs>0;}).map(function(t){
             return (t.notes||t.eventType||'ארוחה')+' '+t.carbs+'g לפני '+Math.round((Date.now()-new Date(t.created_at))/60000)+' דק\'';
         });
-        ctx.boluses = tr.filter(function(t){return parseFloat(t.insulin||0)>0.3;}).map(function(t){
+        ctx.boluses = recentTr.filter(function(t){return parseFloat(t.insulin||0)>0.3;}).map(function(t){
             return parseFloat(t.insulin).toFixed(1)+'U לפני '+Math.round((Date.now()-new Date(t.created_at))/60000)+' דק\'';
         });
     } catch(e) {}
@@ -5841,7 +5843,7 @@ async function buildNSContext() {
 }
 
 // שליפת היסטוריית מאכל ספציפי מ-NS
-async function fetchFoodHistory(foodName) {
+function fetchFoodHistory(foodName) {
     try {
         var from90 = new Date(Date.now() - 90*86400000).toISOString();
         var tr = fullHistory.treatments || [];
@@ -5935,18 +5937,34 @@ function buildGeminiPrompt(ctx, q) {
 
 async function askGeminiAdvisor(userQuestion) {
     if (!userQuestion||!userQuestion.trim()) return;
-    showPopup("🤖 Gemini מנתח...", "<div style='text-align:center;padding:30px'><div style='font-size:30px'>⏳</div><br><small style='color:#888'>קורא נתונים מ-NS...</small></div>");
     try {
-        var ctx = await buildNSContext();
-
-        // זהה מאכל ושלוף היסטוריה
+        // הכן context מיד מנתונים קיימים — אין fetch!
+        var ctx = buildNSContext();
         var detectedFood = (typeof detectFoodName === 'function') ? detectFoodName(userQuestion) : null;
         if (detectedFood) {
-            ctx.foodHistory = await fetchFoodHistory(detectedFood);
+            ctx.foodHistory = fetchFoodHistory(detectedFood);
             ctx.foodName = detectedFood;
+        }
+        if (typeof ACTIVITIES !== 'undefined' && ACTIVITIES.length) {
+            var dayN2 = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+            var nowDay = new Date().getDay();
+            var nowH2 = new Date().getHours();
+            var nowM2 = new Date().getMinutes();
+            var actLines = ACTIVITIES.map(function(a) {
+                var line = a.name + ' יום ' + dayN2[a.day] + ' ' + a.from + '-' + a.to;
+                if (a.day === nowDay) {
+                    var fp = a.from.split(':'), diff = (parseInt(fp[0])*60+parseInt(fp[1])) - (nowH2*60+nowM2);
+                    if (diff > 0 && diff < 300) line += ' (בעוד ' + diff + ' דקות!)';
+                    else if (diff <= 0 && diff > -120) line += ' (מתנהל עכשיו!)';
+                }
+                return line;
+            });
+            ctx._scheduleStr = actLines.join(' | ');
         }
 
         var prompt = buildGeminiPrompt(ctx, userQuestion);
+        if (ctx._scheduleStr) prompt += "\nלו\"ז:" + ctx._scheduleStr;
+
         var insName    = ctx.insulinName    || 'ליומג\'ב';
         var insPreMeal = ctx.insulinPreMeal || 5;
         var insPeak    = ctx.insulinPeak    || 30;
@@ -5973,29 +5991,12 @@ async function askGeminiAdvisor(userQuestion) {
 חוק ה-3 (השלמה): נשאר חוב של [כמות פחמימות שנותרה] גרם. כשהסוכר יעלה מעל 150, לופי תתריע להשלים את ה-[Y] יחידות הנותרות.
 הלופ מציע כעת: [W] יחידות. (ההמלצה שלי שונה בגלל [סיבה קצרה]).`;
 
-        // הוסף חוגים דינמיים לפרומפט עם חישוב זמן
-        if (typeof ACTIVITIES !== 'undefined' && ACTIVITIES.length) {
-            var dayN2 = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-            var nowDay = new Date().getDay();
-            var nowH2 = new Date().getHours();
-            var nowM2 = new Date().getMinutes();
-            var actLines = ACTIVITIES.map(function(a) {
-                var line = a.name + ' יום ' + dayN2[a.day] + ' ' + a.from + '-' + a.to;
-                // חשב כמה זמן עד החוג
-                if (a.day === nowDay) {
-                    var fromParts = a.from.split(':');
-                    var fromMin = parseInt(fromParts[0])*60 + parseInt(fromParts[1]);
-                    var nowMin2 = nowH2*60 + nowM2;
-                    var diff = fromMin - nowMin2;
-                    if (diff > 0 && diff < 300) line += ' (בעוד ' + diff + ' דקות!)';
-                    else if (diff <= 0 && diff > -120) line += ' (מתנהל עכשיו!)';
-                }
-                return line;
-            });
-            prompt += "\nCHEDULE:" + actLines.join(' | ');
-        }
+        // Streaming fetch — מיידי, ללא המתנה
+        var streamHtml = "<div id='gemini-stream' style='font-size:14px;line-height:1.7;text-align:right;white-space:pre-line;direction:rtl'>⏳</div>" +
+                         "<small style='color:#555'>Gemini | " + ctx.time + " | " + ctx.sgv + "</small>";
+        closePopup();
+        showPopup("💉 המלצה", streamHtml);
 
-        // Streaming fetch
         var streamUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=" + geminiKey();
         var streamResp = await fetch(streamUrl, {
             method: "POST",
@@ -6008,15 +6009,9 @@ async function askGeminiAdvisor(userQuestion) {
         });
 
         if (!streamResp.ok) {
-            var errD = await streamResp.json();
-            throw new Error("Gemini " + (errD.error&&errD.error.message||streamResp.status));
+            var errD2 = await streamResp.json();
+            throw new Error("Gemini " + (errD2.error&&errD2.error.message||streamResp.status));
         }
-
-        // הצג popup ריק ומיד התחל למלא
-        var streamHtml = "<div id='gemini-stream' style='font-size:14px;line-height:1.7;text-align:right;white-space:pre-line;direction:rtl'></div>" +
-                         "<small style='color:#555'>Gemini | " + ctx.time + " | " + ctx.sgv + "</small>";
-        closePopup();
-        showPopup("💉 המלצה", streamHtml);
 
         var reader = streamResp.body.getReader();
         var decoder = new TextDecoder();
