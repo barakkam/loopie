@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0050)file:///C:/Users/barak/Downloads/index37_v5_8.html -->
+<!-- saved from url=(0050)file:///C:/Users/barak/Downloads/index37_v5_9.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -222,7 +222,7 @@
     <!-- TAB: NS -->
     <div id="tab-ns" class="hidden">
         <div id="ns-frame-wrap" style="position:relative;width:100%;height:70vh;border-radius:10px;overflow:hidden;background:#000">
-            <iframe id="ns-iframe" src="./index37_8_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
+            <iframe id="ns-iframe" src="./index38_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
             <div id="ns-frame-msg" style="display:none;position:absolute;inset:0;background:#0a0a14;border-radius:10px;flex-direction:column;align-items:center;justify-content:center;color:#888;font-size:14px;text-align:center;padding:20px">
                 <div style="font-size:36px;margin-bottom:12px">🔒</div>
                 <b style="color:var(--text);margin-bottom:8px">NS חוסם iframe</b><br>
@@ -5907,31 +5907,29 @@ async function fetchFoodHistory(foodName) {
 
 function buildGeminiPrompt(ctx, q) {
     var lines = [
-        "T1D|דניאל|9y|Omnipod|Loop|" + (ctx.insulinName||'ליומג\'ב'),
-        "CR:" + ctx.cr.toFixed(1) + " ISF:" + ctx.isf + " TGT:" + ctx.target,
-        "SGV:" + ctx.sgv + " " + ctx.trend + " Δ" + (ctx.delta>=0?"+":"") + ctx.delta +
-            " IOB:" + ctx.iob + "U COB:" + ctx.cob + "g",
-        "TIME:" + ctx.time + " DAY:" + ctx.day
+        "היום: יום " + ctx.day + " | שעה: " + ctx.time,
+        "סוכר: " + ctx.sgv + " " + ctx.trend + " (שינוי " + (ctx.delta>=0?"+":"") + ctx.delta + " ל-5דק')",
+        "אינסולין פעיל: " + ctx.iob + "U | פחמימות פעילות: " + ctx.cob + "g | בזאלי: " + ctx.basal + "U/ש'",
+        "יחס CR: " + ctx.cr.toFixed(1) + " | ISF: " + ctx.isf + " | יעד: " + ctx.target,
+        "סוג אינסולין: " + (ctx.insulinName||'ליומג\'ב') + " (שיא " + ctx.insulinPeak + "דק', המתן " + ctx.insulinPreMeal + "דק' לפני)"
     ];
-    if (ctx.p30 != null)         lines.push("PRED:30m=" + ctx.p30 + " ev=" + ctx.pEv);
-    if (ctx.loopRec != null)     lines.push("LOOP:" + ctx.loopRec + "U");
-    lines.push("INS:" + (ctx.insulinName||'ליומג\'ב') + " peak:" + ctx.insulinPeak + "m pre:" + ctx.insulinPreMeal + "m");
-    if (ctx.meals   && ctx.meals.length)   lines.push("MEALS:" + ctx.meals.join("|"));
-    if (ctx.boluses && ctx.boluses.length) lines.push("BOLUS:" + ctx.boluses.join("|"));
-
-    // היסטוריית מאכל
+    if (ctx.p30 != null)         lines.push("תחזית המשאבה: בעוד 30דק'=" + ctx.p30 + " | eventual=" + ctx.pEv);
+    if (ctx.loopRec != null)     lines.push("המשאבה מציעה: " + ctx.loopRec + "U");
+    if (ctx.cage != null)        lines.push("גיל פוד: " + Math.floor(ctx.cage/24) + "d " + Math.round(ctx.cage%24) + "h");
+    if (ctx.sage != null)        lines.push("גיל חיישן: " + Math.floor(ctx.sage/24) + "d " + Math.round(ctx.sage%24) + "h");
+    if (ctx.meals   && ctx.meals.length)   lines.push("ארוחות אחרונות: " + ctx.meals.join(" | "));
+    if (ctx.boluses && ctx.boluses.length) lines.push("הזרקות אחרונות: " + ctx.boluses.join(" | "));
     if (ctx.foodHistory && ctx.foodHistory.length) {
-        lines.push("HISTORY[" + ctx.foodHistory.length + " times]:");
+        lines.push("היסטוריה [" + ctx.foodHistory.length + " פעמים]:");
         ctx.foodHistory.forEach(function(h, i) {
-            var outcome = h.outcome === 'high' ? '🔴' : h.outcome === 'low' ? '🔵' : h.outcome === 'ok' ? '✅' : '?';
+            var outcome = h.outcome === 'high' ? 'יצא גבוה' : h.outcome === 'low' ? 'יצא נמוך' : 'יצא טוב';
             lines.push("  " + (i+1) + ". לפני " + h.ago + "ימ: " + h.carbs + "g→" + h.insulin + "U" +
                 (h.sgvBefore ? " לפני:" + h.sgvBefore : "") +
                 (h.sgvAfter  ? " אחרי:" + h.sgvAfter  : "") +
-                " " + outcome);
+                " — " + outcome);
         });
     }
-
-    lines.push("Q:" + q);
+    lines.push("שאלה: " + q);
     return lines.join("\n");
 }
 
@@ -5953,12 +5951,55 @@ async function askGeminiAdvisor(userQuestion) {
         var insPreMeal = ctx.insulinPreMeal || 5;
         var insPeak    = ctx.insulinPeak    || 30;
 
-        var sysPrompt = `דבר עם המשתמש בסגנון שיחה ישיר, חברי ומקצועי — כמו חבר שמבין בסוכרת T1D ומייעץ ברגע זה. אל תשתמש ברשימות, אל תפצל לנקודות, אל תרד שורות כפולות. כתוב פסקה אחת או שתיים רציפות וזורמות שנותנות את השורה התחתונה המבצעית מיד.
-דוגמה: "תזריק עכשיו 1.9U על 35g מהפיתה. כי ליומג'ב, תמתין רק 2-3 דקות ותתחיל לאכול. אחרי כשעה תזריק עוד 1.0U על השארית. Loop מציע 0.05U כי הוא לא יודע שאתה אוכל."
-חוקי מאכלים[g|h]: פיתה=50|3 המבורגר=50|5 פסטה/כוס=15|5 אורז/כף=5|3 בננה=25|2 תפוח=15|2 לחם=15|3.
-INS: Lyumjev/Fiasp=2-3דק' לפני. Novorapid=15-20דק'.
-אם יש HISTORY בנתונים — התייחס: "פעם שעברה יצא גבוה — תזריק קצת יותר".
-עברית בלבד. אסור להתחיל בשלום/פתיחה.`;
+        var sysPrompt = `אתה עוזר חכם וחברי בשם לופי (Loopie) עבור ילד בן 9 בשם דניאל המנהל סוכרת מסוג 1.
+אתה מדבר איתו ישירות, בגובה העיניים, בשפה פשוטה, חברית ומעודדת (כמו אח גדול או מאמן).
+אסור בהחלט להשתמש במילים באנגלית (כמו SGV, IOB, COB, Loop). אל תסביר לו מה רמת הסוכר שלו - הוא כבר רואה את המספר על המסך.
+
+תפקידך לתת המלצת טיפול ישירה בטקסט רציף, זורם וקצר (פסקה אחת או שתיים, ללא רשימות מכולת, ללא טבלאות וללא ירידות שורות כפולות).
+
+חוקי הבית הקבועים שלך לפחמימות ופיצול (חוק ה-3):
+- פיתה / המבורגר: דיפולט של 50 גרם פחמימה.
+- פסטה: כוס אחת = 15 גרם פחמימה.
+- אורז: כף אחת = 5 גרם פחמימה.
+- צ'יפס: 10 יחידות = 15 גרם פחמימה.
+- פתיבר: יחידה = 7.5 גרם (חצי = 4 גרם).
+- בננה: 25 גרם. תפוח: 15 גרם. לחם/פרוסה: 15 גרם.
+- חוק ה-3: בארוחות גדולות (פיתה, המבורגר, פסטה) תמיד ממליצים לפצל! הזרק עכשיו על חלק, הסבר כמה נשאר כחוב ומתי להזריק.
+
+זמני המתנה לפי סוג האינסולין (מגיע בנתונים):
+- ליומג'ב (Lyumjev): המתן 2-3 דקות בלבד לפני האכילה.
+- נובורפיד (Novorapid): המתן 20 דקות לפני הביס הראשון.
+
+לו"ז שגרה וחוגים (שלב בחישוב אם רלוונטי):
+- ימי ראשון 15:30-17:30: חוג MMA (אימון קשוח!). לפני האימון — הפחת אינסולין, הפעל 'מצב ספורט' למשך שעתיים.
+- אם יש חוגים אחרים בנתונים — התחשב בהם.
+
+השוואה למשאבה: בסוף ההמלצה, הסבר מה המשאבה באייפון מציעה כרגע ולמה היא מהססת או טועה (כי היא לא יודעת שדניאל הולך לאכול).
+
+דוגמה לסגנון:
+"דניאל, על 2 כוסות הפסטה (30 גרם), אני ממליץ להזריק עכשיו 1.5 יחידות. אנחנו מפצלים כי יש לך MMA ב-15:30! נשאיר 10 גרם כחוב זמני ולא נתקן כדי שלא תתרסק על המזרן. הפעל מצב ספורט שעתיים. המשאבה מציעה 0.2 יחידות כי היא לא יודעת שאתה אוכל — אנחנו חכמים ממנה."`;
+
+        // הוסף חוגים דינמיים לפרומפט עם חישוב זמן
+        if (typeof ACTIVITIES !== 'undefined' && ACTIVITIES.length) {
+            var dayN2 = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+            var nowDay = new Date().getDay();
+            var nowH2 = new Date().getHours();
+            var nowM2 = new Date().getMinutes();
+            var actLines = ACTIVITIES.map(function(a) {
+                var line = a.name + ' יום ' + dayN2[a.day] + ' ' + a.from + '-' + a.to;
+                // חשב כמה זמן עד החוג
+                if (a.day === nowDay) {
+                    var fromParts = a.from.split(':');
+                    var fromMin = parseInt(fromParts[0])*60 + parseInt(fromParts[1]);
+                    var nowMin2 = nowH2*60 + nowM2;
+                    var diff = fromMin - nowMin2;
+                    if (diff > 0 && diff < 300) line += ' (בעוד ' + diff + ' דקות!)';
+                    else if (diff <= 0 && diff > -120) line += ' (מתנהל עכשיו!)';
+                }
+                return line;
+            });
+            prompt += "\nCHEDULE:" + actLines.join(' | ');
+        }
 
         // Streaming fetch
         var streamUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=" + geminiKey();
