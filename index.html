@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0050)file:///C:/Users/barak/Downloads/index37_v5_4.html -->
+<!-- saved from url=(0050)file:///C:/Users/barak/Downloads/index37_v5_5.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1566,6 +1566,7 @@ async function recommendDose(inputText) {
 
     // === פרופיל לילה ===
     var usingNightProfile = isNightProfile();
+    var usingSchoolProfile = isSchoolProfile ? isSchoolProfile() : false;
     if (usingNightProfile) {
         // עדכן יעד
         targetBG = Math.max(targetBG, NIGHT_PROFILE.targetBG);
@@ -5915,7 +5916,7 @@ async function askGeminiAdvisor(userQuestion) {
             body:JSON.stringify({
                 contents:[{role:"user",parts:[{text:prompt}]}],
                 systemInstruction:{parts:[{text:sysPrompt}]},
-                generationConfig:{maxOutputTokens:800,temperature:0.1}
+                generationConfig:{maxOutputTokens:2000,temperature:0.1}
             })
         });
         if (!response.ok) {
