@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0050)file:///C:/Users/barak/Downloads/index37_v5_6.html -->
+<!-- saved from url=(0050)file:///C:/Users/barak/Downloads/index37_v5_7.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -4841,20 +4841,42 @@ async function askOmnibox() {
 
     // --- ניהול חוגים ופעילויות — לפני שרשרת if/else ===
     if (/הוסף|הכנס|הזן|צור/i.test(q) && (/חוג|אימון|שיעור|פעילות|mma|כדורגל|כדורסל|שחייה|ריצה|צופים|קראטה|כושר/i.test(q) || /בימי|בשעות|בשעה/i.test(q))) {
-        var actResult = handleActivityCommand(q);
-        if (actResult) { showPopup("✅ חוג נוסף", actResult); }
-        else { showPopup("❓", "לא הצלחתי לפרסר.<br>נסה: <b>'הוסף חוג MMA יום ראשון 15:30-17:30'</b>"); }
+        // פרסר: "הוסף חוג MMA יום ראשון 15:30-17:30"
+        var dayMap = {'ראשון':0,'שני':1,'שלישי':2,'רביעי':3,'חמישי':4,'שישי':5,'שבת':6,'א':0,'ב':1,'ג':2,'ד':3,'ה':4,'ו':5,'ש':6};
+        var parsedDay = null;
+        Object.keys(dayMap).forEach(function(d){ if (q.includes(d)) parsedDay = dayMap[d]; });
+        var timeMatch = q.match(/(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})/);
+        var nameMatch = q.replace(/הוסף|הכנס|הזן|צור|חוג|אימון|שיעור|פעילות|יום|ביום/gi,'').trim();
+        nameMatch = nameMatch.replace(/\d{1,2}:\d{2}\s*[-–]\s*\d{1,2}:\d{2}/,'').trim();
+        Object.keys(dayMap).forEach(function(d){ nameMatch = nameMatch.replace(new RegExp(d,'g'),'').trim(); });
+
+        if (parsedDay !== null && timeMatch && nameMatch) {
+            var newAct = { id: Date.now(), name: nameMatch, day: parsedDay, from: timeMatch[1], to: timeMatch[2], intensity: 'medium' };
+            ACTIVITIES.push(newAct);
+            try { localStorage.setItem('loopie_activities', JSON.stringify(ACTIVITIES)); } catch(e) {}
+            var dayNames = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+            showPopup("✅ חוג נוסף", "<b>" + nameMatch + "</b><br>יום " + dayNames[parsedDay] + " | " + timeMatch[1] + "–" + timeMatch[2]);
+        } else {
+            showPopup("❓ פורמט לא תקין", "נסה:<br><b>'הוסף חוג MMA יום ראשון 15:30-17:30'</b>");
+        }
         input.value = ''; return;
     }
-    if (/מחק|הסר|בטל|delete/i.test(q) && (/חוג|אימון|פעילות/i.test(q))) {
-        var delResult = handleActivityCommand(q);
-        if (delResult) { showPopup("🗑️ נמחק", delResult); }
-        else { showPopup("❓", "לא הצלחתי למחוק. נסה: <b>'מחק חוג MMA'</b>"); }
+    if (/מחק|הסר|בטל/i.test(q) && /חוג|אימון|פעילות/i.test(q)) {
+        var toDelete = ACTIVITIES.findIndex(function(a){ return q.toLowerCase().includes(a.name.toLowerCase()); });
+        if (toDelete >= 0) {
+            var deletedName = ACTIVITIES[toDelete].name;
+            ACTIVITIES.splice(toDelete, 1);
+            try { localStorage.setItem('loopie_activities', JSON.stringify(ACTIVITIES)); } catch(e) {}
+            showPopup("🗑️ נמחק", "<b>" + deletedName + "</b> הוסר מהרשימה");
+        } else {
+            showPopup("❓", "לא מצאתי חוג כזה. כתוב 'רשימת חוגים' לראות מה קיים.");
+        }
         input.value = ''; return;
     }
     if (/רשימ/i.test(q) && /חוג|פעילות/i.test(q)) {
-        var listResult = handleActivityCommand("רשימה") || "אין חוגים";
-        showPopup("📋 חוגים", listResult);
+        var dayN = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+        var listHtml = ACTIVITIES.length ? ACTIVITIES.map(function(a){ return "• <b>" + a.name + "</b> יום " + dayN[a.day] + " " + a.from + "–" + a.to; }).join('<br>') : "אין חוגים רשומים";
+        showPopup("📋 חוגים", listHtml);
         input.value = ''; return;
     }
 
@@ -5931,26 +5953,25 @@ async function askGeminiAdvisor(userQuestion) {
         var insPreMeal = ctx.insulinPreMeal || 5;
         var insPeak    = ctx.insulinPeak    || 30;
 
-        var sysPrompt = `T1D LOOPIE. עברית בלבד. אין פתיחה. ישר לעניין.
+        var sysPrompt = `T1D LOOPIE. עברית בלבד. אסור להתחיל בפתיחה.
 מאכלים[g|h]: פיתה=50|3 המבורגר=50|5 פסטה/כוס=15|5 אורז/כף=5|3 צ'יפס/10=15|3 פתיבר=7.5|3 בננה=25|2 תפוח=15|2 לחם/פרוסה=15|3. אחר=3h.
-פיצול: הזרק עכשיו חלק, השאר חוב. ציין "בעוד Xדק' הזרק Yg=ZU".
-אם יש HISTORY: נתח — פעמים שיצא גבוה/נמוך/טוב, וכתוב "בעבר X מתוך Y פעמים גבוה — שקול +ZU".
-INS[${insName}]: Lyumjev/Fiasp=2-3דק'. Novorapid/Humalog=15-20דק'.
-עמידות: SGV>180+IOB→תיקון 0.5-1U. פוד>48h→החלף.
-פורמט:
-💉 [X]U על [Y]g
-⏳ המתן [Z]דק' (${insName})
-📋 חוב: [A]g בעוד [B]דק' = [C]U
-📊 Loop: [D]U
-📈 היסטוריה: [ניתוח קצר אם יש]`;
+INS: Lyumjev/Fiasp=הזרק 2-3דק' לפני. Novorapid/Humalog=הזרק 15-20דק' לפני.
+עמידות: SGV>180+IOB→תיקון 0.5-1U בעט. פוד>48h→החלף.
+אם יש HISTORY: ציין מה קרה בעבר ואם צריך לשנות מינון.
+פורמט תשובה — דבר כמו רופא קליני, בשפה פשוטה:
+שורה 1: כמה אינסולין להזריק עכשיו ועל כמה פחמימות
+שורה 2: מתי להזריק (לפי סוג אינסולין)
+שורה 3: אם יש פיצול — מתי ואיך להזריק את השארית
+שורה 4: מה Loop ממליץ ולמה שונה
+שורה 5: הסבר קצר לוגיקה לפי IOB/SGV/היסטוריה`;
 
-        var response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key="+geminiKey()+"", {
+        var response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key="+geminiKey(), {
             method:"POST",
             headers:{"Content-Type":"application/json"},
             body:JSON.stringify({
                 contents:[{role:"user",parts:[{text:prompt}]}],
                 systemInstruction:{parts:[{text:sysPrompt}]},
-                generationConfig:{maxOutputTokens:2000,temperature:0.1}
+                generationConfig:{maxOutputTokens:4000,temperature:0.1}
             })
         });
         if (!response.ok) {
