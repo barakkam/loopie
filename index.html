@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0050)file:///C:/Users/barak/Downloads/index37_v5_7.html -->
+<!-- saved from url=(0050)file:///C:/Users/barak/Downloads/index37_v5_8.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -222,7 +222,7 @@
     <!-- TAB: NS -->
     <div id="tab-ns" class="hidden">
         <div id="ns-frame-wrap" style="position:relative;width:100%;height:70vh;border-radius:10px;overflow:hidden;background:#000">
-            <iframe id="ns-iframe" src="./index37_7_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
+            <iframe id="ns-iframe" src="./index37_8_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
             <div id="ns-frame-msg" style="display:none;position:absolute;inset:0;background:#0a0a14;border-radius:10px;flex-direction:column;align-items:center;justify-content:center;color:#888;font-size:14px;text-align:center;padding:20px">
                 <div style="font-size:36px;margin-bottom:12px">🔒</div>
                 <b style="color:var(--text);margin-bottom:8px">NS חוסם iframe</b><br>
@@ -5953,74 +5953,80 @@ async function askGeminiAdvisor(userQuestion) {
         var insPreMeal = ctx.insulinPreMeal || 5;
         var insPeak    = ctx.insulinPeak    || 30;
 
-        var sysPrompt = `T1D LOOPIE. עברית בלבד. אסור להתחיל בפתיחה.
-מאכלים[g|h]: פיתה=50|3 המבורגר=50|5 פסטה/כוס=15|5 אורז/כף=5|3 צ'יפס/10=15|3 פתיבר=7.5|3 בננה=25|2 תפוח=15|2 לחם/פרוסה=15|3. אחר=3h.
-INS: Lyumjev/Fiasp=הזרק 2-3דק' לפני. Novorapid/Humalog=הזרק 15-20דק' לפני.
-עמידות: SGV>180+IOB→תיקון 0.5-1U בעט. פוד>48h→החלף.
-אם יש HISTORY: ציין מה קרה בעבר ואם צריך לשנות מינון.
-פורמט תשובה — דבר כמו רופא קליני, בשפה פשוטה:
-שורה 1: כמה אינסולין להזריק עכשיו ועל כמה פחמימות
-שורה 2: מתי להזריק (לפי סוג אינסולין)
-שורה 3: אם יש פיצול — מתי ואיך להזריק את השארית
-שורה 4: מה Loop ממליץ ולמה שונה
-שורה 5: הסבר קצר לוגיקה לפי IOB/SGV/היסטוריה`;
+        var sysPrompt = `דבר עם המשתמש בסגנון שיחה ישיר, חברי ומקצועי — כמו חבר שמבין בסוכרת T1D ומייעץ ברגע זה. אל תשתמש ברשימות, אל תפצל לנקודות, אל תרד שורות כפולות. כתוב פסקה אחת או שתיים רציפות וזורמות שנותנות את השורה התחתונה המבצעית מיד.
+דוגמה: "תזריק עכשיו 1.9U על 35g מהפיתה. כי ליומג'ב, תמתין רק 2-3 דקות ותתחיל לאכול. אחרי כשעה תזריק עוד 1.0U על השארית. Loop מציע 0.05U כי הוא לא יודע שאתה אוכל."
+חוקי מאכלים[g|h]: פיתה=50|3 המבורגר=50|5 פסטה/כוס=15|5 אורז/כף=5|3 בננה=25|2 תפוח=15|2 לחם=15|3.
+INS: Lyumjev/Fiasp=2-3דק' לפני. Novorapid=15-20דק'.
+אם יש HISTORY בנתונים — התייחס: "פעם שעברה יצא גבוה — תזריק קצת יותר".
+עברית בלבד. אסור להתחיל בשלום/פתיחה.`;
 
-        var response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key="+geminiKey(), {
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({
-                contents:[{role:"user",parts:[{text:prompt}]}],
-                systemInstruction:{parts:[{text:sysPrompt}]},
-                generationConfig:{maxOutputTokens:4000,temperature:0.1}
+        // Streaming fetch
+        var streamUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=" + geminiKey();
+        var streamResp = await fetch(streamUrl, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                contents: [{role:"user", parts:[{text: prompt}]}],
+                systemInstruction: {parts:[{text: sysPrompt}]},
+                generationConfig: {maxOutputTokens: 4000, temperature: 0.1}
             })
         });
-        if (!response.ok) {
-            var errD = await response.json();
-            throw new Error("Gemini "+(errD.error&&errD.error.message||response.status));
+
+        if (!streamResp.ok) {
+            var errD = await streamResp.json();
+            throw new Error("Gemini " + (errD.error&&errD.error.message||streamResp.status));
         }
-        var data = await response.json();
-        var candidate = data.candidates && data.candidates[0];
-        if (!candidate) throw new Error("אין תגובה מ-Gemini");
 
-        // אסוף את כל החלקים (Gemini לפעמים מחזיר בכמה parts)
-        var answer = (candidate.content.parts || []).map(function(p){ return p.text||''; }).join('').trim();
-
-        // הסר פתיחות מיותרות
-        answer = answer.replace(/^(שלום[^!\n]*[!\n]?\s*|היי[^!\n]*[!\n]?\s*|בוודאי[^!\n]*[!\n]?\s*|כמובן[^!\n]*[!\n]?\s*)/i, '');
-
-        console.log("Gemini answer:", answer);
-        console.log("finishReason:", candidate.finishReason);
-
-        var html = "<div style='font-size:14px;line-height:2;text-align:right'>" +
-                   answer.replace(/\n/g,'<br>') +
-                   "<br><small style='color:#555'>Gemini | " + ctx.time + " | " + ctx.sgv + "</small></div>";
+        // הצג popup ריק ומיד התחל למלא
+        var streamHtml = "<div id='gemini-stream' style='font-size:14px;line-height:1.7;text-align:right;white-space:pre-line;direction:rtl'></div>" +
+                         "<small style='color:#555'>Gemini | " + ctx.time + " | " + ctx.sgv + "</small>";
         closePopup();
-        showPopup("💉 המלצה", html);
+        showPopup("💉 המלצה", streamHtml);
 
-        // זהה פיצול מהתשובה — אם יש "חוב" → קבע התראה
-        var debtMatch = answer.match(/חוב.*?(\d+)ג['']?\s*פחמימ/);
-        var splitMatch = answer.match(/בעוד\s*(\d+)\s*(?:דק|דקות|שעות?)/);
-        var minutesUntil = splitMatch ? parseInt(splitMatch[1]) : 60;
-        if (debtMatch && parseFloat(debtMatch[1]) > 0) {
-            var debtG = parseFloat(debtMatch[1]);
-            setTimeout(function(){
-                sendNotification(
-                    "⏰ זמן להשלמת הזרקה!",
-                    "הזרק את יתרת " + debtG + "g — " + Math.round(debtG / (ctx.cr||15) * 10)/10 + "U",
-                    { tag: 'loopie-split-reminder', requireInteraction: true }
-                );
-                showPopup("⏰ תזכורת פיצול", "<div style='font-size:14px;text-align:right'>" +
-                    "💉 הגיע הזמן להזריק את יתרת <b>" + debtG + "g</b><br>" +
-                    "≈ <b>" + Math.round(debtG / (ctx.cr||15) * 10)/10 + "U</b>" +
-                    "</div>");
-            }, minutesUntil * 60000);
+        var reader = streamResp.body.getReader();
+        var decoder = new TextDecoder();
+        var fullText = "";
+        var streamEl = document.getElementById('gemini-stream');
 
-            // הוסף לתשובה
-            html = html.replace("</div>",
-                "<br><div style='background:rgba(59,130,246,0.1);border:1px solid var(--blue-dim);border-radius:8px;padding:8px;margin-top:8px;font-size:12px'>" +
-                "🔔 תזכורת הוגדרה בעוד <b>" + minutesUntil + " דקות</b> להשלמת " + debtG + "g</div></div>");
-            showPopup("💉 המלצה", html);
+        while (true) {
+            var chunk = await reader.read();
+            if (chunk.done) break;
+            var lines = decoder.decode(chunk.value).split('\n');
+            for (var li = 0; li < lines.length; li++) {
+                var line = lines[li].trim();
+                if (!line.startsWith('data:')) continue;
+                var jsonStr = line.slice(5).trim();
+                if (jsonStr === '[DONE]') break;
+                try {
+                    var parsed = JSON.parse(jsonStr);
+                    var part = parsed.candidates &&
+                               parsed.candidates[0] &&
+                               parsed.candidates[0].content &&
+                               parsed.candidates[0].content.parts &&
+                               parsed.candidates[0].content.parts[0].text;
+                    if (part) {
+                        fullText += part;
+                        if (streamEl) streamEl.textContent = fullText;
+                    }
+                } catch(e) {}
+            }
         }
+
+        // הסר פתיחות
+        fullText = fullText.replace(/^(שלום[^!\n]*[!\n]?\s*|היי[^!\n]*[!\n]?\s*)/i, '').trim();
+        if (streamEl) streamEl.textContent = fullText;
+        console.log("Stream done:", fullText.length, "chars");
+
+        // התראת פיצול
+        var debtMatch = fullText.match(/עוד\s*(\d+)\s*(?:דקות?|דק'?)\s*.*?(\d+\.?\d*)\s*[Uu]/);
+        if (debtMatch) {
+            var splitMin = parseInt(debtMatch[1]);
+            var splitU   = parseFloat(debtMatch[2]);
+            setTimeout(function(){
+                sendNotification("⏰ זמן להזריק השלמה!", "הזרק " + splitU + "U — השלמת הארוחה", {tag:'loopie-split',requireInteraction:true});
+            }, splitMin * 60000);
+        }
+
     } catch(e) {
         closePopup();
         showPopup("⚠️", (e.message||'').includes('429')?"מכסה נגמרה, נסה שוב בעוד דקה.":"שגיאה: "+(e.message||e));
