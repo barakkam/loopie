@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0050)file:///C:/Users/barak/Downloads/index37_v5_3.html -->
+<!-- saved from url=(0050)file:///C:/Users/barak/Downloads/index37_v5_4.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -222,7 +222,7 @@
     <!-- TAB: NS -->
     <div id="tab-ns" class="hidden">
         <div id="ns-frame-wrap" style="position:relative;width:100%;height:70vh;border-radius:10px;overflow:hidden;background:#000">
-            <iframe id="ns-iframe" src="./index37_5_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
+            <iframe id="ns-iframe" src="./index37_6_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
             <div id="ns-frame-msg" style="display:none;position:absolute;inset:0;background:#0a0a14;border-radius:10px;flex-direction:column;align-items:center;justify-content:center;color:#888;font-size:14px;text-align:center;padding:20px">
                 <div style="font-size:36px;margin-bottom:12px">🔒</div>
                 <b style="color:var(--text);margin-bottom:8px">NS חוסם iframe</b><br>
@@ -5886,10 +5886,14 @@ async function askGeminiAdvisor(userQuestion) {
 4. אורז: 1 כף = 5ג' פחמימה | 3 שעות ספיגה.
 5. צ'יפס: 10 יחידות = 15ג' פחמימה | 3 שעות ספיגה.
 6. פתיבר: יחידה = 7.5ג' | 3 שעות (חצי פתיבר = 4ג').
+7. בננה: 1 בינונית = 25ג' פחמימה | 2 שעות ספיגה.
+8. תפוח: 1 = 15ג' פחמימה | 2 שעות ספיגה.
+9. לחם: 1 פרוסה = 15ג' פחמימה | 3 שעות ספיגה.
 * כל מאכל אחר: דיפולט 3 שעות ספיגה.
 
 חוק ה-3 לפיצול ארוחות:
 - המלץ תמיד על פיצול: הזרק עכשיו על חלק מהפחמימות, השאר יתרה כחוב.
+- חובה לציין: "בעוד X דקות הזרק את היתרה" — ציין בדיוק כמה דקות ואת הכמות.
 - ציין מה הלופ היה ממליץ לפי IOB ו-SGV נוכחיים.
 
 🛡️ חוק תזמון הזרקה דינמי לפי סוג האינסולין (מגיע בנתוני השאילתה):
@@ -5919,14 +5923,48 @@ async function askGeminiAdvisor(userQuestion) {
             throw new Error("Gemini "+(errD.error&&errD.error.message||response.status));
         }
         var data = await response.json();
-        var answer = data.candidates[0].content.parts[0].text.trim();
+        var candidate = data.candidates && data.candidates[0];
+        if (!candidate) throw new Error("אין תגובה מ-Gemini");
+
+        // אסוף את כל החלקים (Gemini לפעמים מחזיר בכמה parts)
+        var answer = (candidate.content.parts || []).map(function(p){ return p.text||''; }).join('').trim();
+
         // הסר פתיחות מיותרות
         answer = answer.replace(/^(שלום[^!\n]*[!\n]?\s*|היי[^!\n]*[!\n]?\s*|בוודאי[^!\n]*[!\n]?\s*|כמובן[^!\n]*[!\n]?\s*)/i, '');
-        var html = "<div style='font-size:14px;line-height:1.9;text-align:right'>"+
-                   answer.replace(/\n/g,'<br>')+
-                   "<br><small style='color:#555'>Gemini | "+ctx.time+" | "+ctx.sgv+"</small></div>";
+
+        console.log("Gemini answer:", answer);
+        console.log("finishReason:", candidate.finishReason);
+
+        var html = "<div style='font-size:14px;line-height:2;text-align:right'>" +
+                   answer.replace(/\n/g,'<br>') +
+                   "<br><small style='color:#555'>Gemini | " + ctx.time + " | " + ctx.sgv + "</small></div>";
         closePopup();
         showPopup("💉 המלצה", html);
+
+        // זהה פיצול מהתשובה — אם יש "חוב" → קבע התראה
+        var debtMatch = answer.match(/חוב.*?(\d+)ג['']?\s*פחמימ/);
+        var splitMatch = answer.match(/בעוד\s*(\d+)\s*(?:דק|דקות|שעות?)/);
+        var minutesUntil = splitMatch ? parseInt(splitMatch[1]) : 60;
+        if (debtMatch && parseFloat(debtMatch[1]) > 0) {
+            var debtG = parseFloat(debtMatch[1]);
+            setTimeout(function(){
+                sendNotification(
+                    "⏰ זמן להשלמת הזרקה!",
+                    "הזרק את יתרת " + debtG + "g — " + Math.round(debtG / (ctx.cr||15) * 10)/10 + "U",
+                    { tag: 'loopie-split-reminder', requireInteraction: true }
+                );
+                showPopup("⏰ תזכורת פיצול", "<div style='font-size:14px;text-align:right'>" +
+                    "💉 הגיע הזמן להזריק את יתרת <b>" + debtG + "g</b><br>" +
+                    "≈ <b>" + Math.round(debtG / (ctx.cr||15) * 10)/10 + "U</b>" +
+                    "</div>");
+            }, minutesUntil * 60000);
+
+            // הוסף לתשובה
+            html = html.replace("</div>",
+                "<br><div style='background:rgba(59,130,246,0.1);border:1px solid var(--blue-dim);border-radius:8px;padding:8px;margin-top:8px;font-size:12px'>" +
+                "🔔 תזכורת הוגדרה בעוד <b>" + minutesUntil + " דקות</b> להשלמת " + debtG + "g</div></div>");
+            showPopup("💉 המלצה", html);
+        }
     } catch(e) {
         closePopup();
         showPopup("⚠️", (e.message||'').includes('429')?"מכסה נגמרה, נסה שוב בעוד דקה.":"שגיאה: "+(e.message||e));
