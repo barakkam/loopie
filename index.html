@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0051)file:///C:/Users/barak/Downloads/index37_v5_15.html -->
+<!-- saved from url=(0051)file:///C:/Users/barak/Downloads/index37_v5_16.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -5165,6 +5165,7 @@ async function askGeminiAdvisor(userQuestion) {
                             if (dayNum !== undefined) {
                                 ACTIVITIES.push({ id: Date.now(), name: actObj.name, day: dayNum, from: actObj.startTime, to: actObj.endTime, intensity: actObj.intensity||'medium' });
                                 _saveActs();
+                                try { renderActivities(); } catch(e) {}
                                 showPopup("✅ חוג נוסף!", "<div style='font-size:14px;text-align:right'><b>" + actObj.name + "</b><br>יום " + dayNames2[dayNum] + " | " + actObj.startTime + "–" + actObj.endTime + "</div>");
                                 return;
                             }
@@ -5177,6 +5178,7 @@ async function askGeminiAdvisor(userQuestion) {
                                 if (actObj.endTime)   ACTIVITIES[idx2].to   = actObj.endTime;
                                 if (actObj.intensity) ACTIVITIES[idx2].intensity = actObj.intensity;
                                 _saveActs();
+                                try { renderActivities(); } catch(e) {}
                                 var intLabel = actObj.intensity === 'גבוהה' ? '⚡ גבוהה' : actObj.intensity === 'נמוכה' ? '🟢 נמוכה' : '🔵 בינונית';
                                 var updMsg = "<b>" + ACTIVITIES[idx2].name + "</b> עודכן";
                                 if (actObj.intensity) updMsg += " — עצימות " + intLabel;
@@ -5194,6 +5196,7 @@ async function askGeminiAdvisor(userQuestion) {
                                 var delName = ACTIVITIES[delIdx].name;
                                 ACTIVITIES.splice(delIdx, 1);
                                 _saveActs();
+                                try { renderActivities(); } catch(e) {}
                                 showPopup("🗑️ נמחק", "<b>" + delName + "</b> הוסר מרשימת החוגים.");
                             } else {
                                 showPopup("❓", "לא מצאתי חוג בשם '" + actObj.name + "'.");
