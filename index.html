@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0051)file:///C:/Users/barak/Downloads/index37_v5_18.html -->
+<!-- saved from url=(0051)file:///C:/Users/barak/Downloads/index37_v5_19.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -5122,12 +5122,13 @@ async function askGeminiAdvisor(userQuestion) {
 - גיל חיישן מעל 9 ימים + חצים חריפים + בזאלי=0 → "חיישן ישן — בצע בדיקת אצבע לאימות."
 
 🛡️ ניהול חוגים (הוספה/עדכון/מחיקה):
-אם המשתמש מבקש להוסיף, לעדכן, לשנות, או למחוק חוג — החזר JSON נקי בלבד, ללא טקסט נוסף.
+אם המשתמש מבקש להוסיף, לעדכן, לשנות, או למחוק חוג — החזר JSON נקי בלבד.
+אסור להוסיף תגיות קוד לפני ואחרי. אסור שום טקסט לפני או אחרי ה-JSON.
 מיפוי ימים: א/ראשון→ראשון | ב/שני→שני | ג/שלישי→שלישי | ד/רביעי→רביעי | ה/חמישי→חמישי | ו/שישי→שישי | ש/שבת→שבת
 הוספה: {"action":"add_routine","name":"[שם]","day":"[יום]","startTime":"[HH:MM]","endTime":"[HH:MM]","intensity":"[נמוכה/בינונית/גבוהה]"}
-עדכון: {"action":"update_routine","name":"[שם]","day":"[יום]","startTime":"[HH:MM]","endTime":"[HH:MM]","intensity":"[נמוכה/בינונית/גבוהה]"}
+עדכון: {"action":"update_routine","name":"[שם]","intensity":"[נמוכה/בינונית/גבוהה]","day":"","startTime":"","endTime":""}
 מחיקה: {"action":"delete_routine","name":"[שם]"}
-(כלול רק שדות שהמשתמש ביקש לשנות)
+אם לא צוין יום ספציפי לעדכון — השאר day ריק. כלול רק שדות שהמשתמש ביקש לשנות.
 
 מבנה פלט קשיח (לשאלות טיפוליות):
 כתוב בלופ: [שם המאכל] [גרם כעת] גרם ל-[X] שעות.
@@ -5257,8 +5258,8 @@ async function askGeminiAdvisor(userQuestion) {
         // הסר פתיחות
         fullText = fullText.replace(/^(שלום[^!\n]*[!\n]?\s*|היי[^!\n]*[!\n]?\s*)/i, '').trim();
 
-        // בדוק אם התשובה היא JSON (פקודת חוג)
-        var jsonTry = fullText.trim();
+        // ניקוי תגיות קוד שג'מיני מוסיף לפעמים
+        var jsonTry = fullText.trim().replace(/```json/gi,'').replace(/```/g,'').trim();
         if (jsonTry.startsWith('{') && jsonTry.includes('"action"')) {
             try {
                 var jsonCmd = JSON.parse(jsonTry);
