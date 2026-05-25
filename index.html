@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0051)file:///C:/Users/barak/Downloads/index37_v5_19.html -->
+<!-- saved from url=(0051)file:///C:/Users/barak/Downloads/index37_v5_20.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -5138,22 +5138,25 @@ async function askGeminiAdvisor(userQuestion) {
 הלופ מציע כעת: [W] יחידות.`;
 
         // בדוק אם זו בקשת חוג — שלח ל-Gemini ללא Streaming (צריך JSON מלא)
-        var isActivityRequest = /הוסף חוג|הכנס חוג|צור חוג|שנה חוג|עדכן חוג|ערוך חוג|מחק חוג|הסר חוג|חוג.*יום|יום.*חוג|חוג.*עצימות|עצימות.*חוג/i.test(userQuestion);
+        var isActivityRequest = /הוסף|הכנס|צור|שנה|עדכן|ערוך|מחק|הסר|חוג|אימון|שיעור/i.test(userQuestion) &&
+                                /חוג|אימון|שיעור|פעילות|mma|כדורגל|כדורסל|שחייה|ריצה|צופים|קראטה|כושר|עצימות/i.test(userQuestion);
         if (isActivityRequest) {
             var actResp = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + geminiKey(), {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({
-                    contents: [{role:"user", parts:[{text: "הוסף חוג: " + userQuestion}]}],
+                    contents: [{role:"user", parts:[{text: userQuestion}]}],
                     systemInstruction: {parts:[{text: sysPrompt}]},
-                    generationConfig: {maxOutputTokens: 200, temperature: 0.0}
+                    generationConfig: {maxOutputTokens: 300, temperature: 0.0}
                 })
             });
             if (actResp.ok) {
                 var actData = await actResp.json();
                 var actText = ((actData.candidates[0].content.parts[0].text)||'').trim();
-                // נסה לפרסר JSON
-                var jsonMatch = actText.match(/\{[\s\S]*\}/);
+                // ניקוי תגיות קוד
+                actText = actText.replace(/```json/gi,'').replace(/```/g,'').replace(/^\s*\n/gm,'').trim();
+                // מצא JSON בתשובה
+                var jsonMatch = actText.match(/\{[\s\S]*?\}/);
                 if (jsonMatch) {
                     try {
                         var actObj = JSON.parse(jsonMatch[0]);
