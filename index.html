@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0051)file:///C:/Users/barak/Downloads/index37_v5_12.html -->
+<!-- saved from url=(0051)file:///C:/Users/barak/Downloads/index37_v5_13.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -222,7 +222,7 @@
     <!-- TAB: NS -->
     <div id="tab-ns" class="hidden">
         <div id="ns-frame-wrap" style="position:relative;width:100%;height:70vh;border-radius:10px;overflow:hidden;background:#000">
-            <iframe id="ns-iframe" src="./index40_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
+            <iframe id="ns-iframe" src="./index40_1_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
             <div id="ns-frame-msg" style="display:none;position:absolute;inset:0;background:#0a0a14;border-radius:10px;flex-direction:column;align-items:center;justify-content:center;color:#888;font-size:14px;text-align:center;padding:20px">
                 <div style="font-size:36px;margin-bottom:12px">🔒</div>
                 <b style="color:var(--text);margin-bottom:8px">NS חוסם iframe</b><br>
@@ -4563,7 +4563,7 @@ async function fetchData() {
                     alertDiv.id = 'rising-alert';
                     alertDiv.style.cssText = 'background:rgba(245,158,11,0.15);border:1px solid #f59e0b;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;cursor:pointer';
                     alertDiv.innerHTML = '📈 סוכר <b>' + e0.sgv + '</b> ועולה +' + nsData.delta + '/5דק — <b style="color:#f59e0b">לחץ לבדיקת תיקון</b>';
-                    alertDiv.onclick = function(){ recommendDose("תיקון"); };
+                    alertDiv.onclick = function(){ askGeminiAdvisor("כמה להזריק לתיקון?"); };
                     var grid = document.querySelector('.stats-grid');
                     if (grid) grid.parentNode.insertBefore(alertDiv, grid.nextSibling);
                 } else if (!isRising && !isLow && existing) {
@@ -4840,7 +4840,7 @@ async function askOmnibox() {
             if (allFound2 && totalCarbs2 > 0) {
                 LAST_FOOD_QUERY = foodNames2.join(' + ');
                 closePopup();
-                recommendDose(foodNames2.join(' + ') + ' __carbs__' + Math.round(totalCarbs2) + '__dur__' + maxDur2);
+                askGeminiAdvisor(foodNames2.join(' + ') + " — " + Math.round(totalCarbs2) + " גרם סה\"כ");
                 input.value = '';
                 return;
             }
@@ -6027,17 +6027,59 @@ async function askGeminiAdvisor(userQuestion) {
 - נובורפיד (Novorapid): "המתן 20 דקות לפני האוכל!"
 - חוג MMA: ימי ראשון 15:30-17:30. אם השעה קרובה, הפחת בולוס ב-40% והפעל מצב ספורט.
 
-חוקי אבחון חומרה (פוד/חיישן):
-- אם סוכר מעל 240 + IOB מעל 1.0U + גיל פוד מעל 48 שעות → "חשד לכשל ספיגה! בצע תיקון ידני בעט והחלף פוד."
-- אם גיל חיישן מעל 9 ימים + חצים חריפים + בזאלי=0 → "חיישן ישן — ייתכן זיוף. בצע בדיקת אצבע לאימות."
-- אם בזאלי זמני 0 למרות סוכר גבוה → "לופ לא מגיב. בדוק חיבור."
+חוקי אבחון חומרה:
+- סוכר מעל 240 + IOB מעל 1.0U + גיל פוד מעל 48ש' → "חשד לכשל ספיגה! בצע תיקון ידני בעט והחלף פוד."
+- גיל חיישן מעל 9 ימים + חצים חריפים + בזאלי=0 → "חיישן ישן — בצע בדיקת אצבע לאימות."
 
-מבנה פלט קשיח וחובה:
+🛡️ זיהוי והוספת חוגים:
+אם המשתמש מבקש להוסיף חוג, החזר JSON נקי בלבד ללא שום טקסט נוסף:
+{"action":"add_routine","name":"[שם החוג]","day":"[ראשון/שני/שלישי/רביעי/חמישי/שישי/שבת]","startTime":"[HH:MM]","endTime":"[HH:MM]"}
+מיפוי ימים: א/ראשון→ראשון | ב/שני→שני | ג/שלישי→שלישי | ד/רביעי→רביעי | ה/חמישי→חמישי | ו/שישי→שישי | ש/שבת→שבת
+
+מבנה פלט קשיח (לשאלות טיפוליות):
 כתוב בלופ: [שם המאכל] [גרם כעת] גרם ל-[X] שעות.
 הזרק כעת: [U] יחידות אינסולין.
 תזמון: הזרק [הנחיית זמן] לפני האוכל.
 חוק ה-3 (השלמה): נשאר חוב של [גרם חוב] גרם. כשהסוכר יעלה מעל 150, לופי תתריע לך להשלים.
 הלופ מציע כעת: [W] יחידות.`;
+
+        // בדוק אם זו בקשת חוג — שלח ל-Gemini ללא Streaming (צריך JSON מלא)
+        var isActivityRequest = /הוסף חוג|הכנס חוג|חוג.*יום|יום.*חוג/i.test(userQuestion);
+        if (isActivityRequest) {
+            var actResp = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + geminiKey(), {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    contents: [{role:"user", parts:[{text: "הוסף חוג: " + userQuestion}]}],
+                    systemInstruction: {parts:[{text: sysPrompt}]},
+                    generationConfig: {maxOutputTokens: 200, temperature: 0.0}
+                })
+            });
+            if (actResp.ok) {
+                var actData = await actResp.json();
+                var actText = ((actData.candidates[0].content.parts[0].text)||'').trim();
+                // נסה לפרסר JSON
+                var jsonMatch = actText.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    try {
+                        var actObj = JSON.parse(jsonMatch[0]);
+                        if (actObj.action === 'add_routine') {
+                            var dayMap = {'ראשון':0,'שני':1,'שלישי':2,'רביעי':3,'חמישי':4,'שישי':5,'שבת':6};
+                            var dayNum = dayMap[actObj.day];
+                            if (dayNum !== undefined) {
+                                ACTIVITIES.push({ id: Date.now(), name: actObj.name, day: dayNum, from: actObj.startTime, to: actObj.endTime, intensity: 'medium' });
+                                try { localStorage.setItem('loopie_activities', JSON.stringify(ACTIVITIES)); } catch(e2) {}
+                                var dayNames = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+                                showPopup("✅ חוג נוסף!", "<div style='font-size:14px;text-align:right'><b>" + actObj.name + "</b><br>יום " + dayNames[dayNum] + " | " + actObj.startTime + "–" + actObj.endTime + "</div>");
+                                return;
+                            }
+                        }
+                    } catch(jsonErr) {}
+                }
+                showPopup("❓", actText || "לא הצלחתי לפרסר. נסה: 'הוסף חוג צופים יום שלישי 16:00-17:30'");
+            }
+            return;
+        }
 
         // Streaming fetch — מיידי, ללא המתנה
         var streamHtml = "<div id='gemini-stream' style='font-size:14px;line-height:1.7;text-align:right;white-space:pre-line;direction:rtl'>⏳</div>" +
