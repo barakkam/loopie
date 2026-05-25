@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0051)file:///C:/Users/barak/Downloads/index37_v5_14.html -->
+<!-- saved from url=(0051)file:///C:/Users/barak/Downloads/index37_v5_15.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -222,7 +222,7 @@
     <!-- TAB: NS -->
     <div id="tab-ns" class="hidden">
         <div id="ns-frame-wrap" style="position:relative;width:100%;height:70vh;border-radius:10px;overflow:hidden;background:#000">
-            <iframe id="ns-iframe" src="./index40_2_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
+            <iframe id="ns-iframe" src="./index40_3_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
             <div id="ns-frame-msg" style="display:none;position:absolute;inset:0;background:#0a0a14;border-radius:10px;flex-direction:column;align-items:center;justify-content:center;color:#888;font-size:14px;text-align:center;padding:20px">
                 <div style="font-size:36px;margin-bottom:12px">🔒</div>
                 <b style="color:var(--text);margin-bottom:8px">NS חוסם iframe</b><br>
@@ -4118,6 +4118,14 @@ async function requestNotificationPermission() {
     }
 }
 
+// בקשת אישור מיידי בטעינה
+setTimeout(function(){ requestNotificationPermission(); }, 1500);
+
+// alias פשוט — sendLocalPush
+function sendLocalPush(title, body) {
+    sendNotification(title, body, { requireInteraction: true, vibrate: [300,100,300] });
+}
+
 function sendNotification(title, body, options) {
     if (_notifPermission !== 'granted') return;
     try {
@@ -4725,18 +4733,19 @@ async function fetchData() {
                     var sgvNow = nsData.currentSgv || 0;
                     var trend  = nsData.trend || '';
                     var isRising = trend.includes('↑') || trend.includes('↗') || trend === 'FortyFiveUp' || trend === 'SingleUp' || trend === 'DoubleUp';
-                    // סוכר עלה מעל 150 עם מגמה עולה
                     if (sgvNow > 150 && isRising) {
                         var cr = nsData.cr || 15;
                         var debtU = Math.round(debt.carbs / cr * 10) / 10;
+                        sendLocalPush(
+                            "⏰ חוק ה-3 — זמן להשלמה!",
+                            "זיהיתי עלייה מ" + debt.meal + "! הזרק עוד " + debt.carbs + "g = " + debtU + "U"
+                        );
                         showPopup("⏰ זמן להשלמה!", "<div style='font-size:14px;text-align:right'>" +
                             "זיהיתי עלייה מה<b>" + debt.meal + "</b>!<br><br>" +
-                            "זמן להזריק את ההשלמה:<br>" +
-                            "<b>" + debt.carbs + " גרם פחמימה = " + debtU + "U</b><br><br>" +
+                            "הזרק השלמה:<br><b>" + debt.carbs + "g = " + debtU + "U</b><br><br>" +
                             "<button onclick='_closeDebt()' style='width:100%;padding:10px;background:#10b981;border:none;border-radius:8px;color:#fff;font-size:14px;cursor:pointer'>✅ הזרקתי — סגור חוב</button>" +
                             "</div>");
                     }
-                    // IOB עלה — הזריקו כנראה
                     var prevIob = parseFloat(localStorage.getItem('_lastIob')||'0');
                     var currIob = parseFloat(nsData.iob||'0');
                     if (currIob > prevIob + 0.3) {
@@ -4746,6 +4755,18 @@ async function fetchData() {
                     localStorage.setItem('_lastIob', String(currIob));
                 }
             }
+        } catch(e) {}
+
+        // בדיקת כשל פוד — סוכר מעל 250 + IOB קפוא
+        try {
+            var sgvCheck = nsData.currentSgv || 0;
+            var iobCheck = parseFloat(nsData.iob || '0');
+            var prevIobCheck = parseFloat(localStorage.getItem('_prevIobPod')||'0');
+            var podAge = _lastKnownCage || 0;
+            if (sgvCheck > 250 && iobCheck > 1.0 && Math.abs(iobCheck - prevIobCheck) < 0.1 && podAge > 48) {
+                sendLocalPush("🚨 חשד לכשל פוד!", "סוכר " + sgvCheck + " לא יורד למרות " + iobCheck + "U. החלף פוד!");
+            }
+            localStorage.setItem('_prevIobPod', String(iobCheck));
         } catch(e) {}
 
     } catch(e) { console.error("fetchData error:", e); }
@@ -5100,10 +5121,13 @@ async function askGeminiAdvisor(userQuestion) {
 - סוכר מעל 240 + IOB מעל 1.0U + גיל פוד מעל 48ש' → "חשד לכשל ספיגה! בצע תיקון ידני בעט והחלף פוד."
 - גיל חיישן מעל 9 ימים + חצים חריפים + בזאלי=0 → "חיישן ישן — בצע בדיקת אצבע לאימות."
 
-🛡️ זיהוי והוספת חוגים:
-אם המשתמש מבקש להוסיף חוג, החזר JSON נקי בלבד ללא שום טקסט נוסף:
-{"action":"add_routine","name":"[שם החוג]","day":"[ראשון/שני/שלישי/רביעי/חמישי/שישי/שבת]","startTime":"[HH:MM]","endTime":"[HH:MM]"}
+🛡️ ניהול חוגים (הוספה/עדכון/מחיקה):
+אם המשתמש מבקש להוסיף, לעדכן, לשנות, או למחוק חוג — החזר JSON נקי בלבד, ללא טקסט נוסף.
 מיפוי ימים: א/ראשון→ראשון | ב/שני→שני | ג/שלישי→שלישי | ד/רביעי→רביעי | ה/חמישי→חמישי | ו/שישי→שישי | ש/שבת→שבת
+הוספה: {"action":"add_routine","name":"[שם]","day":"[יום]","startTime":"[HH:MM]","endTime":"[HH:MM]","intensity":"[נמוכה/בינונית/גבוהה]"}
+עדכון: {"action":"update_routine","name":"[שם]","day":"[יום]","startTime":"[HH:MM]","endTime":"[HH:MM]","intensity":"[נמוכה/בינונית/גבוהה]"}
+מחיקה: {"action":"delete_routine","name":"[שם]"}
+(כלול רק שדות שהמשתמש ביקש לשנות)
 
 מבנה פלט קשיח (לשאלות טיפוליות):
 כתוב בלופ: [שם המאכל] [גרם כעת] גרם ל-[X] שעות.
@@ -5113,7 +5137,7 @@ async function askGeminiAdvisor(userQuestion) {
 הלופ מציע כעת: [W] יחידות.`;
 
         // בדוק אם זו בקשת חוג — שלח ל-Gemini ללא Streaming (צריך JSON מלא)
-        var isActivityRequest = /הוסף חוג|הכנס חוג|חוג.*יום|יום.*חוג/i.test(userQuestion);
+        var isActivityRequest = /הוסף חוג|הכנס חוג|צור חוג|שנה חוג|עדכן חוג|ערוך חוג|מחק חוג|הסר חוג|חוג.*יום|יום.*חוג|חוג.*עצימות|עצימות.*חוג/i.test(userQuestion);
         if (isActivityRequest) {
             var actResp = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + geminiKey(), {
                 method: "POST",
@@ -5132,16 +5156,49 @@ async function askGeminiAdvisor(userQuestion) {
                 if (jsonMatch) {
                     try {
                         var actObj = JSON.parse(jsonMatch[0]);
+                        var dayMap2 = {'ראשון':0,'שני':1,'שלישי':2,'רביעי':3,'חמישי':4,'שישי':5,'שבת':6};
+                        var dayNames2 = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+                        var _saveActs = function(){ try { localStorage.setItem('loopie_activities', JSON.stringify(ACTIVITIES)); } catch(e2) {} };
+
                         if (actObj.action === 'add_routine') {
-                            var dayMap = {'ראשון':0,'שני':1,'שלישי':2,'רביעי':3,'חמישי':4,'שישי':5,'שבת':6};
-                            var dayNum = dayMap[actObj.day];
+                            var dayNum = dayMap2[actObj.day];
                             if (dayNum !== undefined) {
-                                ACTIVITIES.push({ id: Date.now(), name: actObj.name, day: dayNum, from: actObj.startTime, to: actObj.endTime, intensity: 'medium' });
-                                try { localStorage.setItem('loopie_activities', JSON.stringify(ACTIVITIES)); } catch(e2) {}
-                                var dayNames = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-                                showPopup("✅ חוג נוסף!", "<div style='font-size:14px;text-align:right'><b>" + actObj.name + "</b><br>יום " + dayNames[dayNum] + " | " + actObj.startTime + "–" + actObj.endTime + "</div>");
+                                ACTIVITIES.push({ id: Date.now(), name: actObj.name, day: dayNum, from: actObj.startTime, to: actObj.endTime, intensity: actObj.intensity||'medium' });
+                                _saveActs();
+                                showPopup("✅ חוג נוסף!", "<div style='font-size:14px;text-align:right'><b>" + actObj.name + "</b><br>יום " + dayNames2[dayNum] + " | " + actObj.startTime + "–" + actObj.endTime + "</div>");
                                 return;
                             }
+
+                        } else if (actObj.action === 'update_routine') {
+                            var idx2 = ACTIVITIES.findIndex(function(a){ return a.name.includes(actObj.name) || actObj.name.includes(a.name); });
+                            if (idx2 >= 0) {
+                                if (actObj.day && dayMap2[actObj.day] !== undefined) ACTIVITIES[idx2].day = dayMap2[actObj.day];
+                                if (actObj.startTime) ACTIVITIES[idx2].from = actObj.startTime;
+                                if (actObj.endTime)   ACTIVITIES[idx2].to   = actObj.endTime;
+                                if (actObj.intensity) ACTIVITIES[idx2].intensity = actObj.intensity;
+                                _saveActs();
+                                var intLabel = actObj.intensity === 'גבוהה' ? '⚡ גבוהה' : actObj.intensity === 'נמוכה' ? '🟢 נמוכה' : '🔵 בינונית';
+                                var updMsg = "<b>" + ACTIVITIES[idx2].name + "</b> עודכן";
+                                if (actObj.intensity) updMsg += " — עצימות " + intLabel;
+                                if (actObj.day) updMsg += " — יום " + dayNames2[ACTIVITIES[idx2].day];
+                                if (actObj.startTime) updMsg += " | " + actObj.startTime + "–" + ACTIVITIES[idx2].to;
+                                showPopup("✅ חוג עודכן!", "<div style='font-size:14px;text-align:right'>" + updMsg + "</div>");
+                            } else {
+                                showPopup("❓", "לא מצאתי חוג בשם '" + actObj.name + "'. כתוב 'רשימת חוגים' לראות מה קיים.");
+                            }
+                            return;
+
+                        } else if (actObj.action === 'delete_routine') {
+                            var delIdx = ACTIVITIES.findIndex(function(a){ return a.name.includes(actObj.name) || actObj.name.includes(a.name); });
+                            if (delIdx >= 0) {
+                                var delName = ACTIVITIES[delIdx].name;
+                                ACTIVITIES.splice(delIdx, 1);
+                                _saveActs();
+                                showPopup("🗑️ נמחק", "<b>" + delName + "</b> הוסר מרשימת החוגים.");
+                            } else {
+                                showPopup("❓", "לא מצאתי חוג בשם '" + actObj.name + "'.");
+                            }
+                            return;
                         }
                     } catch(jsonErr) {}
                 }
