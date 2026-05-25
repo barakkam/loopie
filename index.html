@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0051)file:///C:/Users/barak/Downloads/index37_v5_11.html -->
+<!-- saved from url=(0051)file:///C:/Users/barak/Downloads/index37_v5_12.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -222,7 +222,7 @@
     <!-- TAB: NS -->
     <div id="tab-ns" class="hidden">
         <div id="ns-frame-wrap" style="position:relative;width:100%;height:70vh;border-radius:10px;overflow:hidden;background:#000">
-            <iframe id="ns-iframe" src="./index39_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
+            <iframe id="ns-iframe" src="./index40_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
             <div id="ns-frame-msg" style="display:none;position:absolute;inset:0;background:#0a0a14;border-radius:10px;flex-direction:column;align-items:center;justify-content:center;color:#888;font-size:14px;text-align:center;padding:20px">
                 <div style="font-size:36px;margin-bottom:12px">🔒</div>
                 <b style="color:var(--text);margin-bottom:8px">NS חוסם iframe</b><br>
@@ -4714,10 +4714,50 @@ async function fetchData() {
         checkPendingDose();
         checkPodFailure();
         try { checkSensorHealth(); } catch(e) { console.error('sensorHealth:', e); }
-
-        // זיהוי פוד/חיישן חדש מ-CAGE/SAGE
         try { autoDetectNewDevices(); } catch(e) {}
+
+        // בדיקת חוב פחמימות אוטומטית
+        try {
+            var debtRaw = localStorage.getItem('active_debt');
+            if (debtRaw) {
+                var debt = JSON.parse(debtRaw);
+                if (debt.status === 'open') {
+                    var sgvNow = nsData.currentSgv || 0;
+                    var trend  = nsData.trend || '';
+                    var isRising = trend.includes('↑') || trend.includes('↗') || trend === 'FortyFiveUp' || trend === 'SingleUp' || trend === 'DoubleUp';
+                    // סוכר עלה מעל 150 עם מגמה עולה
+                    if (sgvNow > 150 && isRising) {
+                        var cr = nsData.cr || 15;
+                        var debtU = Math.round(debt.carbs / cr * 10) / 10;
+                        showPopup("⏰ זמן להשלמה!", "<div style='font-size:14px;text-align:right'>" +
+                            "זיהיתי עלייה מה<b>" + debt.meal + "</b>!<br><br>" +
+                            "זמן להזריק את ההשלמה:<br>" +
+                            "<b>" + debt.carbs + " גרם פחמימה = " + debtU + "U</b><br><br>" +
+                            "<button onclick='_closeDebt()' style='width:100%;padding:10px;background:#10b981;border:none;border-radius:8px;color:#fff;font-size:14px;cursor:pointer'>✅ הזרקתי — סגור חוב</button>" +
+                            "</div>");
+                    }
+                    // IOB עלה — הזריקו כנראה
+                    var prevIob = parseFloat(localStorage.getItem('_lastIob')||'0');
+                    var currIob = parseFloat(nsData.iob||'0');
+                    if (currIob > prevIob + 0.3) {
+                        debt.status = 'closed';
+                        localStorage.setItem('active_debt', JSON.stringify(debt));
+                    }
+                    localStorage.setItem('_lastIob', String(currIob));
+                }
+            }
+        } catch(e) {}
+
     } catch(e) { console.error("fetchData error:", e); }
+}
+
+function _closeDebt() {
+    try {
+        var d = JSON.parse(localStorage.getItem('active_debt')||'{}');
+        d.status = 'closed';
+        localStorage.setItem('active_debt', JSON.stringify(d));
+    } catch(e) {}
+    closePopup();
 }
 
 async function loadHistory() {
@@ -5965,31 +6005,39 @@ async function askGeminiAdvisor(userQuestion) {
         var prompt = buildGeminiPrompt(ctx, userQuestion);
         if (ctx._scheduleStr) prompt += "\nלו\"ז:" + ctx._scheduleStr;
 
+        // אבחון חומרה אוטומטי
+        var hwWarnings = [];
+        if (ctx.sgv > 240 && ctx.iob > 1.0 && ctx.cage && ctx.cage > 48)
+            hwWarnings.push("⚠️ חשד לכשל ספיגה: סוכר " + ctx.sgv + " למרות " + ctx.iob + "U + פוד " + Math.round(ctx.cage) + "ש'");
+        if (ctx.sage && ctx.sage > 216 && ctx.basal === 0)
+            hwWarnings.push("⚠️ חיישן ישן (" + Math.floor(ctx.sage/24) + " ימים) + בזאלי 0 — שקול בדיקת אצבע");
+        if (hwWarnings.length) prompt += "\nאזהרת חומרה: " + hwWarnings.join(" | ");
+
         var insName    = ctx.insulinName    || 'ליומג\'ב';
         var insPreMeal = ctx.insulinPreMeal || 5;
         var insPeak    = ctx.insulinPeak    || 30;
 
         var sysPrompt = `אתה עוזר טיפולי ממוקד עבור אפליקציית LOOPIE של ילד בן 9 בשם דניאל.
-עליך להחזיר תשובות קצרות, פשוטות, מבצעיות וישר לעניין. ללא מילות פתיחה, ללא סיפורים, וללא משפטים ארוכים. חתוך ישר לפקודות הביצוע של האייפון.
+חתוך ישר לפקודות ביצוע קצרות בעברית, ללא שום גינונים או מילות פתיחה.
 
-חוקי חישוב ופיצול (חוק ה-3):
-- פיתה / המבורגר = 50 גרם פחמימה בדיפולט.
-- פצל את הארוחה תמיד ל-70% כעת (35 גרם) ו-30% להמשך (15 גרם חוב).
-- משך זמן ספיגה בדיפולט: 3 שעות (פסטה והמבורגר: 5 שעות).
-
-תזמון לפי סוג אינסולין:
+חוקי בית נוקשים (אסור לחרוג מהשעות!):
+- פיתה / המבורגר = 50 גרם פחמימה | 3 שעות ספיגה (המבורגר ופסטה: 5 שעות ספיגה).
+- פצל ארוחה תמיד: 70% כעת (35 גרם), 30% חוב להמשך (15 גרם).
 - ליומג'ב (Lyumjev): "הזרק 2-3 דקות לפני האוכל."
-- נובורפיד (Novorapid): "חובה להמתין 20 דקות לפני האוכל!"
+- נובורפיד (Novorapid): "המתן 20 דקות לפני האוכל!"
+- חוג MMA: ימי ראשון 15:30-17:30. אם השעה קרובה, הפחת בולוס ב-40% והפעל מצב ספורט.
 
-לו"ז חוגים (הצלבת זמן):
-- ימי ראשון בין 15:30 ל-17:30 יש חוג MMA. אם השעה קרובה, ציין להפעיל מצב ספורט (יעד 170-200) לשעתיים ולהפחית בולוס ב-40%.
+חוקי אבחון חומרה (פוד/חיישן):
+- אם סוכר מעל 240 + IOB מעל 1.0U + גיל פוד מעל 48 שעות → "חשד לכשל ספיגה! בצע תיקון ידני בעט והחלף פוד."
+- אם גיל חיישן מעל 9 ימים + חצים חריפים + בזאלי=0 → "חיישן ישן — ייתכן זיוף. בצע בדיקת אצבע לאימות."
+- אם בזאלי זמני 0 למרות סוכר גבוה → "לופ לא מגיב. בדוק חיבור."
 
-החזר את התשובה במבנה הבא בלבד:
-כתוב בלופ: פיתה [כמות פחמימות, למשל 35] גרם ל-[משך שעות].
-הזרק כעת: [X] יחידות אינסולין.
-תזמון: הזרק [הנחיית זמן לפי סוג האינסולין] לפני האוכל.
-חוק ה-3 (השלמה): נשאר חוב של [כמות פחמימות שנותרה] גרם. כשהסוכר יעלה מעל 150, לופי תתריע להשלים את ה-[Y] יחידות הנותרות.
-הלופ מציע כעת: [W] יחידות. (ההמלצה שלי שונה בגלל [סיבה קצרה]).`;
+מבנה פלט קשיח וחובה:
+כתוב בלופ: [שם המאכל] [גרם כעת] גרם ל-[X] שעות.
+הזרק כעת: [U] יחידות אינסולין.
+תזמון: הזרק [הנחיית זמן] לפני האוכל.
+חוק ה-3 (השלמה): נשאר חוב של [גרם חוב] גרם. כשהסוכר יעלה מעל 150, לופי תתריע לך להשלים.
+הלופ מציע כעת: [W] יחידות.`;
 
         // Streaming fetch — מיידי, ללא המתנה
         var streamHtml = "<div id='gemini-stream' style='font-size:14px;line-height:1.7;text-align:right;white-space:pre-line;direction:rtl'>⏳</div>" +
@@ -6004,7 +6052,7 @@ async function askGeminiAdvisor(userQuestion) {
             body: JSON.stringify({
                 contents: [{role:"user", parts:[{text: prompt}]}],
                 systemInstruction: {parts:[{text: sysPrompt}]},
-                generationConfig: {maxOutputTokens: 4000, temperature: 0.1}
+                generationConfig: {maxOutputTokens: 4000, temperature: 0.0}
             })
         });
 
@@ -6017,35 +6065,41 @@ async function askGeminiAdvisor(userQuestion) {
         var decoder = new TextDecoder();
         var fullText = "";
         var streamEl = document.getElementById('gemini-stream');
+        if (streamEl) streamEl.textContent = '';
 
         while (true) {
             var chunk = await reader.read();
             if (chunk.done) break;
-            var lines = decoder.decode(chunk.value).split('\n');
-            for (var li = 0; li < lines.length; li++) {
-                var line = lines[li].trim();
-                if (!line.startsWith('data:')) continue;
-                var jsonStr = line.slice(5).trim();
-                if (jsonStr === '[DONE]') break;
-                try {
-                    var parsed = JSON.parse(jsonStr);
-                    var part = parsed.candidates &&
-                               parsed.candidates[0] &&
-                               parsed.candidates[0].content &&
-                               parsed.candidates[0].content.parts &&
-                               parsed.candidates[0].content.parts[0].text;
-                    if (part) {
-                        fullText += part;
-                        if (streamEl) streamEl.textContent = fullText;
-                    }
-                } catch(e) {}
+            var raw = decoder.decode(chunk.value, {stream: true});
+            var parts = raw.split('"text":');
+            if (parts.length > 1) {
+                for (var pi = 1; pi < parts.length; pi++) {
+                    var cleanText = parts[pi].split('"')[1];
+                    if (!cleanText) continue;
+                    cleanText = cleanText.replace(/\\n/g, '\n').replace(/\\\\/g, '\\').replace(/\\"/g, '"');
+                    fullText += cleanText;
+                    if (streamEl) streamEl.textContent = fullText;
+                }
             }
         }
 
         // הסר פתיחות
         fullText = fullText.replace(/^(שלום[^!\n]*[!\n]?\s*|היי[^!\n]*[!\n]?\s*)/i, '').trim();
         if (streamEl) streamEl.textContent = fullText;
-        console.log("Stream done:", fullText.length, "chars");
+
+        // זהה חוב פחמימות ושמור
+        var debtGMatch = fullText.match(/חוב של (\d+) גרם/);
+        var mealNameMatch = fullText.match(/כתוב בלופ:\s*([^\d\n]+)/);
+        if (debtGMatch) {
+            try {
+                localStorage.setItem('active_debt', JSON.stringify({
+                    carbs: parseInt(debtGMatch[1]),
+                    meal: mealNameMatch ? mealNameMatch[1].trim() : 'ארוחה',
+                    status: 'open',
+                    time: Date.now()
+                }));
+            } catch(e) {}
+        }
 
         // התראת פיצול
         var debtMatch = fullText.match(/עוד\s*(\d+)\s*(?:דקות?|דק'?)\s*.*?(\d+\.?\d*)\s*[Uu]/);
