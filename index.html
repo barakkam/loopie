@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0051)file:///C:/Users/barak/Downloads/index37_v5_20.html -->
+<!-- saved from url=(0051)file:///C:/Users/barak/Downloads/index37_v5_21.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -222,7 +222,7 @@
     <!-- TAB: NS -->
     <div id="tab-ns" class="hidden">
         <div id="ns-frame-wrap" style="position:relative;width:100%;height:70vh;border-radius:10px;overflow:hidden;background:#000">
-            <iframe id="ns-iframe" src="./index40_3_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
+            <iframe id="ns-iframe" src="./index40_4_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
             <div id="ns-frame-msg" style="display:none;position:absolute;inset:0;background:#0a0a14;border-radius:10px;flex-direction:column;align-items:center;justify-content:center;color:#888;font-size:14px;text-align:center;padding:20px">
                 <div style="font-size:36px;margin-bottom:12px">🔒</div>
                 <b style="color:var(--text);margin-bottom:8px">NS חוסם iframe</b><br>
@@ -5162,49 +5162,47 @@ async function askGeminiAdvisor(userQuestion) {
                         var actObj = JSON.parse(jsonMatch[0]);
                         var dayMap2 = {'ראשון':0,'שני':1,'שלישי':2,'רביעי':3,'חמישי':4,'שישי':5,'שבת':6};
                         var dayNames2 = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+                        var _toEn2 = function(v){ if(!v)return'medium'; v=String(v).toLowerCase(); if(v==='גבוהה'||v==='high')return'high'; if(v==='נמוכה'||v==='low')return'low'; return'medium'; };
                         var _saveActs = function(){ try { localStorage.setItem('loopie_activities', JSON.stringify(ACTIVITIES)); } catch(e2) {} };
 
                         if (actObj.action === 'add_routine') {
                             var dayNum = dayMap2[actObj.day];
                             if (dayNum !== undefined) {
-                                ACTIVITIES.push({ id: Date.now(), name: actObj.name, day: dayNum, from: actObj.startTime, to: actObj.endTime, intensity: actObj.intensity||'medium' });
-                                _saveActs();
-                                try { renderActivities(); } catch(e) {}
-                                showPopup("✅ חוג נוסף!", "<div style='font-size:14px;text-align:right'><b>" + actObj.name + "</b><br>יום " + dayNames2[dayNum] + " | " + actObj.startTime + "–" + actObj.endTime + "</div>");
+                                ACTIVITIES.push({ id: Date.now(), name: actObj.name, day: dayNum, from: actObj.startTime, to: actObj.endTime, intensity: _toEn2(actObj.intensity) });
+                                _saveActs(); try { renderActivities(); } catch(e) {}
+                                showPopup("✅ חוג נוסף!", "<b>" + actObj.name + "</b><br>יום " + dayNames2[dayNum] + " | " + actObj.startTime + "–" + actObj.endTime);
                                 return;
                             }
 
                         } else if (actObj.action === 'update_routine') {
-                            var idx2 = ACTIVITIES.findIndex(function(a){ return a.name.includes(actObj.name) || actObj.name.includes(a.name); });
-                            if (idx2 >= 0) {
-                                if (actObj.day && dayMap2[actObj.day] !== undefined) ACTIVITIES[idx2].day = dayMap2[actObj.day];
-                                if (actObj.startTime) ACTIVITIES[idx2].from = actObj.startTime;
-                                if (actObj.endTime)   ACTIVITIES[idx2].to   = actObj.endTime;
-                                if (actObj.intensity) ACTIVITIES[idx2].intensity = actObj.intensity;
-                                _saveActs();
-                                try { renderActivities(); } catch(e) {}
-                                var intLabel = actObj.intensity === 'גבוהה' ? '⚡ גבוהה' : actObj.intensity === 'נמוכה' ? '🟢 נמוכה' : '🔵 בינונית';
-                                var updMsg = "<b>" + ACTIVITIES[idx2].name + "</b> עודכן";
-                                if (actObj.intensity) updMsg += " — עצימות " + intLabel;
-                                if (actObj.day) updMsg += " — יום " + dayNames2[ACTIVITIES[idx2].day];
-                                if (actObj.startTime) updMsg += " | " + actObj.startTime + "–" + ACTIVITIES[idx2].to;
-                                showPopup("✅ חוג עודכן!", "<div style='font-size:14px;text-align:right'>" + updMsg + "</div>");
-                            } else {
-                                showPopup("❓", "לא מצאתי חוג בשם '" + actObj.name + "'. כתוב 'רשימת חוגים' לראות מה קיים.");
-                            }
+                            var updCnt = 0;
+                            ACTIVITIES.forEach(function(a) {
+                                var nm = a.name.toLowerCase().trim(), qn = (actObj.name||'').toLowerCase().trim();
+                                if (nm === qn || nm.includes(qn) || qn.includes(nm)) {
+                                    var dm = !actObj.day || dayMap2[actObj.day] === undefined || a.day === dayMap2[actObj.day];
+                                    if (dm) {
+                                        if (actObj.intensity) a.intensity = _toEn2(actObj.intensity);
+                                        if (actObj.day && dayMap2[actObj.day] !== undefined) a.day = dayMap2[actObj.day];
+                                        if (actObj.startTime) a.from = actObj.startTime;
+                                        if (actObj.endTime)   a.to   = actObj.endTime;
+                                        updCnt++;
+                                    }
+                                }
+                            });
+                            _saveActs(); try { renderActivities(); } catch(e) {}
+                            var lbl = (INTENSITY_LABELS||{})[ _toEn2(actObj.intensity) ] || actObj.intensity || '';
+                            showPopup(updCnt > 0 ? "✅ עודכן!" : "❓",
+                                updCnt > 0 ? "חוג <b>" + actObj.name + "</b> — " + updCnt + " רשומות עודכנו" + (lbl ? " → " + lbl : "") :
+                                "לא מצאתי חוג בשם '" + actObj.name + "'.");
                             return;
 
                         } else if (actObj.action === 'delete_routine') {
-                            var delIdx = ACTIVITIES.findIndex(function(a){ return a.name.includes(actObj.name) || actObj.name.includes(a.name); });
-                            if (delIdx >= 0) {
-                                var delName = ACTIVITIES[delIdx].name;
-                                ACTIVITIES.splice(delIdx, 1);
-                                _saveActs();
-                                try { renderActivities(); } catch(e) {}
-                                showPopup("🗑️ נמחק", "<b>" + delName + "</b> הוסר מרשימת החוגים.");
-                            } else {
-                                showPopup("❓", "לא מצאתי חוג בשם '" + actObj.name + "'.");
-                            }
+                            var beforeD = ACTIVITIES.length;
+                            ACTIVITIES = ACTIVITIES.filter(function(a){ return !a.name.toLowerCase().includes((actObj.name||'').toLowerCase()); });
+                            _saveActs(); try { renderActivities(); } catch(e) {}
+                            showPopup(ACTIVITIES.length < beforeD ? "🗑️ נמחק" : "❓",
+                                ACTIVITIES.length < beforeD ? "<b>" + actObj.name + "</b> — " + (beforeD-ACTIVITIES.length) + " רשומות הוסרו." :
+                                "לא מצאתי חוג בשם '" + actObj.name + "'.");
                             return;
                         }
                     } catch(jsonErr) {}
