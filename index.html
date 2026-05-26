@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0051)file:///C:/Users/barak/Downloads/index37_v5_21.html -->
+<!-- saved from url=(0048)file:///C:/Users/barak/Downloads/index37_v7.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -115,6 +115,7 @@
             <div class="stat-box"><span class="stat-lbl">IOB</span><span id="stat-iob" class="stat-val">0.0</span></div>
             <div class="stat-box"><span class="stat-lbl">בזאלי</span><span id="stat-basal" class="stat-val">0.0</span></div>
         </div>
+        <div id="override-status" style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:8px;padding:4px 8px;border-radius:6px;background:rgba(107,107,128,0.08)">תוכנית פעילה: <span id="override-status-val">אין</span></div>
         <!-- מיני גרף -->
         <div id="mini-chart-wrap" style="background:#0a0a14;border-radius:10px;padding:8px;margin-bottom:10px;display:none">
             <div style="display:flex;justify-content:space-between;font-size:10px;color:#555;margin-bottom:4px">
@@ -222,7 +223,7 @@
     <!-- TAB: NS -->
     <div id="tab-ns" class="hidden">
         <div id="ns-frame-wrap" style="position:relative;width:100%;height:70vh;border-radius:10px;overflow:hidden;background:#000">
-            <iframe id="ns-iframe" src="./index40_4_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
+            <iframe id="ns-iframe" src="./index40_5_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
             <div id="ns-frame-msg" style="display:none;position:absolute;inset:0;background:#0a0a14;border-radius:10px;flex-direction:column;align-items:center;justify-content:center;color:#888;font-size:14px;text-align:center;padding:20px">
                 <div style="font-size:36px;margin-bottom:12px">🔒</div>
                 <b style="color:var(--text);margin-bottom:8px">NS חוסם iframe</b><br>
@@ -2339,22 +2340,66 @@ function deleteActivity(id) {
 
 function renderActivities() {
     var list = document.getElementById('activity-list');
+    if (!list) return;
     if (!ACTIVITIES.length) {
         list.innerHTML = '<div style="color:var(--muted);font-size:13px">אין פעילויות שמורות</div>';
         return;
     }
+    // המר עצימות עברית → אנגלית לצורך תצוגה
+    function _intLabel(v) {
+        if (!v) return INTENSITY_LABELS['medium']||'בינונית';
+        var e = v.toLowerCase();
+        if (e==='גבוהה'||e==='high')   return INTENSITY_LABELS['high']  ||'עצימות גבוהה';
+        if (e==='נמוכה'||e==='low')    return INTENSITY_LABELS['low']   ||'עצימות נמוכה';
+        if (e==='medium'||e==='בינונית') return INTENSITY_LABELS['medium']||'עצימות בינונית';
+        return INTENSITY_LABELS[v] || v;
+    }
     list.innerHTML = ACTIVITIES.map(function(a){
         return "<div class='activity-item'>" +
             "<div class='act-info'>" +
-            "<div class='act-name'>" + a.name + " <small style='color:var(--muted)'>(" + INTENSITY_LABELS[a.intensity] + ")</small></div>" +
+            "<div class='act-name'>" + a.name + " <small style='color:var(--muted)'>(" + _intLabel(a.intensity) + ")</small></div>" +
             "<div class='act-time'>יום " + DAYS_HE[a.day] + " | " + a.from + "–" + a.to + "</div>" +
             "</div>" +
+            "<div style='display:flex;gap:4px'>" +
+            "<button class='act-del' onclick='editActivity(" + a.id + ")' style='background:rgba(59,130,246,0.15);border:1px solid var(--blue-dim);color:var(--blue)'>📝</button>" +
             "<button class='act-del' onclick='deleteActivity(" + a.id + ")'>🗑</button>" +
+            "</div>" +
             "</div>";
     }).join('');
 }
 
-// בדיקה האם יש פעילות פעילה עכשיו או בקרוב
+function editActivity(id) {
+    var a = ACTIVITIES.find(function(x){ return x.id === id; });
+    if (!a) return;
+    var dayNames = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+    var html = "<div style='font-size:14px;text-align:right'>";
+    html += "<b>" + a.name + "</b> — יום " + dayNames[a.day] + "<br><br>";
+    html += "עצימות:<br><div style='display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin:8px 0'>";
+    ['low','medium','high'].forEach(function(k){
+        var lbl = INTENSITY_LABELS[k]; var cur = (a.intensity===k||a.intensity===lbl);
+        html += "<button onclick='_setIntensity("+id+",\""+k+"\")' style='padding:8px;border-radius:8px;border:2px solid "+(cur?'#10b981':'var(--border)')+";background:"+(cur?'rgba(16,185,129,0.15)':'transparent')+";color:"+(cur?'#10b981':'var(--muted)')+";cursor:pointer'>"+lbl+"</button>";
+    });
+    html += "</div>";
+    html += "שעות: <input id='_editFrom' value='" + a.from + "' style='width:70px;background:#111;border:1px solid var(--border);color:#fff;border-radius:6px;padding:4px;direction:ltr'>";
+    html += " – <input id='_editTo' value='" + a.to + "' style='width:70px;background:#111;border:1px solid var(--border);color:#fff;border-radius:6px;padding:4px;direction:ltr'><br><br>";
+    html += "<button onclick='_saveEditActivity("+id+")' style='width:100%;padding:10px;background:#10b981;border:none;border-radius:8px;color:#fff;font-size:14px;cursor:pointer'>✅ שמור</button>";
+    html += "</div>";
+    showPopup("📝 עריכת חוג", html);
+}
+function _setIntensity(id, val) {
+    var a = ACTIVITIES.find(function(x){ return x.id === id; });
+    if (a) { a.intensity = val; try { localStorage.setItem('loopie_activities', JSON.stringify(ACTIVITIES)); } catch(e){} renderActivities(); editActivity(id); }
+}
+function _saveEditActivity(id) {
+    var a = ACTIVITIES.find(function(x){ return x.id === id; });
+    var f = document.getElementById('_editFrom'), t = document.getElementById('_editTo');
+    if (a && f && t) {
+        a.from = f.value.trim(); a.to = t.value.trim();
+        try { localStorage.setItem('loopie_activities', JSON.stringify(ACTIVITIES)); } catch(e){}
+        renderActivities();
+        closePopup();
+    }
+}
 function checkActiveActivity() {
     var now    = new Date();
     var dayN   = now.getDay();
@@ -3285,7 +3330,7 @@ async function lookupFoodAI(foodQuery) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { maxOutputTokens: 600, temperature: 0.2 }
+                generationConfig: { maxOutputTokens: 600, temperature: 0.0 }
             })
         });
 
@@ -4052,7 +4097,7 @@ async function importFromGmail(token) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { maxOutputTokens: 500, temperature: 0.1 }
+                generationConfig: { maxOutputTokens: 500, temperature: 0.0 }
             })
         });
         var aiData = await aiRes.json();
@@ -4108,22 +4153,31 @@ var _notifPermission = 'default';
 
 async function requestNotificationPermission() {
     if (!('Notification' in window)) return;
-    if (Notification.permission === 'granted') {
-        _notifPermission = 'granted';
-        return;
-    }
+    if (Notification.permission === 'granted') { _notifPermission = 'granted'; return; }
     if (Notification.permission !== 'denied') {
         var perm = await Notification.requestPermission();
         _notifPermission = perm;
     }
 }
-
-// בקשת אישור מיידי בטעינה
 setTimeout(function(){ requestNotificationPermission(); }, 1500);
 
-// alias פשוט — sendLocalPush
-function sendLocalPush(title, body) {
-    sendNotification(title, body, { requireInteraction: true, vibrate: [300,100,300] });
+// Service Worker — Push ברקע
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js')
+        .then(function(){ console.log('SW registered'); })
+        .catch(function(e){ console.warn('SW:', e); });
+}
+
+function _swNotify(sgv, trend) {
+    if (!('serviceWorker' in navigator)) return;
+    var debtRaw = null;
+    try { debtRaw = JSON.parse(localStorage.getItem('active_debt')||'null'); } catch(e){}
+    navigator.serviceWorker.ready.then(function(reg) {
+        if (reg && reg.active) reg.active.postMessage({
+            type: 'CHECK_SGV', sgv: sgv, trend: trend,
+            activeMeal: debtRaw && debtRaw.status === 'open' ? { name: debtRaw.meal, debtOpen: true } : null
+        });
+    });
 }
 
 function sendNotification(title, body, options) {
@@ -4599,6 +4653,37 @@ async function fetchData() {
                 console.log("pump.battery:", dig(dev,'pump.battery'));
                 console.log("uploader.battery:", dig(dev,'uploader.battery'));
                 console.log("override:", dig(dev,'override'));
+
+                // Override פעיל
+                var ovData = dig(dev,'loop.override') || dig(dev,'override');
+                if (ovData && ovData.active) {
+                    nsData.overrideActive = true;
+                    nsData.overrideName   = ovData.name || ovData.currentCorrectionRange || 'תוכנית פעילה';
+                    nsData.overrideMultiplier = ovData.multiplier || null;
+                } else {
+                    nsData.overrideActive = false;
+                    nsData.overrideName   = null;
+                    nsData.overrideMultiplier = null;
+                }
+                // עדכן UI
+                var ovEl = document.getElementById('override-status');
+                var ovValEl = document.getElementById('override-status-val');
+                if (ovEl && ovValEl) {
+                    if (nsData.overrideActive) {
+                        var pct = nsData.overrideMultiplier ? Math.round(nsData.overrideMultiplier*100) + '%' : '';
+                        ovValEl.textContent = nsData.overrideName + (pct ? ' — ' + pct : '');
+                        ovValEl.style.color = '#f59e0b';
+                        ovValEl.style.fontWeight = '700';
+                        ovEl.style.background = 'rgba(245,158,11,0.1)';
+                        ovEl.style.border = '1px solid #f59e0b';
+                    } else {
+                        ovValEl.textContent = 'אין';
+                        ovValEl.style.color = 'var(--muted)';
+                        ovValEl.style.fontWeight = 'normal';
+                        ovEl.style.background = 'rgba(107,107,128,0.08)';
+                        ovEl.style.border = 'none';
+                    }
+                }
                 if (dev.openaps) console.log("openaps keys:", Object.keys(dev.openaps));
                 if (dev.loop)    console.log("loop keys:", Object.keys(dev.loop));
 
@@ -4723,6 +4808,9 @@ async function fetchData() {
         checkPodFailure();
         try { checkSensorHealth(); } catch(e) { console.error('sensorHealth:', e); }
         try { autoDetectNewDevices(); } catch(e) {}
+
+        // שלח נתוני SGV ל-SW לבדיקת Push
+        try { _swNotify(nsData.currentSgv||0, nsData.trend||''); } catch(e) {}
 
         // בדיקת חוב פחמימות אוטומטית
         try {
@@ -4950,8 +5038,11 @@ function buildNSContext() {
                 ctx.p60 = Math.round(vals[Math.min(12, vals.length-1)]);
                 ctx.pEv = Math.round(vals[vals.length-1]);
             }
-            ctx.loopRec     = dig(dev,'loop.recommendedBolus');
-            ctx.loopEnacted = dig(dev,'loop.enacted.rate');
+            ctx.loopRec            = dig(dev,'loop.recommendedBolus');
+            ctx.loopEnacted        = dig(dev,'loop.enacted.rate');
+            ctx.overrideActive     = nsData.overrideActive     || false;
+            ctx.overrideName       = nsData.overrideName       || null;
+            ctx.overrideMultiplier = nsData.overrideMultiplier || null;
         }
     } catch(e) {}
 
@@ -5047,6 +5138,7 @@ function buildGeminiPrompt(ctx, q) {
     ];
     if (ctx.p30 != null)         lines.push("תחזית המשאבה: בעוד 30דק'=" + ctx.p30 + " | eventual=" + ctx.pEv);
     if (ctx.loopRec != null)     lines.push("המשאבה מציעה: " + ctx.loopRec + "U");
+    if (ctx.overrideActive)      lines.push("⚠️ Override פעיל: " + ctx.overrideName + (ctx.overrideMultiplier ? " (מכפיל: " + ctx.overrideMultiplier + ")" : "") + " — הפחת המלצות בהתאם!");
     if (ctx.cage != null)        lines.push("גיל פוד: " + Math.floor(ctx.cage/24) + "d " + Math.round(ctx.cage%24) + "h");
     if (ctx.sage != null)        lines.push("גיל חיישן: " + Math.floor(ctx.sage/24) + "d " + Math.round(ctx.sage%24) + "h");
     if (ctx.meals   && ctx.meals.length)   lines.push("ארוחות אחרונות: " + ctx.meals.join(" | "));
@@ -5107,35 +5199,51 @@ async function askGeminiAdvisor(userQuestion) {
         var insPreMeal = ctx.insulinPreMeal || 5;
         var insPeak    = ctx.insulinPeak    || 30;
 
-        var sysPrompt = `אתה עוזר טיפולי ממוקד עבור אפליקציית LOOPIE של ילד בן 9 בשם דניאל.
+        var sysPrompt = `חובה לבצע מתמטיקה יבשה ומדויקת אך ורק לפי חוקי הבית הרשומים כאן! אסור לנחש ערכים מהאינטרנט. אם רשום ש-1 כוס פסטה = 15ג', אז 2 כוסות הן 30ג' בדיוק!
+אתה עוזר טיפולי ממוקד עבור אפליקציית LOOPIE של ילד בן 9 בשם דניאל.
 חתוך ישר לפקודות ביצוע קצרות בעברית, ללא שום גינונים או מילות פתיחה.
 
-חוקי בית נוקשים (אסור לחרוג מהשעות!):
-- פיתה / המבורגר = 50 גרם פחמימה | 3 שעות ספיגה (המבורגר ופסטה: 5 שעות ספיגה).
-- פצל ארוחה תמיד: 70% כעת (35 גרם), 30% חוב להמשך (15 גרם).
-- ליומג'ב (Lyumjev): "הזרק 2-3 דקות לפני האוכל."
-- נובורפיד (Novorapid): "המתן 20 דקות לפני האוכל!"
-- חוג MMA: ימי ראשון 15:30-17:30. אם השעה קרובה, הפחת בולוס ב-40% והפעל מצב ספורט.
+🛡️ חוק פענוח קיצורים — אם המשתמש רושם בדיוק: "cob", "iob", "override", "בזאלי", "מצב", "סטטוס" — אל תמליץ על ארוחה! החזר תשובה קצרה על הסטטוס מהנתונים שקיבלת. דוגמה: "cob" → "כרגע יש לך [X]g פחמימות פעילות." | "iob" → "יש לך [X]U אינסולין פעיל." | "override" → "תוכנית [שם] [פעילה/לא פעילה]."
 
-חוקי אבחון חומרה:
-- סוכר מעל 240 + IOB מעל 1.0U + גיל פוד מעל 48ש' → "חשד לכשל ספיגה! בצע תיקון ידני בעט והחלף פוד."
-- גיל חיישן מעל 9 ימים + חצים חריפים + בזאלי=0 → "חיישן ישן — בצע בדיקת אצבע לאימות."
+חובה לבצע מתמטיקה יבשה ומדויקת לפי חוקי הבית בלבד! 1 כוס פסטה = 15ג', 2 כוסות = 30ג' בדיוק.
 
-🛡️ ניהול חוגים (הוספה/עדכון/מחיקה):
-אם המשתמש מבקש להוסיף, לעדכן, לשנות, או למחוק חוג — החזר JSON נקי בלבד.
-אסור להוסיף תגיות קוד לפני ואחרי. אסור שום טקסט לפני או אחרי ה-JSON.
-מיפוי ימים: א/ראשון→ראשון | ב/שני→שני | ג/שלישי→שלישי | ד/רביעי→רביעי | ה/חמישי→חמישי | ו/שישי→שישי | ש/שבת→שבת
-הוספה: {"action":"add_routine","name":"[שם]","day":"[יום]","startTime":"[HH:MM]","endTime":"[HH:MM]","intensity":"[נמוכה/בינונית/גבוהה]"}
-עדכון: {"action":"update_routine","name":"[שם]","intensity":"[נמוכה/בינונית/גבוהה]","day":"","startTime":"","endTime":""}
+חוקי פחמימות [גרם|שעות ספיגה]:
+פיתה/המבורגר=50|3. פסטה/כוס=15|5. אורז/כף=5|3. צ'יפס/10=15|3. פתיבר=7.5|3. בננה=25|2. תפוח=15|2. לחם=15|3.
+
+🔴 חוק בטיחות קריטי — סוכר ≤100:
+אם הסוכר הנוכחי הוא 100 ומטה:
+- איסור מוחלט על המתנה לפני אכילה! "תן לדניאל לאכול מיד."
+- הזרק רק 10-15 דקות לאחר שהתחיל לאכול.
+- פיצול: 50% כעת, 50% חוב. "הסוכר נמוך — מזריקים פחות כדי לתת לסוכר לעלות. חוב גדול יושלם כשהסוכר יעלה מעל 140."
+
+חוק ה-3 (פיצול):
+פצל ארוחות גדולות: 70% כעת, 30% חוב. ציין "בעוד Xדק' הזרק Yg=ZU".
+
+תזמון לפי אינסולין:
+ליומג'ב/Lyumjev: הזרק 2-3 דק' לפני. נובורפיד/Novorapid: המתן 20 דק'.
+
+חוגים (לו"ז): אם שאילתה קרובה לחוג — הפחת ב-40%, הפעל מצב ספורט.
+
+חוקי Grace חומרה:
+Omnipod: תוקף 72ש' + Grace 8ש'. G7: תוקף 10 ימים + Grace 12ש' בדיוק.
+אם פוד >48ש' + סוכר>240 + IOB>1U → "חשד לכשל ספיגה! תיקון בעט + החלף פוד."
+אם חיישן >9 ימים → "חיישן ישן — בדיקת אצבע לאימות."
+
+היפו לילי חוזר (03:00-05:00):
+אם המשתמש מדווח על היפו חוזר בשעות הקטנות — המלץ: Override לילה 90% (הפחתה 10%) + יעד 120-140 למשך 4 שעות. אל תיצור ריבאונד בוקר.
+
+🛡️ ניהול חוגים — החזר JSON נקי בלבד (ללא תגיות קוד, ללא טקסט):
+הוספה: {"action":"add_routine","name":"[שם]","day":"[ראשון/שני/שלישי/רביעי/חמישי/שישי/שבת]","startTime":"[HH:MM]","endTime":"[HH:MM]","intensity":"[נמוכה/בינונית/גבוהה]"}
+עדכון: {"action":"update_routine","name":"[שם]","intensity":"[גבוהה/בינונית/נמוכה]","day":"","startTime":"","endTime":""}
 מחיקה: {"action":"delete_routine","name":"[שם]"}
-אם לא צוין יום ספציפי לעדכון — השאר day ריק. כלול רק שדות שהמשתמש ביקש לשנות.
 
-מבנה פלט קשיח (לשאלות טיפוליות):
-כתוב בלופ: [שם המאכל] [גרם כעת] גרם ל-[X] שעות.
-הזרק כעת: [U] יחידות אינסולין.
-תזמון: הזרק [הנחיית זמן] לפני האוכל.
-חוק ה-3 (השלמה): נשאר חוב של [גרם חוב] גרם. כשהסוכר יעלה מעל 150, לופי תתריע לך להשלים.
-הלופ מציע כעת: [W] יחידות.`;
+פורמט פלט חובה (לשאלות טיפוליות):
+🍔 סך הכל: [X]ג' פחמימה.
+💉 כתוב בלופ: [Y]ג' למשך [Z]ש'.
+💊 הזרק כעת: [U] יחידות.
+⏳ תזמון ([שם האינסולין]): [הנחיה].
+📋 חוק ה-3: [הנחיית פיצול וחוב] — לופי יתריע כשסוכר יעלה מעל 150.
+📊 סימולציית לופ יבש: הלופ היה מציע [V]U על המנה המלאה ([הסבר קצר למה שונה]).`;
 
         // בדוק אם זו בקשת חוג — שלח ל-Gemini ללא Streaming (צריך JSON מלא)
         var isActivityRequest = /הוסף|הכנס|צור|שנה|עדכן|ערוך|מחק|הסר|חוג|אימון|שיעור/i.test(userQuestion) &&
