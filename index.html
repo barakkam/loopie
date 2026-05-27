@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0050)file:///C:/Users/barak/Downloads/index37_v7_2.html -->
+<!-- saved from url=(0050)file:///C:/Users/barak/Downloads/index37_v7_3.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -5208,6 +5208,58 @@ function buildGeminiPrompt(ctx, q) {
 
 async function askGeminiAdvisor(userQuestion) {
     if (!userQuestion||!userQuestion.trim()) return;
+    var qlLocal = userQuestion.toLowerCase().trim();
+
+    // === טיפול מקומי מיידי — ללא Gemini ===
+
+    // CR / יחס פחמימות
+    if (qlLocal === 'cr' || qlLocal === 'icr' || qlLocal === 'rc' || qlLocal.includes('יחס פחמימ')) {
+        var nowH3 = new Date().getHours();
+        var prof3 = fullHistory && fullHistory.profile;
+        var crNow3 = prof3 ? parseFloat(profileValueAt(prof3.carbratio||prof3.carbRatio||prof3.ic, nowH3)||15) : (nsData.cr||15);
+        var crRows = '';
+        if (prof3 && prof3.carbratio && Array.isArray(prof3.carbratio)) {
+            crRows = prof3.carbratio.map(function(b,i){
+                var next = prof3.carbratio[i+1] ? prof3.carbratio[i+1].time : '24:00';
+                return '• ' + b.time + ' עד ' + next + ': 1U לכל ' + b.value + 'g';
+            }).join('<br>');
+        } else { crRows = '• 00:00 עד 24:00: 1U לכל ' + crNow3 + 'g'; }
+        showPopup("📊 יחס פחמימות (CR)", "<div style='font-size:14px;line-height:1.8;text-align:right'><b>כרגע:</b> 1U לכל " + crNow3 + "g פחמימה<br><br><b>תוכנית יומית:</b><br>" + crRows + "</div>");
+        return;
+    }
+
+    // ISF / רגישות
+    if (qlLocal === 'isf' || qlLocal.includes('רגישות') || qlLocal.includes('מדד רגישות')) {
+        var nowH4 = new Date().getHours();
+        var prof4 = fullHistory && fullHistory.profile;
+        var isfNow4 = prof4 ? parseFloat(profileValueAt(prof4.sens||prof4.sensitivity, nowH4)||120) : (nsData.isf||120);
+        var isfRows = '';
+        if (prof4 && prof4.sens && Array.isArray(prof4.sens)) {
+            isfRows = prof4.sens.map(function(b,i){
+                var next = prof4.sens[i+1] ? prof4.sens[i+1].time : '24:00';
+                return '• ' + b.time + ' עד ' + next + ': ' + b.value + ' mg/dL';
+            }).join('<br>');
+        } else { isfRows = '• 00:00 עד 24:00: ' + isfNow4 + ' mg/dL'; }
+        showPopup("🎯 רגישות לאינסולין (ISF)", "<div style='font-size:14px;line-height:1.8;text-align:right'><b>כרגע:</b> " + isfNow4 + " mg/dL ליחידה<br><br><b>תוכנית יומית:</b><br>" + isfRows + "</div>");
+        return;
+    }
+
+    // בזאלי
+    if (qlLocal === 'בזאלי' || qlLocal === 'בזאל' || qlLocal.includes('תוכנית בזאל')) {
+        var prof5 = fullHistory && fullHistory.profile;
+        var basalNow5 = nsData.basal || 0;
+        var basalRows = '';
+        if (prof5 && prof5.basal && Array.isArray(prof5.basal)) {
+            basalRows = prof5.basal.map(function(b,i){
+                var next = prof5.basal[i+1] ? prof5.basal[i+1].time : '24:00';
+                return '• ' + b.time + ' עד ' + next + ': ' + b.value + ' U/ש\'';
+            }).join('<br>');
+        } else { basalRows = '• 00:00 עד 24:00: ' + basalNow5 + ' U/ש\''; }
+        showPopup("⏳ קצב בזאלי", "<div style='font-size:14px;line-height:1.8;text-align:right'><b>כרגע:</b> " + basalNow5 + " U/ש'<br><br><b>תוכנית יומית:</b><br>" + basalRows + "</div>");
+        return;
+    }
+
+    // === כל שאר → Gemini ===
     try {
         // הכן context מיד מנתונים קיימים — אין fetch!
         var ctx = buildNSContext();
@@ -5235,6 +5287,30 @@ async function askGeminiAdvisor(userQuestion) {
 
         var prompt = buildGeminiPrompt(ctx, userQuestion);
         if (ctx._scheduleStr) prompt += "\nלו\"ז:" + ctx._scheduleStr;
+
+        // זיהוי סוג שאילתה — שלח לג'מיני רק מה שרלוונטי
+        var ql2 = userQuestion.toLowerCase().trim();
+        var isStatusCmd = ql2.includes('מה המצב') || ql2.includes('מה קורה') || ql2.includes('סטטוס') || ql2.includes('status') || ql2 === 'מצב';
+        var isBasalCmd  = ql2.includes('בזאלי') || ql2.includes('תוכנית בזאלית') || ql2.includes('בזאל');
+        var isCRCmd     = ql2.includes('cr') || ql2.includes('icr') || ql2.includes('rc') || ql2.includes('יחס פחמימ');
+        var isISFCmd    = ql2.includes('isf') || ql2.includes('רגישות') || ql2.includes('מדד רגישות');
+        var isProfileCmd = isBasalCmd || isCRCmd || isISFCmd;
+
+        if (isStatusCmd) {
+            // מצב — רק נתוני רגע, ללא טבלאות
+            prompt = [
+                "שאילתת סטטוס — הצג נתוני רגע בלבד, ללא טבלאות או לוחות שעות.",
+                "סוכר: " + ctx.sgv + " " + ctx.trend + " Δ" + (ctx.delta>=0?"+":"") + ctx.delta,
+                "אינסולין פעיל: " + ctx.iob + "U | פחמימות פעילות: " + ctx.cob + "g | בזאלי: " + ctx.basal + "U/ש'",
+                ctx.overrideActive ? "Override פעיל: " + ctx.overrideName : "Override: לא פעיל",
+                ctx.loopRec != null ? "המשאבה מציעה: " + ctx.loopRec + "U" : "",
+                "שאלה: " + userQuestion
+            ].filter(Boolean).join("\n");
+        } else if (!isProfileCmd) {
+            // שאילתה רגילה (לא פרופיל) — הסר טבלת בזאלי מהפרומפט
+            prompt = prompt.replace(/לוח בזאלי יומי:.*$/s, '').trim();
+        }
+        // isProfileCmd — שלח את כל הפרומפט כולל לוחות שעות
 
         // אבחון חומרה אוטומטי
         var hwWarnings = [];
