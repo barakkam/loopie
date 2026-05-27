@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0050)file:///C:/Users/barak/Downloads/index37_v7_3.html -->
+<!-- saved from url=(0050)file:///C:/Users/barak/Downloads/index37_v7_4.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -4151,67 +4151,38 @@ async function importFromGmail(token) {
 // ========= Web Push Notifications =========
 var _notifPermission = 'default';
 
-// Service Worker — הטמעה פנימית (ללא קובץ חיצוני)
-(function() {
-    if (!('serviceWorker' in navigator)) return;
-
-    var swCode = `
-self.addEventListener('install', function(e){ self.skipWaiting(); });
-self.addEventListener('activate', function(e){ e.waitUntil(clients.claim()); });
-self.addEventListener('message', function(e) {
-    var data = e.data;
-    if (!data || data.type !== 'CHECK_SGV') return;
-    var sgv = data.sgv, trend = data.trend || '', meal = data.activeMeal || null;
-    if (sgv < 70) {
-        self.registration.showNotification('🚨 התרעת היפו!', {
-            body: 'סוכר נוכחי: ' + sgv + ' — נדרש טיפול מיידי בפחמימות מהירות!',
-            tag: 'loopie-hypo', requireInteraction: true, vibrate: [500,200,500,200,500]
-        });
-    }
-    if (sgv > 150 && meal && meal.debtOpen) {
-        var rising = ['SingleUp','DoubleUp','FortyFiveUp'].indexOf(trend) >= 0;
-        if (rising) {
-            self.registration.showNotification('📋 תזכורת חוק ה-3', {
-                body: 'זמן להזריק את חוב הפחמימות שנותר מ' + meal.name + '!',
-                tag: 'loopie-debt', requireInteraction: true, vibrate: [300,100,300]
-            });
-        }
-    }
-});
-self.addEventListener('notificationclick', function(e) {
-    e.notification.close();
-    e.waitUntil(clients.matchAll({type:'window'}).then(function(list){
-        if (list.length > 0) return list[0].focus();
-        return clients.openWindow('/');
-    }));
-});`;
-
-    var blob = new Blob([swCode], {type: 'application/javascript'});
-    var swUrl = URL.createObjectURL(blob);
-
-    navigator.serviceWorker.register(swUrl).then(function(reg) {
-        console.log('SW registered (blob)');
-    }).catch(function(e) { console.warn('SW error:', e); });
-})();
-
-// בקשת אישור התראות — מיידי בפתיחה
+// התראות ישירות — ללא Service Worker Blob (מונע message channel errors)
+var _notifPermission = 'default';
 if ('Notification' in window) {
     Notification.requestPermission().then(function(permission) {
-        console.log('Notification permission:', permission);
         _notifPermission = permission;
+        console.log('Notification permission:', permission);
     });
 }
 
 function _swNotify(sgv, trend) {
-    if (!('serviceWorker' in navigator)) return;
+    if (_notifPermission !== 'granted') return;
     var debtRaw = null;
     try { debtRaw = JSON.parse(localStorage.getItem('active_debt')||'null'); } catch(e){}
-    navigator.serviceWorker.ready.then(function(reg) {
-        if (reg && reg.active) reg.active.postMessage({
-            type: 'CHECK_SGV', sgv: sgv, trend: trend,
-            activeMeal: debtRaw && debtRaw.status === 'open' ? { name: debtRaw.meal, debtOpen: true } : null
+    // היפו
+    if (sgv < 70) {
+        new Notification('🚨 התרעת היפו!', {
+            body: 'סוכר נוכחי: ' + sgv + ' — נדרש טיפול מיידי בפחמימות מהירות!',
+            tag: 'loopie-hypo',
+            requireInteraction: true
         });
-    });
+    }
+    // חוק ה-3
+    if (sgv > 150 && debtRaw && debtRaw.status === 'open') {
+        var rising = ['SingleUp','DoubleUp','FortyFiveUp'].indexOf(trend) >= 0;
+        if (rising) {
+            new Notification('📋 תזכורת חוק ה-3', {
+                body: 'זמן להזריק את חוב הפחמימות שנותר מ' + debtRaw.meal + '!',
+                tag: 'loopie-debt',
+                requireInteraction: true
+            });
+        }
+    }
 }
 
 function sendNotification(title, body, options) {
@@ -5351,7 +5322,13 @@ async function askGeminiAdvisor(userQuestion) {
 נוסחת סימולציית לופ יבש (מנה מלאה):
 (סך פחמימות / ICR) + תיקון סוכר אם נדרש = כמה הלופ היה מציע.
 
-🛑 לוגיקת עצירת ארוחה באמצע (Meal Interruption):
+🎯 ניתוח ISF/CR:
+אם המשתמש שואל "האם לשנות ISF" או "האם לשנות CR" — נתח את הנתונים שקיבלת:
+- בדוק מגמת סוכר, IOB, וגובה הסוכר הנוכחי.
+- החזר המלצה קצרה: האם לשנות (כן/לא), לאיזה ערך מדויק, ובאילו שעות ביום לבצע שינוי באייפון.
+- דוגמה: "כן — העלה ISF מ-120 ל-130 בשעות 02:00-06:00 בלבד, כדי למנוע ירידות לילה."
+
+
 אם המשתמש מדווח שהילד עצר את הארוחה באמצע (למשל: "אכל רק חצי פיתה", "הפסיק לאכול", "לא סיים"):
 1. חשב כמה גרם נאכלו בפועל לעומת כמה הוזרק עליהם.
 2. בטל מיד את חוב ה-30% — אין להשלים אותו!
