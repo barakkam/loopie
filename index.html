@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0050)file:///C:/Users/barak/Downloads/index37_v7_6.html -->
+<!-- saved from url=(0050)file:///C:/Users/barak/Downloads/index37_v7_8.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -5194,10 +5194,10 @@ async function askGeminiAdvisor(userQuestion) {
                         qlLocal.includes('עריכה') || qlLocal.includes('לשפר') ||
                         qlLocal.includes('מה דעתך') || qlLocal.includes('נכון');
 
-    // === טיפול מקומי מיידי — ללא Gemini (רק לשאילתות יבשות) ===
+    // === טיפול מקומי מיידי — רק Exact Match, לא includes ===
 
-    // CR / יחס פחמימות
-    if (!wantsAnalysis && (qlLocal === 'cr' || qlLocal === 'icr' || qlLocal === 'rc' || qlLocal.includes('יחס פחמימ'))) {
+    // CR / יחס פחמימות — מילת קוד בלבד
+    if (!wantsAnalysis && (qlLocal === 'cr' || qlLocal === 'icr' || qlLocal === 'rc' || qlLocal === 'יחס פחמימות')) {
         var nowH3 = new Date().getHours();
         var prof3 = fullHistory && fullHistory.profile;
         var crNow3 = prof3 ? parseFloat(profileValueAt(prof3.carbratio||prof3.carbRatio||prof3.ic, nowH3)||15) : (nsData.cr||15);
@@ -5212,8 +5212,8 @@ async function askGeminiAdvisor(userQuestion) {
         return;
     }
 
-    // ISF / רגישות
-    if (!wantsAnalysis && (qlLocal === 'isf' || qlLocal.includes('רגישות') || qlLocal.includes('מדד רגישות'))) {
+    // ISF / רגישות — מילת קוד בלבד
+    if (!wantsAnalysis && (qlLocal === 'isf' || qlLocal === 'רגישות' || qlLocal === 'מדד רגישות')) {
         var nowH4 = new Date().getHours();
         var prof4 = fullHistory && fullHistory.profile;
         var isfNow4 = prof4 ? parseFloat(profileValueAt(prof4.sens||prof4.sensitivity, nowH4)||120) : (nsData.isf||120);
@@ -5228,8 +5228,8 @@ async function askGeminiAdvisor(userQuestion) {
         return;
     }
 
-    // בזאלי
-    if (!wantsAnalysis && (qlLocal === 'בזאלי' || qlLocal === 'בזאל' || qlLocal.includes('תוכנית בזאל'))) {
+    // בזאלי — מילת קוד בלבד
+    if (!wantsAnalysis && (qlLocal === 'בזאלי' || qlLocal === 'בזאל' || qlLocal === 'תוכנית בזאלית')) {
         var prof5 = fullHistory && fullHistory.profile;
         var basalNow5 = nsData.basal || 0;
         var basalRows = '';
@@ -5240,6 +5240,27 @@ async function askGeminiAdvisor(userQuestion) {
             }).join('<br>');
         } else { basalRows = '• 00:00 עד 24:00: ' + basalNow5 + ' U/ש\''; }
         showPopup("⏳ קצב בזאלי", "<div style='font-size:14px;line-height:1.8;text-align:right'><b>כרגע:</b> " + basalNow5 + " U/ש'<br><br><b>תוכנית יומית:</b><br>" + basalRows + "</div>");
+        return;
+    }
+
+    // היסטוריית ארוחות — מקומי מהיר
+    if (qlLocal === 'מה אכלתי' || qlLocal === 'היסטוריית ארוחות' || qlLocal === 'ארוחות אחרונות') {
+        var tr3 = (fullHistory.treatments || []).filter(function(t){
+            return t.carbs > 0 || parseFloat(t.insulin||0) > 0.1;
+        }).slice(0, 5);
+        if (!tr3.length) { showPopup("📜 היסטוריה", "לא נמצאו ארוחות או הזרקות."); return; }
+        var html3 = "<div style='font-size:13px;line-height:2;text-align:right'>";
+        tr3.forEach(function(t) {
+            var ago = Math.round((Date.now() - new Date(t.created_at)) / 60000);
+            var agoStr = ago >= 60 ? (Math.floor(ago/60) + "ש' " + (ago%60) + "דק'") : ago + " דק'";
+            html3 += "<div style='border-bottom:1px solid #222;padding:6px 0'>";
+            html3 += "• <b>" + (t.notes||t.eventType||'ארוחה') + "</b> לפני " + agoStr + "<br>";
+            if (t.carbs) html3 += "&nbsp;&nbsp;🍞 " + t.carbs + "g פחמימה<br>";
+            if (parseFloat(t.insulin||0)>0) html3 += "&nbsp;&nbsp;💉 " + parseFloat(t.insulin).toFixed(2) + "U אינסולין<br>";
+            html3 += "</div>";
+        });
+        html3 += "</div>";
+        showPopup("📜 ארוחות אחרונות", html3);
         return;
     }
 
@@ -5348,6 +5369,17 @@ async function askGeminiAdvisor(userQuestion) {
 3. חשב את הפער: אינסולין שהוזרק על [X]ג' אבל נאכלו רק [Y]ג' → פער של [X-Y]ג' פחמימה חסרה.
 4. המלץ במפורש: "תן לדניאל עכשיו [Z]ג' פחמימה מהירה (פתיבר / מיץ / גלוקוז) כדי לכסות את עודף האינסולין ולמנוע היפו!"
 5. עקוב: "עקוב אחרי הסוכר בדקות הקרובות — אם יורד מתחת ל-80, הוסף עוד 15ג' מהר!"
+
+📜 היסטוריית ארוחות:
+אם המשתמש שואל "מה אכלתי?" — השתמש ב-MEALS וב-BOLUSES שקיבלת והצג 3 אחרונות בפורמט:
+• [שם] לפני [X]דק': [Y]g פחמימה | [Z]U אינסולין.
+אסור להמציא נתונים שאינם ב-MEALS/BOLUSES.
+
+
+אם המשתמש מדווח על מאכל שנאכל בעבר ולא דווח (למשל: "אכלתי פתיבר לפני חצי שעה"):
+1. חשב פחמימות לפי חוקי הבית (חצי פתיבר = 3.75ג') והסבר שעברו X דקות — הן כבר נספגו.
+2. השווה מול IOB נוכחי: אם IOB מכסה את הפחמימות → "אין צורך להזריק! האינסולין הפעיל כבר בלם את האוכל."
+3. סיים תמיד: "אין לדווח במשאבה — יגרום לכפל אינסולין מסוכן! לופי יעקוב ב-30 דקות הקרובות. אם סוכר יעלה מעל 150 — תגיע התראה."
 
 
 Omnipod: תוקף 72ש' + Grace 8ש'. G7: תוקף 10 ימים + Grace 12ש'.
