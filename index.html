@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0050)file:///C:/Users/barak/Downloads/index37_v7_8.html -->
+<!-- saved from url=(0050)file:///C:/Users/barak/Downloads/index37_v7_9.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -5247,20 +5247,21 @@ async function askGeminiAdvisor(userQuestion) {
     if (qlLocal === 'מה אכלתי' || qlLocal === 'היסטוריית ארוחות' || qlLocal === 'ארוחות אחרונות') {
         var tr3 = (fullHistory.treatments || []).filter(function(t){
             return t.carbs > 0 || parseFloat(t.insulin||0) > 0.1;
-        }).slice(0, 5);
-        if (!tr3.length) { showPopup("📜 היסטוריה", "לא נמצאו ארוחות או הזרקות."); return; }
+        }).slice(0, 3);
+        if (!tr3.length) { showPopup("📜 היסטוריה", "לא נמצאו ארוחות ב-24ש' האחרונות."); return; }
         var html3 = "<div style='font-size:13px;line-height:2;text-align:right'>";
         tr3.forEach(function(t) {
-            var ago = Math.round((Date.now() - new Date(t.created_at)) / 60000);
-            var agoStr = ago >= 60 ? (Math.floor(ago/60) + "ש' " + (ago%60) + "דק'") : ago + " דק'";
+            var minsAgo = Math.round((Date.now() - new Date(t.created_at)) / 60000);
+            var agoStr = minsAgo >= 60 ? Math.floor(minsAgo/60) + "ש' " + (minsAgo%60) + "דק'" : minsAgo + " דק'";
+            var foodName = t.notes || t.eventType || (t.carbs ? "ארוחה" : "תיקון אינסולין");
             html3 += "<div style='border-bottom:1px solid #222;padding:6px 0'>";
-            html3 += "• <b>" + (t.notes||t.eventType||'ארוחה') + "</b> לפני " + agoStr + "<br>";
-            if (t.carbs) html3 += "&nbsp;&nbsp;🍞 " + t.carbs + "g פחמימה<br>";
-            if (parseFloat(t.insulin||0)>0) html3 += "&nbsp;&nbsp;💉 " + parseFloat(t.insulin).toFixed(2) + "U אינסולין<br>";
+            html3 += "• <b>" + foodName + "</b> — לפני " + agoStr + "<br>";
+            if (t.carbs)                      html3 += "&nbsp;&nbsp;🍞 " + t.carbs + "g פחמימה<br>";
+            if (parseFloat(t.insulin||0) > 0) html3 += "&nbsp;&nbsp;💉 " + parseFloat(t.insulin).toFixed(2) + "U אינסולין<br>";
             html3 += "</div>";
         });
         html3 += "</div>";
-        showPopup("📜 ארוחות אחרונות", html3);
+        showPopup("📜 3 ארוחות אחרונות", html3);
         return;
     }
 
