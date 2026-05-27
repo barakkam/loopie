@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0050)file:///C:/Users/barak/Downloads/index37_v7_1.html -->
+<!-- saved from url=(0050)file:///C:/Users/barak/Downloads/index37_v7_2.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -223,7 +223,7 @@
     <!-- TAB: NS -->
     <div id="tab-ns" class="hidden">
         <div id="ns-frame-wrap" style="position:relative;width:100%;height:70vh;border-radius:10px;overflow:hidden;background:#000">
-            <iframe id="ns-iframe" src="./index40_6_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
+            <iframe id="ns-iframe" src="./index40_7_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
             <div id="ns-frame-msg" style="display:none;position:absolute;inset:0;background:#0a0a14;border-radius:10px;flex-direction:column;align-items:center;justify-content:center;color:#888;font-size:14px;text-align:center;padding:20px">
                 <div style="font-size:36px;margin-bottom:12px">🔒</div>
                 <b style="color:var(--text);margin-bottom:8px">NS חוסם iframe</b><br>
@@ -4151,21 +4151,55 @@ async function importFromGmail(token) {
 // ========= Web Push Notifications =========
 var _notifPermission = 'default';
 
-async function requestNotificationPermission() {
-    if (!('Notification' in window)) return;
-    if (Notification.permission === 'granted') { _notifPermission = 'granted'; return; }
-    if (Notification.permission !== 'denied') {
-        var perm = await Notification.requestPermission();
-        _notifPermission = perm;
-    }
-}
-setTimeout(function(){ requestNotificationPermission(); }, 1500);
+// Service Worker — הטמעה פנימית (ללא קובץ חיצוני)
+(function() {
+    if (!('serviceWorker' in navigator)) return;
 
-// Service Worker — Push ברקע
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js')
-        .then(function(){ console.log('SW registered'); })
-        .catch(function(e){ console.warn('SW:', e); });
+    var swCode = `
+self.addEventListener('install', function(e){ self.skipWaiting(); });
+self.addEventListener('activate', function(e){ e.waitUntil(clients.claim()); });
+self.addEventListener('message', function(e) {
+    var data = e.data;
+    if (!data || data.type !== 'CHECK_SGV') return;
+    var sgv = data.sgv, trend = data.trend || '', meal = data.activeMeal || null;
+    if (sgv < 70) {
+        self.registration.showNotification('🚨 התרעת היפו!', {
+            body: 'סוכר נוכחי: ' + sgv + ' — נדרש טיפול מיידי בפחמימות מהירות!',
+            tag: 'loopie-hypo', requireInteraction: true, vibrate: [500,200,500,200,500]
+        });
+    }
+    if (sgv > 150 && meal && meal.debtOpen) {
+        var rising = ['SingleUp','DoubleUp','FortyFiveUp'].indexOf(trend) >= 0;
+        if (rising) {
+            self.registration.showNotification('📋 תזכורת חוק ה-3', {
+                body: 'זמן להזריק את חוב הפחמימות שנותר מ' + meal.name + '!',
+                tag: 'loopie-debt', requireInteraction: true, vibrate: [300,100,300]
+            });
+        }
+    }
+});
+self.addEventListener('notificationclick', function(e) {
+    e.notification.close();
+    e.waitUntil(clients.matchAll({type:'window'}).then(function(list){
+        if (list.length > 0) return list[0].focus();
+        return clients.openWindow('/');
+    }));
+});`;
+
+    var blob = new Blob([swCode], {type: 'application/javascript'});
+    var swUrl = URL.createObjectURL(blob);
+
+    navigator.serviceWorker.register(swUrl).then(function(reg) {
+        console.log('SW registered (blob)');
+    }).catch(function(e) { console.warn('SW error:', e); });
+})();
+
+// בקשת אישור התראות — מיידי בפתיחה
+if ('Notification' in window) {
+    Notification.requestPermission().then(function(permission) {
+        console.log('Notification permission:', permission);
+        _notifPermission = permission;
+    });
 }
 
 function _swNotify(sgv, trend) {
