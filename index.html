@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0051)file:///C:/Users/barak/Downloads/index37_v7_12.html -->
+<!-- saved from url=(0051)file:///C:/Users/barak/Downloads/index37_v7_13.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -100,7 +100,7 @@
         <div class="nav-tab" onclick="switchTab(&#39;tab-activity&#39;,this)" style="font-size:10px;padding:7px 1px">🏃 פעילות</div>
         <div class="nav-tab" onclick="switchTab(&#39;tab-reports&#39;,this)" style="font-size:10px;padding:7px 1px">📊 דוחות</div>
         <div class="nav-tab" onclick="switchTab(&#39;tab-ns&#39;,this)" style="font-size:10px;padding:7px 1px">🌐 NS</div>
-        <div class="nav-tab" onclick="switchTab(&#39;tab-profile&#39;,this);renderProfile()" style="font-size:10px;padding:7px 1px">👤 פרופיל</div>
+        <div class="nav-tab" onclick="switchTab(&#39;tab-profile&#39;,this)" style="font-size:10px;padding:7px 1px">👤 פרופיל</div>
         <div class="nav-tab" onclick="switchTab(&#39;tab-logs&#39;,this)" style="font-size:10px;padding:7px 1px">📋 לוגים</div>
     </div>
 
@@ -2243,7 +2243,7 @@ var POST_ACTIVITY_REDUCTION = { low: 10, medium: 20, high: 30 };
 
 function switchTab(id, el) {
     try {
-        ['tab-home','tab-activity','tab-reports','tab-ns','tab-logs'].forEach(function(t){
+        ['tab-home','tab-activity','tab-reports','tab-ns','tab-logs','tab-profile'].forEach(function(t){
             var el2 = document.getElementById(t);
             if (el2) el2.classList.add('hidden');
         });
@@ -2254,6 +2254,7 @@ function switchTab(id, el) {
         if (id === 'tab-activity') { try { renderActivities(); } catch(e){} }
         if (id === 'tab-ns')       { try { loadNSFrame();       } catch(e){} }
         if (id === 'tab-logs')     { try { loadLogs('all');      } catch(e){} }
+        if (id === 'tab-profile')  { try { renderProfile();      } catch(e){} }
     } catch(e) { console.error('switchTab error:', e); }
 }
 
@@ -5983,12 +5984,7 @@ function markReminder(id) {
     renderReminders();
 }
 
-// הוסף ל-switchTab
-var _origSwitchTab = window.switchTab;
-window.switchTab = function(id, el) {
-    if (_origSwitchTab) _origSwitchTab(id, el);
-    if (id === 'tab-profile') setTimeout(renderProfile, 50);
-};
+// ========= סוף תוספות =========
 async function _runWeeklyClinic() {
     try {
         var days = 14;
