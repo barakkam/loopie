@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0051)file:///C:/Users/barak/Downloads/index37_v7_11.html -->
+<!-- saved from url=(0051)file:///C:/Users/barak/Downloads/index37_v7_12.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -105,9 +105,9 @@
     </div>
 
     <!-- TAB: פרופיל -->
-    <div id="tab-profile" class="hidden" style="padding:16px">
+    <div id="tab-profile" class="hidden" style="padding:12px;width:100%;max-width:450px;margin:0 auto;box-sizing:border-box;overflow-x:hidden">
         <div id="profile-view"></div>
-        <div id="reminders-view" style="margin-top:16px"></div>
+        <div id="reminders-view" style="margin-top:12px"></div>
     </div>
 
     <!-- TAB: בית -->
@@ -5883,6 +5883,13 @@ var MEDICAL_REMINDERS = [
     { id:'growth',    icon:'📐', name:'מדדי גדילה (גובה ומשקל)',      intervalDays:90  }
 ];
 
+function _fmtDate(dateString) {
+    if (!dateString) return 'לא הוגדר';
+    var d = new Date(dateString);
+    if (isNaN(d.getTime())) return 'לא הוגדר';
+    return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear();
+}
+
 function renderProfile() {
     var p = LOOPIE_PROFILE;
     var age = '';
@@ -5890,20 +5897,26 @@ function renderProfile() {
         var diff = Date.now() - new Date(p.dob).getTime();
         var yrs = Math.floor(diff / (365.25*86400000));
         var mos = Math.floor((diff % (365.25*86400000)) / (30.44*86400000));
-        age = yrs + 'ש\' ' + mos + 'ח\'';
+        age = yrs + ' שנים ' + mos + ' חודשים';
     }
 
-    var html = "<div style='background:#0a0a14;border-radius:12px;padding:14px;margin-bottom:12px'>" +
+    var card = function(label, val) {
+        return "<div style='display:flex;justify-content:space-between;align-items:center;width:100%;box-sizing:border-box;padding:6px 0;border-bottom:1px solid #1a1a2e'>" +
+               "<span style='color:var(--muted);font-size:12px'>" + label + "</span>" +
+               "<span style='font-size:13px;font-weight:600'>" + (val||'לא הוגדר') + "</span></div>";
+    };
+
+    var html = "<div style='background:#0a0a14;border-radius:12px;padding:14px;width:100%;box-sizing:border-box'>" +
         "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:12px'>" +
         "<b style='font-size:15px'>👤 פרופיל אישי</b>" +
-        "<button onclick='editProfile()' style='padding:6px 12px;background:rgba(59,130,246,0.15);border:1px solid var(--blue-dim);border-radius:8px;color:var(--blue);font-size:12px;cursor:pointer'>📝 ערוך</button>" +
+        "<button onclick='editProfile()' style='padding:5px 10px;background:rgba(59,130,246,0.15);border:1px solid var(--blue-dim);border-radius:8px;color:var(--blue);font-size:12px;cursor:pointer;white-space:nowrap'>📝 ערוך</button>" +
         "</div>" +
-        "<div style='font-size:13px;line-height:2;text-align:right'>" +
-        "👦 <b>שם:</b> " + (p.name||'לא הוגדר') + "<br>" +
-        "🎂 <b>גיל:</b> " + (age||'לא הוגדר') + "<br>" +
-        "⚖️ <b>משקל:</b> " + (p.weight ? p.weight+'ק"ג' : 'לא הוגדר') + "<br>" +
-        "📏 <b>גובה:</b> " + (p.height ? p.height+'ס"מ' : 'לא הוגדר') + "<br>" +
-        "</div></div>";
+        card('שם',    p.name) +
+        card('ת. לידה', _fmtDate(p.dob)) +
+        card('גיל',   age||null) +
+        card('משקל',  p.weight ? p.weight+'ק"ג' : null) +
+        card('גובה',  p.height ? p.height+'ס"מ' : null) +
+        "</div>";
 
     document.getElementById('profile-view').innerHTML = html;
     renderReminders();
@@ -5950,13 +5963,12 @@ function renderReminders() {
                      '🟢 בעוד ' + daysLeft + ' ימים';
         var lastStr = lastDate ? lastDate.toLocaleDateString('he-IL') : '—';
 
-        html += "<div style='border-bottom:1px solid #1a1a2e;padding:8px 0;font-size:12px'>" +
-            "<div style='display:flex;justify-content:space-between;align-items:center'>" +
-            "<span>" + r.icon + " <b>" + r.name + "</b></span>" +
-            "<button onclick='markReminder(\""+r.id+"\")' style='padding:3px 8px;background:rgba(16,185,129,0.15);border:1px solid #10b981;border-radius:6px;color:#10b981;font-size:11px;cursor:pointer'>✅ בוצע</button>" +
-            "</div>" +
-            "<div style='color:var(--muted);margin-top:2px'>בוצע: " + lastStr + " | " + status + "</div>" +
-            "</div>";
+        html += "<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:8px;width:100%;box-sizing:border-box;border-bottom:1px solid #1a1a2e;padding:8px 0;font-size:12px'>" +
+            "<div style='flex:1;min-width:0'><b>" + r.icon + " " + r.name + "</b><br><span style='color:var(--muted)'>בוצע: " + lastStr + "</span></div>" +
+            "<div style='display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0'>" +
+            "<span style='font-size:11px'>" + status + "</span>" +
+            "<button onclick='markReminder(\""+r.id+"\")' style='padding:3px 8px;background:rgba(16,185,129,0.15);border:1px solid #10b981;border-radius:6px;color:#10b981;font-size:11px;cursor:pointer;white-space:nowrap'>✅ בוצע</button>" +
+            "</div></div>";
     });
 
     html += "</div>";
