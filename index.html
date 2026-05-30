@@ -5748,8 +5748,9 @@ Override פעיל → הפחת המלצות בהתאם למכפיל.
         // טקסט רגיל — הצג
         if (streamEl) streamEl.textContent = fullText;
 
-        // הוסף שורת משאבה מתחת לטקסט אם יש המלצה
-        if (ctx.loopRec != null && streamEl) {
+        // הוסף שורת משאבה מתחת לטקסט — רק אם יש המלצה ויש מאכל
+        var isFoodQuery = ctx.cob > 0 || /פיתה|המבורגר|פסטה|בננה|אורז|גלידה|ג'חנון|שניצל|פצה|לחם|עוגה|שוקולד|פרי/i.test(userQuestion);
+        if (isFoodQuery && ctx.loopRec != null && streamEl) {
             var barDiv = document.createElement('div');
             barDiv.style.cssText = 'margin-top:10px;padding:8px 10px;background:rgba(59,130,246,0.1);border-right:3px solid #3b82f6;border-radius:6px;font-size:12px;text-align:right;direction:rtl';
             barDiv.innerHTML = '📊 המשאבה מציעה: <b style="color:#3b82f6">' + ctx.loopRec + 'U</b>' +
