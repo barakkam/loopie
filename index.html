@@ -5661,7 +5661,13 @@ Override פעיל → הפחת המלצות בהתאם למכפיל.
         var reader = streamResp.body.getReader();
         var decoder = new TextDecoder();
         var fullText = "";
+        // קבל את האלמנט אחרי שה-popup נוצר
         var streamEl = document.getElementById('gemini-stream');
+        if (!streamEl) {
+            // נסה שוב אחרי render
+            await new Promise(function(r){ setTimeout(r, 50); });
+            streamEl = document.getElementById('gemini-stream');
+        }
         if (streamEl) streamEl.textContent = '';
 
         while (true) {
