@@ -5175,7 +5175,6 @@ function buildGeminiPrompt(ctx, q) {
         "סוג אינסולין: " + (ctx.insulinName||'ליומג\'ב') + " (שיא " + ctx.insulinPeak + "דק', המתן " + ctx.insulinPreMeal + "דק' לפני)"
     ];
     if (ctx.p30 != null)         lines.push("תחזית המשאבה: בעוד 30דק'=" + ctx.p30 + " | eventual=" + ctx.pEv);
-    if (ctx.loopRec != null)     lines.push("⚠️ המשאבה מציעה (חובה לפעול לפיו): " + ctx.loopRec + "U — אל תחרוג ממספר זה!");
     if (ctx.overrideActive)      lines.push("⚠️ Override פעיל: " + ctx.overrideName + (ctx.overrideMultiplier ? " (מכפיל: " + ctx.overrideMultiplier + ")" : "") + " — הפחת המלצות בהתאם!");
     if (ctx.cage != null)        lines.push("גיל פוד: " + Math.floor(ctx.cage/24) + "d " + Math.round(ctx.cage%24) + "h");
     if (ctx.sage != null)        lines.push("גיל חיישן: " + Math.floor(ctx.sage/24) + "d " + Math.round(ctx.sage%24) + "h");
@@ -5482,10 +5481,6 @@ async function askGeminiAdvisor(userQuestion) {
 נוסחת סימולציית לופ יבש (מנה מלאה):
 (סך פחמימות / ICR) + תיקון סוכר אם נדרש = כמה הלופ היה מציע.
 
-🦺 בטיחות דינמית (קרא מהנתונים):
-סוג אינסולין (INS): Lyumjev/Fiasp → 0-2 דק' לפני, 70/30. Novorapid/Humalog → 15-20 דק' לפני, 80/20.
-אם "המשאבה מציעה" פחות מהחישוב שלך — ציין בסוף: "⚠️ הלופ בלם ל-XU — הזרק XU בלבד."
-
 
 אם מתקבלת תמונה — קרא ונתח כל טקסט בכל שפה. תרגם ערכי תזונה לעברית.
 זהה מוצרים ממותגים וחשב פחמימות מדויקות מהמוצר שזיהית.
@@ -5747,17 +5742,6 @@ Override פעיל → הפחת המלצות בהתאם למכפיל.
 
         // טקסט רגיל — הצג
         if (streamEl) streamEl.textContent = fullText;
-
-        // הוסף שורת משאבה מתחת לטקסט — רק אם יש המלצה ויש מאכל
-        var isFoodQuery = ctx.cob > 0 || /פיתה|המבורגר|פסטה|בננה|אורז|גלידה|ג'חנון|שניצל|פצה|לחם|עוגה|שוקולד|פרי/i.test(userQuestion);
-        if (isFoodQuery && ctx.loopRec != null && streamEl) {
-            var barDiv = document.createElement('div');
-            barDiv.style.cssText = 'margin-top:10px;padding:8px 10px;background:rgba(59,130,246,0.1);border-right:3px solid #3b82f6;border-radius:6px;font-size:12px;text-align:right;direction:rtl';
-            barDiv.innerHTML = '📊 המשאבה מציעה: <b style="color:#3b82f6">' + ctx.loopRec + 'U</b>' +
-                (parseFloat(ctx.loopRec) === 0 ? ' — <span style="color:#ef4444">בלימה מלאה! אל תזריק.</span>' : '');
-            if (streamEl.nextSibling) streamEl.parentNode.insertBefore(barDiv, streamEl.nextSibling);
-            else streamEl.parentNode.appendChild(barDiv);
-        }
 
         // זהה חוב פחמימות ושמור
         var debtGMatch = fullText.match(/חוב של (\d+) גרם/);
