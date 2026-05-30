@@ -5642,8 +5642,9 @@ Override פעיל → הפחת המלצות בהתאם למכפיל.
             _clearImage(); // נקה אחרי שליחה
         }
 
-        var streamUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=" + geminiKey();
-        var streamResp = await fetch(streamUrl, {
+        // Fetch ישיר — ללא Streaming
+        var fetchUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + geminiKey();
+        var fetchResp = await fetch(fetchUrl, {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({
@@ -5653,48 +5654,19 @@ Override פעיל → הפחת המלצות בהתאם למכפיל.
             })
         });
 
-        if (!streamResp.ok) {
-            var errD2 = await streamResp.json();
-            throw new Error("Gemini " + (errD2.error&&errD2.error.message||streamResp.status));
+        if (!fetchResp.ok) {
+            var errD2 = await fetchResp.json();
+            throw new Error("Gemini " + (errD2.error&&errD2.error.message||fetchResp.status));
         }
 
-        var reader = streamResp.body.getReader();
-        var decoder = new TextDecoder();
-        var fullText = "";
-        // קבל את האלמנט אחרי שה-popup נוצר
+        var data2 = await fetchResp.json();
+        var fullText = '';
+        try {
+            data2.candidates[0].content.parts.forEach(function(p){ if (p.text) fullText += p.text; });
+        } catch(e) { fullText = 'שגיאה בחילוץ תשובה'; }
+
         var streamEl = document.getElementById('gemini-stream');
-        if (!streamEl) {
-            // נסה שוב אחרי render
-            await new Promise(function(r){ setTimeout(r, 50); });
-            streamEl = document.getElementById('gemini-stream');
-        }
         if (streamEl) streamEl.textContent = '';
-
-        while (true) {
-            var chunk = await reader.read();
-            if (chunk.done) break;
-            var raw = decoder.decode(chunk.value, {stream: true});
-            // פרסור SSE — כל שורת data
-            var lines2 = raw.split('\n');
-            for (var li2 = 0; li2 < lines2.length; li2++) {
-                var line2 = lines2[li2].trim();
-                if (!line2.startsWith('data:')) continue;
-                var jsonStr2 = line2.slice(5).trim();
-                if (jsonStr2 === '[DONE]') break;
-                try {
-                    var parsed2 = JSON.parse(jsonStr2);
-                    var part2 = parsed2.candidates &&
-                                parsed2.candidates[0] &&
-                                parsed2.candidates[0].content &&
-                                parsed2.candidates[0].content.parts &&
-                                parsed2.candidates[0].content.parts[0].text;
-                    if (part2) {
-                        fullText += part2;
-                        if (streamEl) streamEl.textContent = fullText;
-                    }
-                } catch(e) {}
-            }
-        }
 
         // הסר פתיחות
         fullText = fullText.replace(/^(שלום[^!\n]*[!\n]?\s*|היי[^!\n]*[!\n]?\s*)/i, '').trim();
