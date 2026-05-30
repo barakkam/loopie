@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0051)file:///C:/Users/barak/Downloads/index37_v7_13.html -->
+<!-- saved from url=(0053)file:///C:/Users/barak/Downloads/loopie-ultra_22.html -->
 <html lang="he" dir="rtl"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -68,6 +68,13 @@
         .activity-item .act-del  { background:none; border:none; color:var(--red); font-size:18px; cursor:pointer; padding:0 4px; }
         .act-active-banner { background:rgba(245,158,11,0.12); border:1px solid #f59e0b; border-radius:10px; padding:10px 14px; margin-bottom:12px; font-size:13px; }
         select { width:100%; padding:10px; background:#0a0a10; border:1px solid var(--border); color:var(--text); border-radius:8px; font-size:14px; outline:none; margin-bottom:10px; }
+        .profile-container { width:100%; max-width:450px; margin:0 auto; box-sizing:border-box; padding:12px; overflow-x:hidden; }
+        .profile-row { display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:10px; box-sizing:border-box; padding:6px 0; border-bottom:1px solid #1a1a2e; }
+        .profile-row span:first-child { color:var(--muted); font-size:12px; flex-shrink:0; }
+        .profile-row span:last-child  { font-size:13px; font-weight:600; text-align:left; }
+        .reminder-row { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; width:100%; box-sizing:border-box; border-bottom:1px solid #1a1a2e; padding:8px 0; font-size:12px; }
+        .reminder-row .r-info { flex:1; min-width:0; }
+        .reminder-row .r-btn  { flex-shrink:0; padding:3px 8px; background:rgba(16,185,129,0.15); border:1px solid #10b981; border-radius:6px; color:#10b981; font-size:11px; cursor:pointer; white-space:nowrap; }
     </style>
 </head>
 <body>
@@ -100,7 +107,7 @@
         <div class="nav-tab" onclick="switchTab(&#39;tab-activity&#39;,this)" style="font-size:10px;padding:7px 1px">🏃 פעילות</div>
         <div class="nav-tab" onclick="switchTab(&#39;tab-reports&#39;,this)" style="font-size:10px;padding:7px 1px">📊 דוחות</div>
         <div class="nav-tab" onclick="switchTab(&#39;tab-ns&#39;,this)" style="font-size:10px;padding:7px 1px">🌐 NS</div>
-        <div class="nav-tab" onclick="switchTab(&#39;tab-profile&#39;,this)" style="font-size:10px;padding:7px 1px">👤 פרופיל</div>
+        <div class="nav-tab" onclick="switchTab('tab-profile',this)" style="font-size:10px;padding:7px 1px">👤 פרופיל</div>
         <div class="nav-tab" onclick="switchTab(&#39;tab-logs&#39;,this)" style="font-size:10px;padding:7px 1px">📋 לוגים</div>
     </div>
 
@@ -150,8 +157,8 @@
         </div>
         <input type="file" id="img-input" accept="image/*" capture="environment" style="display:none" onchange="_onImageSelected(this)">
         <div class="omni-row">
-            <button onclick="document.getElementById(&#39;img-input&#39;).click()" style="padding:8px 10px;background:rgba(107,107,128,0.15);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:18px;cursor:pointer;flex-shrink:0">📷</button>
-            <input type="text" id="omnibox" class="omnibox" placeholder="שאל: מה המצב? / כמה להזריק על פיתה?" onkeydown="if(event.key===&#39;Enter&#39;) askOmnibox()">
+            <button onclick="document.getElementById('img-input').click()" style="padding:8px 10px;background:rgba(107,107,128,0.15);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:18px;cursor:pointer;flex-shrink:0">📷</button>
+            <input type="text" id="omnibox" class="omnibox" placeholder="שאל: מה המצב? / כמה להזריק על פיתה?" onkeydown="if(event.key==='Enter') askOmnibox()">
             <button class="btn omni-send" onclick="askOmnibox()">שלח</button>
         </div>
         <div style="display:flex;gap:8px;margin-bottom:0">
@@ -236,7 +243,7 @@
     <!-- TAB: NS -->
     <div id="tab-ns" class="hidden">
         <div id="ns-frame-wrap" style="position:relative;width:100%;height:70vh;border-radius:10px;overflow:hidden;background:#000">
-            <iframe id="ns-iframe" src="./index41_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
+            <iframe id="ns-iframe" src="./index37_files/saved_resource.html" style="width:100%;height:100%;border:none;border-radius:10px" allow="fullscreen"></iframe>
             <div id="ns-frame-msg" style="display:none;position:absolute;inset:0;background:#0a0a14;border-radius:10px;flex-direction:column;align-items:center;justify-content:center;color:#888;font-size:14px;text-align:center;padding:20px">
                 <div style="font-size:36px;margin-bottom:12px">🔒</div>
                 <b style="color:var(--text);margin-bottom:8px">NS חוסם iframe</b><br>
@@ -4837,8 +4844,11 @@ async function fetchData() {
         try { checkSensorHealth(); } catch(e) { console.error('sensorHealth:', e); }
         try { autoDetectNewDevices(); } catch(e) {}
 
-        // שלח נתוני SGV ל-SW לבדיקת Push
+        // שלח נתוני SGV ל-Push לבדיקת היפו/חוב
         try { _swNotify(nsData.currentSgv||0, nsData.trend||''); } catch(e) {}
+
+        // מנוע התראות פרו-אקטיבי
+        try { checkProactiveAlerts(); } catch(e) {}
 
         // בדיקת חוב פחמימות אוטומטית
         try {
@@ -5165,7 +5175,7 @@ function buildGeminiPrompt(ctx, q) {
         "סוג אינסולין: " + (ctx.insulinName||'ליומג\'ב') + " (שיא " + ctx.insulinPeak + "דק', המתן " + ctx.insulinPreMeal + "דק' לפני)"
     ];
     if (ctx.p30 != null)         lines.push("תחזית המשאבה: בעוד 30דק'=" + ctx.p30 + " | eventual=" + ctx.pEv);
-    if (ctx.loopRec != null)     lines.push("המשאבה מציעה: " + ctx.loopRec + "U");
+    if (ctx.loopRec != null)     lines.push("⚠️ המשאבה מציעה (חובה לפעול לפיו): " + ctx.loopRec + "U — אל תחרוג ממספר זה!");
     if (ctx.overrideActive)      lines.push("⚠️ Override פעיל: " + ctx.overrideName + (ctx.overrideMultiplier ? " (מכפיל: " + ctx.overrideMultiplier + ")" : "") + " — הפחת המלצות בהתאם!");
     if (ctx.cage != null)        lines.push("גיל פוד: " + Math.floor(ctx.cage/24) + "d " + Math.round(ctx.cage%24) + "h");
     if (ctx.sage != null)        lines.push("גיל חיישן: " + Math.floor(ctx.sage/24) + "d " + Math.round(ctx.sage%24) + "h");
@@ -5215,7 +5225,7 @@ async function askGeminiAdvisor(userQuestion) {
     var LOCAL_COB     = ['cob','פחמימות פעילות','כוב'];
     var LOCAL_IOB     = ['iob','אינסולין פעיל','איוב'];
     var LOCAL_WEEKLY  = ['דוח שבועי','דוח שבועי','weekly','קליניקה','weekly clinic'];
-    var LOCAL_ANALYSIS = ['האם לשנות','לשנות','האם לתקן','לתקן','לשפר','מה דעתך'];
+    var LOCAL_ANALYSIS = ['האם לשנות','לשנות','האם לתקן','לתקן','לשפר','מה דעתך','האם','למה','איך','לעשות','כדאי','מומלץ'];
 
     // ניתוח — תמיד ל-Gemini
     var wantsAnalysis = LOCAL_ANALYSIS.some(function(w){ return qlLocal.includes(w); });
@@ -5318,8 +5328,8 @@ async function askGeminiAdvisor(userQuestion) {
         return;
     }
 
-    // Override — exact match
-    if (LOCAL_OVR.indexOf(qlLocal) >= 0) {
+    // Override — exact match בלבד, לא ניתוח
+    if (!wantsAnalysis && LOCAL_OVR.indexOf(qlLocal) >= 0) {
         var ovRaw = nsData._overrideRaw || null;
         var html_ov = "<div style='font-size:14px;line-height:1.9;text-align:right'>";
         if (nsData.overrideActive) {
@@ -5472,7 +5482,13 @@ async function askGeminiAdvisor(userQuestion) {
 נוסחת סימולציית לופ יבש (מנה מלאה):
 (סך פחמימות / ICR) + תיקון סוכר אם נדרש = כמה הלופ היה מציע.
 
-👁️ מודול ראייה ותרגום (Vision):
+🦺 בטיחות והזרקה דינמית (קרא מהנתונים!):
+סוג אינסולין מהנתונים (INS):
+- Lyumjev/Fiasp → Pre-Bolus 0-2 דק' בלבד, פיצול 70/30.
+- Novorapid/Humalog → Pre-Bolus קשיח 15-20 דק', פיצול 80/20.
+נעילת המשאבה: "הזרק כעת" = בדיוק ערך "המשאבה מציעה" שקיבלת. אם המשאבה מציעה פחות מהחישוב — השתמש בה בלבד + הסבר "הלופ בלם להגנה מהיפו."
+
+
 אם מתקבלת תמונה — קרא ונתח כל טקסט בכל שפה. תרגם ערכי תזונה לעברית.
 זהה מוצרים ממותגים וחשב פחמימות מדויקות מהמוצר שזיהית.
 השתמש בפחמימות שחילצת מהתמונה + CR הנוכחי + סוכר מ-NS, והצג המלצה לפי חוק ה-3.
@@ -5845,6 +5861,49 @@ async function showEquipmentStatus() {
     }
 }
 
+// ========= Proactive Food Debt Monitor =========
+function checkProactiveAlerts() {
+    var sgv         = nsData.currentSgv  || 0;
+    var iob         = parseFloat(nsData.iob||0);
+    var recommended = parseFloat(nsData.loopRec||0);
+
+    // זנב ארוחה שומנית: סוכר מעל 160, IOB נמוך, יש המלצה חיובית
+    if (sgv > 165 && iob < 1.5 && recommended > 0.05) {
+        var now = Date.now();
+        var lastAlert = parseInt(localStorage.getItem('loopie_last_debt_alert')||'0');
+        if (now - lastAlert < 30*60000) return; // throttle 30 דק'
+        localStorage.setItem('loopie_last_debt_alert', String(now));
+        sendSystemPushNotification(
+            "⚠️ התראת חוב ארוחה — Loopie",
+            "סוכר " + sgv + " עקשן. זנב הארוחה השומנית הגיע לדם. המשאבה ממליצה " + recommended + "U. כנס לאייפון לאשר!"
+        );
+        showPopup("⚠️ זנב ארוחה שומנית", "<div style='font-size:14px;text-align:right'>" +
+            "סוכר <b>" + sgv + "</b> עקשן — IOB " + iob.toFixed(2) + "U.<br><br>" +
+            "המשאבה ממליצה: <b>" + recommended + "U</b><br>" +
+            "כנס לאייפון ואשר את ההזרקה!" +
+            "</div>");
+    }
+
+    // היפו לילי 02:00-05:00
+    var hr = new Date().getHours();
+    if (sgv < 80 && hr >= 2 && hr <= 5) {
+        var lastH = parseInt(localStorage.getItem('loopie_last_hypo_alert')||'0');
+        if (Date.now() - lastH > 20*60000) {
+            localStorage.setItem('loopie_last_hypo_alert', String(Date.now()));
+            sendSystemPushNotification("🚨 היפו לילי — Loopie", "סוכר " + sgv + " בשעה " + hr + ":00. טפל מיד!");
+        }
+    }
+}
+
+function sendSystemPushNotification(title, body) {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'granted') {
+        try { new Notification(title, { body: body, tag: 'loopie-proactive', requireInteraction: true }); } catch(e) {}
+    } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then(function(p){ if (p==='granted') sendSystemPushNotification(title, body); });
+    }
+}
+
 // ========= Vision / Camera =========
 var _pendingImageB64 = null;
 var _pendingImageType = 'image/jpeg';
@@ -5902,22 +5961,22 @@ function renderProfile() {
     }
 
     var card = function(label, val) {
-        return "<div style='display:flex;justify-content:space-between;align-items:center;width:100%;box-sizing:border-box;padding:6px 0;border-bottom:1px solid #1a1a2e'>" +
-               "<span style='color:var(--muted);font-size:12px'>" + label + "</span>" +
-               "<span style='font-size:13px;font-weight:600'>" + (val||'לא הוגדר') + "</span></div>";
+        return "<div class='profile-row'>" +
+               "<span>" + label + "</span>" +
+               "<span>" + (val||'לא הוגדר') + "</span></div>";
     };
 
-    var html = "<div style='background:#0a0a14;border-radius:12px;padding:14px;width:100%;box-sizing:border-box'>" +
+    var html = "<div class='profile-container'><div style='background:#0a0a14;border-radius:12px;padding:14px;width:100%;box-sizing:border-box'>" +
         "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:12px'>" +
         "<b style='font-size:15px'>👤 פרופיל אישי</b>" +
         "<button onclick='editProfile()' style='padding:5px 10px;background:rgba(59,130,246,0.15);border:1px solid var(--blue-dim);border-radius:8px;color:var(--blue);font-size:12px;cursor:pointer;white-space:nowrap'>📝 ערוך</button>" +
         "</div>" +
-        card('שם',    p.name) +
+        card('שם',       p.name) +
         card('ת. לידה', _fmtDate(p.dob)) +
-        card('גיל',   age||null) +
-        card('משקל',  p.weight ? p.weight+'ק"ג' : null) +
-        card('גובה',  p.height ? p.height+'ס"מ' : null) +
-        "</div>";
+        card('גיל',      age||null) +
+        card('משקל',     p.weight ? p.weight+'ק"ג' : null) +
+        card('גובה',     p.height ? p.height+'ס"מ' : null) +
+        "</div></div>";
 
     document.getElementById('profile-view').innerHTML = html;
     renderReminders();
@@ -5964,12 +6023,10 @@ function renderReminders() {
                      '🟢 בעוד ' + daysLeft + ' ימים';
         var lastStr = lastDate ? lastDate.toLocaleDateString('he-IL') : '—';
 
-        html += "<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:8px;width:100%;box-sizing:border-box;border-bottom:1px solid #1a1a2e;padding:8px 0;font-size:12px'>" +
-            "<div style='flex:1;min-width:0'><b>" + r.icon + " " + r.name + "</b><br><span style='color:var(--muted)'>בוצע: " + lastStr + "</span></div>" +
-            "<div style='display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0'>" +
-            "<span style='font-size:11px'>" + status + "</span>" +
-            "<button onclick='markReminder(\""+r.id+"\")' style='padding:3px 8px;background:rgba(16,185,129,0.15);border:1px solid #10b981;border-radius:6px;color:#10b981;font-size:11px;cursor:pointer;white-space:nowrap'>✅ בוצע</button>" +
-            "</div></div>";
+        html += "<div class='reminder-row'>" +
+            "<div class='r-info'><b>" + r.icon + " " + r.name + "</b><br><span style='color:var(--muted)'>בוצע: " + lastStr + " | " + status + "</span></div>" +
+            "<button class='r-btn' onclick='markReminder(\""+r.id+"\")'>✅ בוצע</button>" +
+            "</div>";
     });
 
     html += "</div>";
