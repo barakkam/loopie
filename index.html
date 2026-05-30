@@ -5614,11 +5614,15 @@ Override פעיל → הפחת המלצות בהתאם למכפיל.
         closePopup();
         showPopup("🧠 Loopie מנתח", streamHtml);
 
-        // בנה parts — טקסט + תמונה אם יש
-        var msgParts = [{text: prompt}];
+        // בנה parts — האוכל בנפרד מנתוני NS
+        var foodMsg = "נתח את האוכל הבא וחשב פחמימות + חוק ה-3:\n" + userQuestion;
+        if (ctx._scheduleStr) foodMsg += "\nלו\"ז חוגים: " + ctx._scheduleStr;
+        var nsContext = "נתוני רקע (לחישוב בולוס בלבד):\n" + prompt;
+
+        var msgParts = [{text: nsContext + "\n\n" + foodMsg}];
         if (_pendingImageB64) {
             msgParts.unshift({ inlineData: { mimeType: _pendingImageType, data: _pendingImageB64 } });
-            _clearImage(); // נקה אחרי שליחה
+            _clearImage();
         }
 
         // Fetch ישיר — ללא Streaming
