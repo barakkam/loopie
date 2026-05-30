@@ -5418,29 +5418,8 @@ async function askGeminiAdvisor(userQuestion) {
         var prompt = buildGeminiPrompt(ctx, userQuestion);
         if (ctx._scheduleStr) prompt += "\nלו\"ז:" + ctx._scheduleStr;
 
-        // זיהוי סוג שאילתה — שלח לג'מיני רק מה שרלוונטי
-        var ql2 = userQuestion.toLowerCase().trim();
-        var isStatusCmd = ql2.includes('מה המצב') || ql2.includes('מה קורה') || ql2.includes('סטטוס') || ql2.includes('status') || ql2 === 'מצב';
-        var isBasalCmd  = ql2.includes('בזאלי') || ql2.includes('תוכנית בזאלית') || ql2.includes('בזאל');
-        var isCRCmd     = ql2.includes('cr') || ql2.includes('icr') || ql2.includes('rc') || ql2.includes('יחס פחמימ');
-        var isISFCmd    = ql2.includes('isf') || ql2.includes('רגישות') || ql2.includes('מדד רגישות');
-        var isProfileCmd = isBasalCmd || isCRCmd || isISFCmd;
-
-        if (isStatusCmd) {
-            // מצב — רק נתוני רגע, ללא טבלאות
-            prompt = [
-                "שאילתת סטטוס — הצג נתוני רגע בלבד, ללא טבלאות או לוחות שעות.",
-                "סוכר: " + ctx.sgv + " " + ctx.trend + " Δ" + (ctx.delta>=0?"+":"") + ctx.delta,
-                "אינסולין פעיל: " + ctx.iob + "U | פחמימות פעילות: " + ctx.cob + "g | בזאלי: " + ctx.basal + "U/ש'",
-                ctx.overrideActive ? "Override פעיל: " + ctx.overrideName : "Override: לא פעיל",
-                ctx.loopRec != null ? "המשאבה מציעה: " + ctx.loopRec + "U" : "",
-                "שאלה: " + userQuestion
-            ].filter(Boolean).join("\n");
-        } else if (!isProfileCmd) {
-            // שאילתה רגילה (לא פרופיל) — הסר טבלת בזאלי מהפרומפט
-            prompt = prompt.replace(/לוח בזאלי יומי:.*$/s, '').trim();
-        }
-        // isProfileCmd — שלח את כל הפרומפט כולל לוחות שעות
+        // הסר טבלת בזאלי מפרומפט רגיל
+        prompt = prompt.replace(/לוח בזאלי יומי:.*$/s, '').trim();
 
         // אבחון חומרה אוטומטי
         var hwWarnings = [];
