@@ -537,6 +537,48 @@ async function askOmnibox() {
         return;
     }
 
+    // ── SMB ──
+    if (ql === 'smb' || ql === 'מיקרובולוס' || ql === 'סמב') {
+        showPopup('💉 SMB אחרון', "<div style='text-align:center;padding:16px'><span class='spinner'></span></div>");
+        (async function() {
+            try {
+                var since2h = new Date(Date.now() - 2*3600000).toISOString();
+                var res = await nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + since2h + '&count=50');
+                if (!res.ok) throw new Error('NS error');
+                var treats = await res.json();
+
+                var smbs = treats.filter(function(t) {
+                    var ev = (t.eventType||'').toLowerCase();
+                    var ins = parseFloat(t.insulin||0);
+                    return (ev.includes('smb') || ev.includes('microbolus') ||
+                            (ins > 0 && ins < 0.5 && !t.carbs));
+                });
+
+                if (!smbs.length) {
+                    showPopup('💉 SMB', "<div style='text-align:right;font-size:14px'>לא נמצאו SMB ב-2 שעות האחרונות.</div>");
+                    return;
+                }
+
+                var totalSMB = smbs.reduce(function(s,t){ return s + parseFloat(t.insulin||0); }, 0);
+                var html = "<div style='font-size:13px;text-align:right;line-height:1.8'>";
+                html += "<div style='margin-bottom:10px;color:#888'>סה\"כ " + smbs.length + " SMB — <b style='color:#3b82f6'>" + totalSMB.toFixed(2) + "U</b> ב-2ש' האחרונות</div>";
+
+                smbs.slice(0,8).forEach(function(t) {
+                    var minsAgo = Math.round((Date.now() - new Date(t.created_at).getTime()) / 60000);
+                    var ins = parseFloat(t.insulin||0).toFixed(2);
+                    html += "<div style='background:#0a0a14;border-radius:8px;padding:8px 10px;margin-bottom:6px;display:flex;justify-content:space-between'>" +
+                        "<span>💉 <b>" + ins + "U</b></span>" +
+                        "<span style='color:#888'>לפני " + minsAgo + " דק'</span></div>";
+                });
+                html += "</div>";
+                showPopup('💉 SMB ב-2 שעות אחרונות', html);
+            } catch(e) {
+                showPopup('💉 SMB', 'שגיאה: ' + e.message);
+            }
+        })();
+        return;
+    }
+
     // כל שאלה שלא טופלה → Gemini
     closePopup();
     input.value = '';
