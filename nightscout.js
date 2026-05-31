@@ -165,103 +165,163 @@ var POST_ACTIVITY_REDUCTION  = { low:10, medium:20, high:30 };
 
 
 // ─── Firebase / זיכרון ───────────────────────────────────────
+//
+//  חוק בטיחות: שגיאת Firebase (403/401/network) לעולם לא עוצרת
+//  את ה-UI. כל פונקציה עם timeout + fallback אוטומטי ל-localStorage.
+//  _fbBlocked נועל Firebase לאחר כשל ראשון — חוסך bounding ל-API.
+//
 var FIREBASE_CONFIG = {
     projectId:  'loopie-daniel',
     apiKey:     'AIzaSyAzaGEs6r_fs8hKfrnfxxr78zpzmNEfdes',
     collection: 'memory',
 };
 
+// דגל: האם Firebase חסום (403/401 שהתקבל לפחות פעם אחת)?
+var _fbBlocked = false;
+
+// Fetch עם timeout — מונע תקיעה ב-network
+function _fbFetch(url, options, timeoutMs) {
+    timeoutMs = timeoutMs || 5000;
+    return Promise.race([
+        fetch(url, options || {}),
+        new Promise(function(_, reject) {
+            setTimeout(function() { reject(new Error('Firebase timeout')); }, timeoutMs);
+        })
+    ]);
+}
+
+// ── Firestore converters ─────────────────────────────────────
+function objToFirestore(obj) {
+    var fields = {};
+    try {
+        Object.keys(obj).forEach(function(k) {
+            var v = obj[k];
+            if (typeof v === 'string')       fields[k] = { stringValue: v };
+            else if (typeof v === 'number')  fields[k] = { doubleValue: v };
+            else if (typeof v === 'boolean') fields[k] = { booleanValue: v };
+            else if (v === null)             fields[k] = { nullValue: null };
+            else                             fields[k] = { stringValue: JSON.stringify(v) };
+        });
+    } catch(e) {}
+    return fields;
+}
+
+function firestoreToObj(fields) {
+    var obj = {};
+    try {
+        Object.keys(fields).forEach(function(k) {
+            var f = fields[k];
+            if      ('stringValue'  in f) obj[k] = f.stringValue;
+            else if ('doubleValue'  in f) obj[k] = f.doubleValue;
+            else if ('integerValue' in f) obj[k] = parseInt(f.integerValue);
+            else if ('booleanValue' in f) obj[k] = f.booleanValue;
+            else if ('nullValue'    in f) obj[k] = null;
+            else obj[k] = null;
+        });
+    } catch(e) {}
+    return obj;
+}
+
+// ── fsGet (פנימי) ─────────────────────────────────────────────
 async function fsGet(collection, docId) {
+    if (_fbBlocked) return null;
     try {
         var url = 'https://firestore.googleapis.com/v1/projects/' + FIREBASE_CONFIG.projectId +
                   '/databases/(default)/documents/' + collection + '/' + docId +
                   '?key=' + FIREBASE_CONFIG.apiKey;
-        var res = await fetch(url);
+        var res = await _fbFetch(url);
+        if (res.status === 403 || res.status === 401) { _fbBlocked = true; return null; }
         if (!res.ok) return null;
         var data = await res.json();
         return data.fields ? firestoreToObj(data.fields) : null;
     } catch(e) { return null; }
 }
 
+// ── fsSet (פנימי) ─────────────────────────────────────────────
 async function fsSet(collection, docId, obj) {
+    if (_fbBlocked) return;
     try {
         var url = 'https://firestore.googleapis.com/v1/projects/' + FIREBASE_CONFIG.projectId +
                   '/databases/(default)/documents/' + collection + '/' + docId +
                   '?key=' + FIREBASE_CONFIG.apiKey;
-        await fetch(url, {
-            method: 'PATCH',
+        var res = await _fbFetch(url, {
+            method:  'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fields: objToFirestore(obj) })
+            body:    JSON.stringify({ fields: objToFirestore(obj) })
         });
+        if (res.status === 403 || res.status === 401) { _fbBlocked = true; }
     } catch(e) {}
 }
 
-function objToFirestore(obj) {
-    var fields = {};
-    Object.keys(obj).forEach(function(k) {
-        var v = obj[k];
-        if (typeof v === 'string')       fields[k] = { stringValue: v };
-        else if (typeof v === 'number')  fields[k] = { doubleValue: v };
-        else if (typeof v === 'boolean') fields[k] = { booleanValue: v };
-        else if (v === null)             fields[k] = { nullValue: null };
-        else                             fields[k] = { stringValue: JSON.stringify(v) };
-    });
-    return fields;
-}
-
-function firestoreToObj(fields) {
-    var obj = {};
-    Object.keys(fields).forEach(function(k) {
-        var f = fields[k];
-        if      ('stringValue'  in f) obj[k] = f.stringValue;
-        else if ('doubleValue'  in f) obj[k] = f.doubleValue;
-        else if ('integerValue' in f) obj[k] = parseInt(f.integerValue);
-        else if ('booleanValue' in f) obj[k] = f.booleanValue;
-        else if ('nullValue'    in f) obj[k] = null;
-        else obj[k] = null;
-    });
-    return obj;
-}
-
+// ── loadMemory — FALLBACK SAFE ────────────────────────────────
 async function loadMemory() {
     var mem = {};
-    try {
-        var url = 'https://firestore.googleapis.com/v1/projects/' + FIREBASE_CONFIG.projectId +
-                  '/databases/(default)/documents/' + FIREBASE_CONFIG.collection +
-                  '?key=' + FIREBASE_CONFIG.apiKey + '&pageSize=50';
-        var res = await fetch(url);
-        if (res.ok) {
-            var data = await res.json();
-            (data.documents || []).forEach(function(doc) {
-                var key = doc.name.split('/').pop();
-                try { mem[key] = { value: firestoreToObj(doc.fields || {}) }; } catch(e) {}
-            });
-            return mem;
-        }
-    } catch(e) {}
-    // fallback localStorage
-    for (var i = 0; i < localStorage.length; i++) {
-        var k = localStorage.key(i);
-        if (k && k.startsWith('loopie_memory_')) {
-            var key2 = k.replace('loopie_memory_', '');
-            try { mem[key2] = { value: JSON.parse(localStorage.getItem(k)) }; } catch(e) {}
+
+    // ── ניסיון Firebase (רק אם לא חסום) ──
+    if (!_fbBlocked) {
+        try {
+            var url = 'https://firestore.googleapis.com/v1/projects/' + FIREBASE_CONFIG.projectId +
+                      '/databases/(default)/documents/' + FIREBASE_CONFIG.collection +
+                      '?key=' + FIREBASE_CONFIG.apiKey + '&pageSize=50';
+            var res = await _fbFetch(url, {}, 5000);
+
+            // 403/401 → נעל Firebase, עבור ישר ל-localStorage
+            if (res.status === 403 || res.status === 401) {
+                _fbBlocked = true;
+                console.warn('[Loopie] Firebase 403 — עובר ל-localStorage fallback.');
+            } else if (res.ok) {
+                var data = await res.json();
+                (data.documents || []).forEach(function(doc) {
+                    try {
+                        var key = doc.name.split('/').pop();
+                        mem[key] = { value: firestoreToObj(doc.fields || {}) };
+                    } catch(e) {}
+                });
+                return mem; // ← הצלחה מ-Firebase
+            }
+        } catch(e) {
+            // network error / timeout — לא נועל, רק fallback
+            console.warn('[Loopie] Firebase error:', e.message, '— fallback ל-localStorage');
         }
     }
-    return mem;
+
+    // ── Fallback: localStorage ────────────────────────────────
+    try {
+        for (var i = 0; i < localStorage.length; i++) {
+            var k = localStorage.key(i);
+            if (k && k.startsWith('loopie_memory_')) {
+                var key2 = k.replace('loopie_memory_', '');
+                try { mem[key2] = { value: JSON.parse(localStorage.getItem(k)) }; } catch(e) {}
+            }
+        }
+    } catch(e) {}
+
+    return mem; // תמיד מחזיר אובייקט (גם אם ריק) — לעולם לא זורק
 }
 
+// ── saveMemory — FALLBACK SAFE ────────────────────────────────
 async function saveMemory(key, value) {
-    try {
-        var url = 'https://firestore.googleapis.com/v1/projects/' + FIREBASE_CONFIG.projectId +
-                  '/databases/(default)/documents/' + FIREBASE_CONFIG.collection + '/' + key +
-                  '?key=' + FIREBASE_CONFIG.apiKey;
-        await fetch(url, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fields: { value: { stringValue: JSON.stringify(value) } } })
-        });
-    } catch(e) {
-        try { localStorage.setItem('loopie_memory_' + key, JSON.stringify(value)); } catch(e2) {}
+    // שמירה מקומית תמיד קודם (מהירה, מבטיחה)
+    try { localStorage.setItem('loopie_memory_' + key, JSON.stringify(value)); } catch(e) {}
+
+    // ניסיון Firebase ברקע — שגיאה לא משפיעה על ה-UI
+    if (!_fbBlocked) {
+        try {
+            var url = 'https://firestore.googleapis.com/v1/projects/' + FIREBASE_CONFIG.projectId +
+                      '/databases/(default)/documents/' + FIREBASE_CONFIG.collection + '/' + key +
+                      '?key=' + FIREBASE_CONFIG.apiKey;
+            var res = await _fbFetch(url, {
+                method:  'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ fields: { value: { stringValue: JSON.stringify(value) } } })
+            }, 5000);
+            if (res.status === 403 || res.status === 401) {
+                _fbBlocked = true;
+                console.warn('[Loopie] Firebase 403 on saveMemory — נועל Firebase.');
+            }
+        } catch(e) {
+            // שגיאת network בלבד — לא קריטי, localStorage כבר שמר
+        }
     }
 }
 
