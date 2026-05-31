@@ -192,21 +192,219 @@ async function askOmnibox() {
         return;
     }
 
-    // ── CR ──
-    if (ql === 'cr' || ql === 'icr' || ql === '\u05d9\u05d7\u05e1 \u05e4\u05d7\u05de\u05d9\u05de\u05d5\u05ea') {
-        var prof2 = fullHistory && fullHistory.profile;
-        var crNow = prof2 ? parseFloat(profileValueAt(prof2.carbratio||prof2.carbRatio||prof2.ic, new Date().getHours())||15) : 15;
-        showPopup('\ud83d\udcca CR',
-            "<div style='font-size:16px;text-align:right'>1U / <span style='font-size:28px;color:#10b981;font-weight:700'>" + crNow + "g</span></div>");
+
+
+    // ── ISF ──
+    if (ql === 'isf' || ql === 'רגישות' || ql === 'מדד רגישות') {
+        var prof3 = fullHistory && fullHistory.profile;
+        var nowH3 = new Date().getHours();
+        var isfNow = prof3 ? parseFloat(profileValueAt(prof3.sens||prof3.sensitivity, nowH3)||120) : 120;
+        var isfArr = prof3 && Array.isArray(prof3.sens||prof3.sensitivity) ? (prof3.sens||prof3.sensitivity) : null;
+        var isfRows = isfArr
+            ? isfArr.map(function(b,i){
+                var nx = isfArr[i+1] ? isfArr[i+1].time : '24:00';
+                var isCurrent = parseInt((b.time||'0').split(':')[0]) <= nowH3 &&
+                                (!isfArr[i+1] || parseInt(isfArr[i+1].time.split(':')[0]) > nowH3);
+                return "<span style='" + (isCurrent?"color:#f59e0b;font-weight:700":"color:#aaa") + "'>" +
+                       '• ' + b.time + '–' + nx + ': <b>' + b.value + " mg/dL/U</b></span>";
+              }).join('<br>')
+            : "• כל היום: <b>" + isfNow + " mg/dL/U</b>";
+        showPopup('🎯 רגישות (ISF)',
+            "<div style='font-size:14px;line-height:1.8;text-align:right'>" +
+            "⚡ <b>כרגע:</b> <span style='font-size:22px;color:#f59e0b;font-weight:700'>" + isfNow + "</span> mg/dL/U<br><br>" +
+            "<b>תוכנית יומית:</b><br>" + isfRows + "</div>");
         return;
     }
 
-    // ── ISF ──
-    if (ql === 'isf' || ql === '\u05e8\u05d2\u05d9\u05e9\u05d5\u05ea') {
-        var prof3 = fullHistory && fullHistory.profile;
-        var isfNow = prof3 ? parseFloat(profileValueAt(prof3.sens||prof3.sensitivity, new Date().getHours())||120) : 120;
-        showPopup('\ud83c\udfaf ISF',
-            "<div style='font-size:16px;text-align:right'><span style='font-size:28px;color:#f59e0b;font-weight:700'>" + isfNow + "</span> mg/dL/U</div>");
+    // ── CR מלא ──
+    if (ql === 'cr' || ql === 'icr' || ql === 'יחס פחמימות') {
+        var prof4 = fullHistory && fullHistory.profile;
+        var nowH4 = new Date().getHours();
+        var crNow2 = prof4 ? parseFloat(profileValueAt(prof4.carbratio||prof4.carbRatio||prof4.ic, nowH4)||15) : 15;
+        var crArr = prof4 && Array.isArray(prof4.carbratio||prof4.carbRatio||prof4.ic) ? (prof4.carbratio||prof4.carbRatio||prof4.ic) : null;
+        var crRows = crArr
+            ? crArr.map(function(b,i){
+                var nx = crArr[i+1] ? crArr[i+1].time : '24:00';
+                var isCurrent = parseInt((b.time||'0').split(':')[0]) <= nowH4 &&
+                                (!crArr[i+1] || parseInt(crArr[i+1].time.split(':')[0]) > nowH4);
+                return "<span style='" + (isCurrent?"color:#10b981;font-weight:700":"color:#aaa") + "'>" +
+                       '• ' + b.time + '–' + nx + ': 1U / <b>' + b.value + "g</b></span>";
+              }).join('<br>')
+            : "• כל היום: 1U / <b>" + crNow2 + "g</b>";
+        showPopup('📊 יחס פחמימות (CR)',
+            "<div style='font-size:14px;line-height:1.8;text-align:right'>" +
+            "🍞 <b>כרגע:</b> 1U / <span style='font-size:22px;color:#10b981;font-weight:700'>" + crNow2 + "g</span><br><br>" +
+            "<b>תוכנית יומית:</b><br>" + crRows + "</div>");
+        return;
+    }
+
+    // ── Override ──
+    if (ql === 'override' || ql === 'אוברריד' || ql === 'החרגה' ||
+        ql === 'תוכנית ספורט' || ql === 'מה ה-override' || ql === 'מה האוברריד') {
+        var raw = nsData._overrideRaw;
+        if (nsData.overrideActive && raw) {
+            var pct     = raw.multiplier ? Math.round(raw.multiplier * 100) : null;
+            var basalPct= raw.basalMultiplier ? Math.round(raw.basalMultiplier * 100) : null;
+            var ispfPct = raw.insulinNeedsScaleFactor ? Math.round(raw.insulinNeedsScaleFactor * 100) : null;
+            var tgtRng  = raw.currentCorrectionRange
+                ? (raw.currentCorrectionRange.minValue + '–' + raw.currentCorrectionRange.maxValue + ' mg/dL')
+                : null;
+            var duration= raw.duration ? (raw.duration / 60).toFixed(0) + ' דק'' : null;
+            var symbol  = raw.symbol || '';
+            var name    = raw.name || 'Override פעיל';
+
+            var html = "<div style='font-size:14px;line-height:2;text-align:right'>" +
+                "<div style='background:rgba(245,158,11,0.12);border:1px solid #f59e0b;border-radius:10px;padding:12px;margin-bottom:12px'>" +
+                "🟢 <b style='color:#f59e0b;font-size:16px'>" + symbol + " " + name + "</b></div>";
+
+            if (pct !== null)     html += "⚡ <b>עוצמה כללית:</b> <span style='color:" + (pct<100?'#3b82f6':'#ef4444') + ";font-size:18px;font-weight:700'>" + pct + "%</span><br>";
+            if (basalPct !== null)html += "⏱ <b>בזאלי:</b> <span style='color:#f59e0b;font-size:16px;font-weight:700'>" + basalPct + "%</span>" +
+                                          " <small style='color:#888'>(" + (100-basalPct) + "% הפחתה)</small><br>";
+            if (ispfPct !== null) html += "💉 <b>צורך אינסולין:</b> <span style='font-size:16px;font-weight:700'>" + ispfPct + "%</span><br>";
+            if (tgtRng)           html += "🎯 <b>יעד סוכר:</b> " + tgtRng + "<br>";
+            if (duration)         html += "⏳ <b>משך:</b> " + duration + "<br>";
+
+            html += "</div>";
+            showPopup('🔄 Override פעיל', html);
+        } else {
+            showPopup('🔄 Override',
+                "<div style='font-size:14px;text-align:right;padding:8px'>" +
+                "⚪ <b>אין Override פעיל כרגע.</b><br><br>" +
+                "<span style='color:#888;font-size:12px'>להפעלה — כנס ל-Loop באייפון ← Overrides</span></div>");
+        }
+        return;
+    }
+
+    // ── מה אכלתי / ארוחות אחרונות ──
+    if (ql === 'מה אכלתי' || ql === 'ארוחות' || ql === 'ארוחות אחרונות' ||
+        ql === 'היסטוריה' || ql.includes('אכלתי') || ql.includes('ארוחה אחרונה')) {
+        showPopup('🍽️ ארוחות', "<div style='text-align:center;padding:16px;color:#888'><span class='spinner'></span> טוען...</div>");
+        (async function() {
+            try {
+                var since6h = new Date(Date.now() - 6 * 3600000).toISOString();
+                var res = await nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + since6h + '&count=30');
+                if (!res.ok) throw new Error('NS error');
+                var treats = await res.json();
+
+                // רק treatments עם פחמימות
+                var meals = treats.filter(function(t) {
+                    return t.carbs && parseFloat(t.carbs) > 0;
+                }).slice(0, 3);
+
+                if (!meals.length) {
+                    showPopup('🍽️ ארוחות', "<div style='text-align:right;font-size:14px'>לא נמצאו ארוחות ב-6 שעות האחרונות.</div>");
+                    return;
+                }
+
+                var html = "<div style='font-size:13px;text-align:right;line-height:1.8'>";
+                meals.forEach(function(m) {
+                    var mTime    = new Date(m.created_at);
+                    var minsAgo  = Math.round((Date.now() - mTime.getTime()) / 60000);
+                    var hoursAgo = (minsAgo / 60).toFixed(1);
+                    var timeStr  = mTime.toLocaleTimeString('he-IL', {hour:'2-digit', minute:'2-digit', hour12:false});
+                    var carbs    = parseFloat(m.carbs || 0);
+                    var insulin  = parseFloat(m.insulin || 0);
+                    var name     = m.notes || m.foodType || 'ארוחה';
+
+                    // חישוב ספיגה — DIA של 5 שעות, פיק ב-60 דק'
+                    var diaMin   = 300; // 5 שעות
+                    var absorbed = Math.min(100, Math.round((minsAgo / diaMin) * 100));
+                    var remaining= Math.max(0, 100 - absorbed);
+                    var iobEst   = insulin > 0 ? (insulin * remaining / 100).toFixed(2) : null;
+
+                    var color    = minsAgo < 60 ? '#f59e0b' : minsAgo < 180 ? '#3b82f6' : '#10b981';
+                    var absBar   = "<div style='background:#1a1a28;border-radius:4px;height:6px;margin:4px 0'>" +
+                                   "<div style='background:" + color + ";width:" + absorbed + "%;height:100%;border-radius:4px'></div></div>";
+
+                    html += "<div style='background:#0a0a14;border-radius:10px;padding:12px;margin-bottom:10px;border-right:3px solid " + color + "'>" +
+                        "<div style='display:flex;justify-content:space-between;margin-bottom:4px'>" +
+                        "<b style='color:" + color + "'>" + name + "</b>" +
+                        "<span style='color:#888;font-size:11px'>" + timeStr + " (לפני " + (minsAgo < 60 ? minsAgo + " דק'" : hoursAgo + " ש'") + ")</span></div>" +
+                        "🍞 <b>" + carbs + "g</b> פחמימות" +
+                        (insulin > 0 ? " | 💉 <b>" + insulin.toFixed(1) + "U</b>" : "") + "<br>" +
+                        "ספיגה: <b>" + absorbed + "%</b> נספג" +
+                        absBar +
+                        (iobEst && parseFloat(iobEst) > 0.05 ? "⏳ נותר IOB: <b style='color:#3b82f6'>" + iobEst + "U</b>" : "✅ אינסולין נספג לחלוטין") +
+                        "</div>";
+                });
+                html += "</div>";
+                showPopup('🍽️ ' + meals.length + ' ארוחות אחרונות', html);
+            } catch(e) {
+                showPopup('🍽️ שגיאה', e.message);
+            }
+        })();
+        return;
+    }
+
+    // ── הוסף חוג / פעילות ──
+    if (ql.includes('הוסף חוג') || ql.includes('הוסף פעילות') || ql.includes('הוסף אימון') ||
+        ql.startsWith('חוג ') || ql.startsWith('פעילות ') || ql.startsWith('אימון ')) {
+
+        // פרסור יום
+        var DAYS_MAP = {
+            'ראשון':0,'שני':1,'שלישי':2,'רביעי':3,'חמישי':4,'שישי':5,'שבת':6,
+            'sunday':0,'monday':1,'tuesday':2,'wednesday':3,'thursday':4,'friday':5,'saturday':6
+        };
+        var foundDay = null;
+        Object.keys(DAYS_MAP).forEach(function(d) {
+            if (q.includes(d)) foundDay = DAYS_MAP[d];
+        });
+
+        // פרסור שעות — תבנית HH:MM או H:MM
+        var timeMatches = q.match(/(\d{1,2}:\d{2})/g);
+        var fromTime = timeMatches ? timeMatches[0] : null;
+        var toTime   = timeMatches && timeMatches[1] ? timeMatches[1] : null;
+
+        // פרסור עצימות
+        var intensity = 'medium';
+        if (q.includes('נמוכ') || q.includes('קל') || q.includes('יוגה') || q.includes('הליכה')) intensity = 'low';
+        if (q.includes('גבוה') || q.includes('מאומץ') || q.includes('mma') || q.includes('ריצה') || q.includes('hiit')) intensity = 'high';
+
+        // חילוץ שם — מחיקת מילות תשתית
+        var actName = q
+            .replace(/הוסף (חוג|פעילות|אימון)/g, '')
+            .replace(/יום (ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)/g, '')
+            .replace(/(\d{1,2}:\d{2})/g, '')
+            .replace(/עד|מ-|מ|בשעה|עצימות (נמוכה|בינונית|גבוהה)/g, '')
+            .replace(/\s+/g, ' ').trim();
+        if (!actName) actName = 'חוג חדש';
+
+        if (foundDay === null || !fromTime) {
+            // לא הצלחנו לפרסר — פתח טופס ידני
+            showPopup('➕ הוסף חוג', 
+                "<div style='font-size:13px;text-align:right;line-height:1.8'>" +
+                "לא הצלחתי לפרסר את הפרטים. נסה:<br>" +
+                "<b>הוסף חוג [שם] יום [יום] [HH:MM] עד [HH:MM]</b><br><br>" +
+                "לדוגמה:<br>• הוסף חוג MMA יום שלישי 17:00 עד 18:30<br>" +
+                "• הוסף חוג שחייה יום חמישי 16:00 עד 17:00<br><br>" +
+                "<button onclick="switchTab('tab-activity',document.querySelectorAll('.nav-tab')[1]);closePopup()" " +
+                "style='width:100%;padding:10px;background:#3b82f6;border:none;border-radius:8px;color:#fff;cursor:pointer;font-size:13px'>" +
+                "📋 פתח טאב פעילויות</button></div>");
+            return;
+        }
+
+        // הוסף לרשימה
+        var newAct = {
+            id:        Date.now(),
+            name:      actName,
+            day:       foundDay,
+            from:      fromTime,
+            to:        toTime || (parseInt(fromTime.split(':')[0])+1 + ':' + fromTime.split(':')[1]),
+            intensity: intensity
+        };
+        ACTIVITIES.push(newAct);
+        saveActivities();
+        renderActivities();
+        checkActiveActivity();
+
+        var DAYS_HE2 = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+        var INTENS_HE = {low:'נמוכה',medium:'בינונית',high:'גבוהה'};
+        showPopup('✅ חוג נוסף!',
+            "<div style='font-size:14px;text-align:right;line-height:1.9'>" +
+            "🏃 <b>" + newAct.name + "</b><br>" +
+            "📅 יום <b>" + DAYS_HE2[foundDay] + "</b><br>" +
+            "🕐 <b>" + newAct.from + "–" + newAct.to + "</b><br>" +
+            "⚡ עצימות: <b>" + INTENS_HE[intensity] + "</b></div>");
         return;
     }
 
