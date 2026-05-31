@@ -469,42 +469,72 @@ async function askGeminiAdvisor(userQuestion) {
 
 // ─── Equipment Status ─────────────────────────────────────────
 async function showEquipmentStatus() {
-    showPopup('⚙️ ציוד', "<div style='text-align:center;padding:16px;color:#888'><span class='spinner'></span> טוען...</div>");
+    showPopup('📟 מצב ציוד', "<div style='text-align:center;padding:20px'><span class='spinner'></span></div>");
     try {
-        var dsRes = await nsGet('/api/v1/devicestatus.json?count=1');
-        if (!dsRes.ok) throw new Error('NS error');
-        var dsArr = await dsRes.json();
-        var ds    = Array.isArray(dsArr) ? dsArr[0] : dsArr;
-        if (!ds)  { showPopup('⚙️ ציוד', 'לא נמצאו נתוני ציוד.'); return; }
+        var res  = await nsGet('/api/v2/properties/cage,sage');
+        var data = res.ok ? await res.json() : {};
 
-        var dsStr  = JSON.stringify(ds);
-        var cMatch = dsStr.match(/"cage"\s*:\s*([\d.]+)/i);
-        var sMatch = dsStr.match(/"sage"\s*:\s*([\d.]+)/i);
-        var cage   = cMatch ? parseFloat(cMatch[1]) : null;
-        var sage   = sMatch ? parseFloat(sMatch[1]) : null;
+        function parseHours(prop) {
+            if (!prop) return null;
+            if (prop.age  !== undefined && prop.age  !== null) return parseFloat(prop.age);
+            if (prop.value !== undefined && prop.value !== null) return parseFloat(prop.value);
+            var keys = Object.keys(prop);
+            for (var ki = 0; ki < keys.length; ki++) {
+                var sub = prop[keys[ki]];
+                if (sub && typeof sub === 'object' && sub.found && sub.age !== undefined)
+                    return parseFloat(sub.age);
+            }
+            if (prop.display) {
+                var m = prop.display.match(/(\d+)d\s*(\d+)h/);
+                if (m) return parseInt(m[1]) * 24 + parseInt(m[2]);
+                m = prop.display.match(/(\d+)h/);
+                if (m) return parseInt(m[1]);
+            }
+            return null;
+        }
 
-        var html = "<div style='font-size:14px;line-height:1.9;text-align:right'>";
-        if (cage !== null) {
-            var cDays = Math.floor(cage / 24);
-            var cHrs  = Math.round(cage % 24);
-            var cColor = cage > 60 ? '#ef4444' : cage > 48 ? '#f59e0b' : '#10b981';
-            html += "💉 <b>פוד:</b> <span style='color:" + cColor + "'>" + cDays + " ימים " + cHrs + " שעות</span>";
-            if (cage > 60) html += " ⚠️ <b>זמן להחלפה!</b>";
-            html += "<br>";
+        var cageH = parseHours(data.cage);
+        var sageH = parseHours(data.sage);
+
+        var ans = "<div style='font-size:13px;line-height:1.8;text-align:right'>";
+
+        // ── חיישן ──
+        ans += "<div style='background:#0a0a14;border-radius:10px;padding:12px;margin-bottom:10px'>";
+        ans += "<div style='font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px'>📡 חיישן CGM</div>";
+        if (sageH !== null) {
+            var sLeft  = Math.max(0, 240 - sageH);
+            var sColor = sLeft < 24 ? '#ef4444' : sLeft < 48 ? '#f59e0b' : '#10b981';
+            var sReplaceDate = new Date(Date.now() + sLeft * 3600000)
+                .toLocaleString('he-IL', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false});
+            ans += "• גיל: <b>" + Math.floor(sageH/24) + "d " + Math.round(sageH%24) + "h</b><br>";
+            ans += "• נותרו: <b style='color:" + sColor + "'>" + Math.floor(sLeft/24) + "d " + Math.round(sLeft%24) + "h</b>";
+            ans += " | החלפה: <b>" + sReplaceDate + "</b>";
+            if (sLeft < 24) ans += "<br><span style='color:#ef4444'>⚠️ החלף בקרוב!</span>";
+        } else {
+            ans += "<span style='color:#f59e0b'>SAGE לא זמין</span>";
         }
-        if (sage !== null) {
-            var sDays = Math.floor(sage / 24);
-            var sHrs  = Math.round(sage % 24);
-            var sColor = sage > 240 ? '#ef4444' : sage > 192 ? '#f59e0b' : '#10b981';
-            html += "📡 <b>חיישן:</b> <span style='color:" + sColor + "'>" + sDays + " ימים " + sHrs + " שעות</span>";
-            if (sage > 240) html += " ⚠️ <b>שקול החלפה!</b>";
-            html += "<br>";
+        ans += "</div>";
+
+        // ── פוד ──
+        ans += "<div style='background:#0a0a14;border-radius:10px;padding:12px'>";
+        ans += "<div style='font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px'>💊 פוד (Omnipod)</div>";
+        if (cageH !== null) {
+            var pLeft  = Math.max(0, 72 - cageH);
+            var pColor = pLeft < 12 ? '#ef4444' : pLeft < 24 ? '#f59e0b' : '#10b981';
+            var pReplaceDate = new Date(Date.now() + pLeft * 3600000)
+                .toLocaleString('he-IL', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false});
+            ans += "• גיל: <b>" + Math.floor(cageH/24) + "d " + Math.round(cageH%24) + "h</b><br>";
+            ans += "• נותרו: <b style='color:" + pColor + "'>" + Math.floor(pLeft/24) + "d " + Math.round(pLeft%24) + "h</b>";
+            ans += " | החלפה: <b>" + pReplaceDate + "</b>";
+            if (pLeft < 12) ans += "<br><span style='color:#ef4444'>⚠️ פוד כמעט נגמר!</span>";
+        } else {
+            ans += "<span style='color:#f59e0b'>CAGE לא זמין</span>";
         }
-        if (cage === null && sage === null) html += "לא נמצאו נתוני CAGE/SAGE ב-NS.";
-        html += "</div>";
-        showPopup('⚙️ מצב ציוד', html);
+        ans += "</div></div>";
+
+        showPopup('📟 מצב ציוד', ans);
     } catch(e) {
-        showPopup('⚙️ ציוד', 'שגיאה: ' + e.message);
+        showPopup('⚠️ ציוד', 'שגיאה: ' + e.message);
     }
 }
 
