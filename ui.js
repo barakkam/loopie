@@ -640,10 +640,22 @@ async function askOmnibox() {
         return;
     }
 
-    // כל שאלה שלא טופלה → Gemini
-    closePopup();
-    input.value = '';
-    askGeminiAdvisor(q);
+    // ── זיהוי אוכל אוטומטי → triggerLoopieAI (חוק ה-3) ──────
+    // אם השאלה נראית כמו שם מאכל — שלח לניתוח אוכל מלא
+    var FOOD_KEYWORDS = /פיתה|לחם|אורז|פסטה|פיצה|המבורגר|שניצל|עוף|בשר|דג|סלט|ביצ|קינוח|עוגה|עוגיה|שוקולד|גלידה|פרי|בננה|תפוח|ענב|תמר|אבטיח|מלון|תפוז|פסיפלורה|חומוס|טחינה|פלאפל|שווארמה|בורגר|כריך|טוסט|קרואסון|בייגל|לחמנייה|צ'יפס|פופקורן|אגוז|שקד|וופל|פנקייק|שניצל|קציצ|סנדוויץ|ספגטי|לזניה|קוסקוס|בורקס|מאפה|שוקו|מיץ|קולה|גבינה|יוגורט|חלב|דגני|קוואקר|מוזלי|גרנולה|חביתה|שקשוקה|חלה|פוקאצ'ה|ריזוטו|קרי|חמין|עדשים|שעועית|תירס|קינואה|טמפה|טופו/i;
+    var QUESTION_KEYWORDS = /כמה|מה|האם|למה|מתי|איך|האם|כדאי|עדיף|תסביר|מה קורה|מה זה|ספר לי|תן לי/i;
+
+    var looksLikeFood     = FOOD_KEYWORDS.test(q) || (q.length < 25 && !QUESTION_KEYWORDS.test(q) && !/\d/.test(q));
+    var looksLikeQuestion = QUESTION_KEYWORDS.test(q) || q.endsWith('?') || q.endsWith('?');
+
+    if (looksLikeFood && !looksLikeQuestion) {
+        // מאכל → ניתוח חוק ה-3 מלא
+        triggerLoopieAI(q);
+    } else {
+        // שאלה כללית → Gemini Advisor
+        closePopup();
+        askGeminiAdvisor(q);
+    }
     return;
 }
 
