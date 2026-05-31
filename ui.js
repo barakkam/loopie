@@ -2012,37 +2012,95 @@ function exportLogs() {
 
 // ─── Memory History ───────────────────────────────────────────
 async function showMemoryHistory() {
-    showPopup("🧠 זיכרון", '<div class="loading-center"><span class="spinner spinner-md"></span></div>');
+    showPopup("🧠 היסטוריית הזרקות", '<div class="loading-center"><span class="spinner spinner-md"></span></div>');
     try {
-        var mem  = await loadMemory();
-        var keys = Object.keys(mem).filter(function(k){ return k.startsWith('food_'); });
-        if (!keys.length) {
-            showPopup("🧠 זיכרון", "אין עדיין נתונים שמורים.<br><br>לאחר כל הזרקה, רשום תוצאה ו-Loopie ילמד.");
+        // שלוף treatments מ-NS — 7 ימים אחרונים
+        var since7d = new Date(Date.now() - 7*86400000).toISOString();
+        var [treatRes, entRes] = await Promise.all([
+            nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + since7d + '&count=100'),
+            nsGet('/api/v1/entries.json?find[dateString][$gte]=' + since7d + '&count=1000')
+        ]);
+
+        if (!treatRes.ok) throw new Error('NS error');
+        var treats  = await treatRes.json();
+        var entries = entRes.ok ? await entRes.json() : [];
+
+        // רק treatments עם פחמימות (ארוחות) + הזרקה
+        var meals = treats.filter(function(t){
+            return t.carbs && parseFloat(t.carbs) > 0;
+        });
+
+        if (!meals.length) {
+            showPopup("🧠 היסטוריית הזרקות",
+                "<div style='text-align:right;font-size:13px;line-height:1.8'>" +
+                "לא נמצאו ארוחות עם פחמימות ב-7 ימים האחרונים ב-NS.<br><br>" +
+                "<span style='color:#888;font-size:12px'>Loopie לומד אוטומטית מהזרקות ב-NS — אין צורך לרשום ידנית.</span></div>");
             return;
         }
 
-        var html = "<div style='font-size:12px;color:#888;margin-bottom:12px'>זיכרון מקומי</div>";
-        html += "<b style='color:var(--blue)'>🍽️ מאכלים (" + keys.length + ")</b><br>";
+        // לכל ארוחה — חשב סוכר לפני ו-2ש' אחרי מה-entries
+        function sgvNear(timestamp, offsetMs, windowMs) {
+            windowMs = windowMs || 15*60000;
+            var target = timestamp + offsetMs;
+            var best = null, bestDiff = Infinity;
+            entries.forEach(function(e) {
+                var t = new Date(e.dateString||e.date).getTime();
+                var diff = Math.abs(t - target);
+                if (diff < windowMs && diff < bestDiff) { best = e.sgv; bestDiff = diff; }
+            });
+            return best;
+        }
 
-        keys.forEach(function(k) {
-            var name     = k.replace('food_','').replace(/_/g,' ');
-            var data     = mem[k].value || {};
-            var outcomes = data.outcomes || [];
-            if (!outcomes.length) return;
-            var n    = outcomes.length;
-            var good = outcomes.filter(function(o){ return o.outcome==='good'; }).length;
-            var high = outcomes.filter(function(o){ return o.outcome==='high'; }).length;
-            var low  = outcomes.filter(function(o){ return o.outcome==='low';  }).length;
-            var avgI = (outcomes.reduce(function(a,o){return a+(parseFloat(o.insulin)||0);},0)/n).toFixed(1);
-            var col  = good/n > 0.6 ? '#10b981' : high/n > 0.4 ? '#ef4444' : '#f59e0b';
-            html += "<div style='background:#0a0a14;border-radius:10px;padding:10px;margin-bottom:8px;border-right:3px solid "+col+"'>" +
-                "<b>" + name + "</b> <span style='font-size:11px;color:#888'>" + n + " הזרקות</span><br>" +
-                "<small style='color:#aaa'>💉 ממוצע: "+avgI+"U | ✅ "+good+" 🔴 "+high+" 🔵 "+low+"</small></div>";
+        function outcomeLabel(sgv2h, sgvBefore) {
+            if (!sgv2h) return { txt: '❓ אין נתון', col: '#888' };
+            if (sgv2h < 70)  return { txt: '🔵 היפו', col: '#3b82f6' };
+            if (sgv2h > 250) return { txt: '🔴 גבוה מאוד', col: '#ef4444' };
+            if (sgv2h > 180) return { txt: '🟡 גבוה', col: '#f59e0b' };
+            return { txt: '✅ בטווח', col: '#10b981' };
+        }
+
+        var html = "<div style='font-size:12px;color:#888;margin-bottom:10px'>" +
+            meals.length + " ארוחות ב-7 ימים | תוצאות אוטומטיות מ-NS</div>";
+
+        meals.forEach(function(t) {
+            var mealTime = new Date(t.created_at).getTime();
+            var minsAgo  = Math.round((Date.now() - mealTime) / 60000);
+            var timeStr  = new Date(t.created_at).toLocaleString('he-IL',{
+                day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false
+            });
+            var carbs    = parseFloat(t.carbs || 0);
+            var insulin  = parseFloat(t.insulin || 0);
+            var notes    = t.notes || t.foodType || '';
+            var sgvBefore = sgvNear(mealTime, 0);
+            var sgv2h     = minsAgo >= 90 ? sgvNear(mealTime, 2*3600000) : null;
+            var outcome   = outcomeLabel(sgv2h, sgvBefore);
+
+            // ספיגת IOB משוערת
+            var diaMin    = 300;
+            var absorbed  = Math.min(100, Math.round((minsAgo / diaMin) * 100));
+            var iobLeft   = insulin > 0 ? Math.max(0, insulin * (1 - absorbed/100)).toFixed(2) : null;
+
+            html += "<div style='background:#0a0a14;border-radius:10px;padding:10px 12px;margin-bottom:8px;" +
+                "border-right:3px solid " + outcome.col + "'>" +
+                "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:4px'>" +
+                    "<span style='font-size:13px;font-weight:700'>" + (notes || 'ארוחה') + "</span>" +
+                    "<span style='font-size:11px;color:#888'>" + timeStr + "</span>" +
+                "</div>" +
+                "<div style='font-size:12px;color:#aaa'>" +
+                    "🍞 <b>" + carbs + "g</b>" +
+                    (insulin > 0 ? " | 💉 <b>" + insulin.toFixed(1) + "U</b>" : '') +
+                    (sgvBefore ? " | לפני: <b>" + sgvBefore + "</b>" : '') +
+                    (sgv2h     ? " | 2ש': <b>" + sgv2h + "</b>" : (minsAgo < 90 ? " | 2ש': ⏳ עוד " + (90-minsAgo) + " דק'" : '')) +
+                "</div>" +
+                "<div style='font-size:12px;margin-top:4px;color:" + outcome.col + "'>" + outcome.txt + "</div>" +
+                (iobLeft && parseFloat(iobLeft) > 0.05 ?
+                    "<div style='font-size:11px;color:#3b82f6;margin-top:2px'>⏳ IOB נותר: ~" + iobLeft + "U</div>" : '') +
+                "</div>";
         });
 
-        showPopup("🧠 זיכרון (" + keys.length + " מאכלים)", html);
+        showPopup("🧠 היסטוריית הזרקות", html);
     } catch(e) {
-        showPopup("🧠 זיכרון", "שגיאה: " + e.message);
+        showPopup("🧠 שגיאה", e.message);
     }
 }
 
