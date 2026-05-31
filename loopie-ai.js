@@ -66,9 +66,9 @@ async function triggerLoopieAI(userInput) {
   // ── 3. קריאה ישירה ל-Gemini generateContent (ללא streaming) ─
   let aiText = '';
   try {
-    const apiKey = (typeof GEMINI_KEY !== 'undefined') ? GEMINI_KEY : '';
+    const apiKey = (typeof geminiKey === 'function') ? geminiKey() : (typeof GEMINI_KEY !== 'undefined' ? GEMINI_KEY : '');
     const endpoint =
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
     const body = {
       system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
