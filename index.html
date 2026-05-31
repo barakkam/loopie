@@ -1,1 +1,384 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Loopie v37</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
+<!-- ═══════════════════════════════════════════════════════════
+     מסך התחברות
+════════════════════════════════════════════════════════════════ -->
+<div id="login-screen" class="card">
+
+    <div class="logo">
+        <div class="logo-icon">💉</div>
+        <h1>Loopie Ultra</h1>
+    </div>
+
+    <div id="login-status" class="status"></div>
+
+    <label for="nsUrl">כתובת Nightscout</label>
+    <input type="text" id="nsUrl" placeholder="https://yoursite.herokuapp.com" autocomplete="off">
+
+    <label for="apiSecret">API Secret</label>
+    <input type="password" id="apiSecret" placeholder="••••••••" autocomplete="current-password">
+
+    <div class="remember-row">
+        <input type="checkbox" id="remember-me" checked>
+        <label for="remember-me">זכור אותי</label>
+    </div>
+
+    <button class="btn" id="loginBtn" onclick="connect()">התחבר למערכת</button>
+    <button class="btn btn-ghost" onclick="clearSaved()" style="margin-top:6px;font-size:12px">
+        נקה נתונים שמורים
+    </button>
+
+</div><!-- /login-screen -->
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     מסך ראשי
+════════════════════════════════════════════════════════════════ -->
+<div id="main-screen" class="card hidden">
+
+    <!-- ── Header ── -->
+    <div class="logo" style="margin-bottom:12px">
+        <div class="logo-icon" style="width:28px;height:28px;font-size:14px">♾️</div>
+        <span id="badge-name" style="font-weight:700">Loopie Active</span>
+        <span id="school-badge">🏫 ביה"ס</span>
+    </div>
+
+    <!-- ── Tabs navigation ── -->
+    <nav class="nav-tabs" role="tablist" aria-label="ניווט ראשי">
+        <div class="nav-tab active"
+             role="tab" tabindex="0"
+             onclick="switchTab('tab-home', this)"
+             title="בית">🏠</div>
+
+        <div class="nav-tab"
+             role="tab" tabindex="0"
+             onclick="switchTab('tab-activity', this)"
+             title="פעילויות וחוגים">🏃</div>
+
+        <div class="nav-tab"
+             role="tab" tabindex="0"
+             onclick="switchTab('tab-reports', this)"
+             title="דוחות">📊</div>
+
+        <div class="nav-tab"
+             role="tab" tabindex="0"
+             onclick="switchTab('tab-ns', this)"
+             title="Nightscout">🌐</div>
+
+        <div class="nav-tab"
+             role="tab" tabindex="0"
+             onclick="switchTab('tab-profile', this)"
+             title="פרופיל">👤</div>
+
+        <div class="nav-tab"
+             role="tab" tabindex="0"
+             onclick="switchTab('tab-logs', this)"
+             title="לוגים והיסטוריה">📋</div>
+    </nav>
+
+
+    <!-- ════════════════════════════════════
+         TAB: בית (Home)
+    ═════════════════════════════════════════ -->
+    <div id="tab-home" role="tabpanel">
+
+        <!-- גלוקוז גדול -->
+        <div class="bg-display">
+            <div class="bg-value" id="current-bg">--</div>
+            <div id="trend-label">→</div>
+        </div>
+
+        <!-- Override / alerts -->
+        <div id="override-banner"></div>
+        <div id="battery-warn"></div>
+
+        <!-- IOB + בזאלי -->
+        <div class="stats-grid">
+            <div class="stat-box">
+                <span class="stat-lbl">IOB</span>
+                <span id="stat-iob" class="stat-val">0.0</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-lbl">בזאלי</span>
+                <span id="stat-basal" class="stat-val">0.0</span>
+            </div>
+        </div>
+
+        <!-- Override status -->
+        <div id="override-status">
+            תוכנית פעילה: <span id="override-status-val">אין</span>
+        </div>
+
+        <!-- מיני גרף -->
+        <div id="mini-chart-wrap">
+            <div class="chart-header">
+                <span>3ש' אחורה</span>
+                <span id="chart-range-lbl"></span>
+                <span>צפי 1ש'</span>
+            </div>
+            <canvas id="mini-chart" width="300" height="80"></canvas>
+            <div class="chart-footer">
+                <span id="chart-low-lbl">70</span>
+                <div class="chart-legend">
+                    <span style="color:#10b981">● בטווח</span>
+                    <span style="color:#f59e0b">● גבוה</span>
+                    <span style="color:#3b82f6">● נמוך</span>
+                    <span style="color:#6b6b80">- - צפי</span>
+                </div>
+                <span id="chart-high-lbl">280</span>
+            </div>
+        </div>
+
+        <!-- Activity banner -->
+        <div id="activity-banner"></div>
+
+        <!-- Image preview (camera) -->
+        <div id="img-preview-wrap">
+            <img id="img-preview" alt="תמונה שנבחרה">
+            <button class="img-clear-btn" onclick="_clearImage()" aria-label="מחק תמונה">✕</button>
+        </div>
+        <input type="file" id="img-input" accept="image/*" capture="environment"
+               style="display:none" onchange="_onImageSelected(this)">
+
+        <!-- אומניבוקס -->
+        <div class="omni-row">
+            <button class="omni-camera"
+                    onclick="document.getElementById('img-input').click()"
+                    aria-label="צלם תמונה">📷</button>
+
+            <input type="text" id="omnibox" class="omnibox"
+                   placeholder="שאל: מה המצב? / כמה להזריק על פיתה?"
+                   onkeydown="if(event.key==='Enter') askOmnibox()"
+                   autocomplete="off">
+
+            <button class="btn omni-send" onclick="askOmnibox()">שלח</button>
+        </div>
+
+        <!-- כפתורי פעולה -->
+        <div class="action-row" style="margin-bottom:6px">
+            <button class="btn" id="refreshBtn" onclick="doRefresh()">🔄 רענן</button>
+            <button class="btn btn-memory" onclick="showMemoryHistory()">🧠 זיכרון</button>
+        </div>
+
+        <button class="btn btn-gemini" style="margin-bottom:8px;width:100%"
+                onclick="triggerLoopieAI(document.getElementById('omnibox').value || '')">
+            🤖 ייעוץ Gemini AI
+        </button>
+
+        <button class="btn btn-ghost" style="margin-top:4px"
+                onclick="location.reload()">התנתקות</button>
+
+    </div><!-- /tab-home -->
+
+
+    <!-- ════════════════════════════════════
+         TAB: פעילויות וחוגים
+    ═════════════════════════════════════════ -->
+    <div id="tab-activity" class="hidden" role="tabpanel">
+
+        <!-- Google Calendar banner -->
+        <div id="gcal-banner">
+            📅 <b>גוגל קלנדר מחובר</b> — <span id="gcal-next"></span>
+        </div>
+
+        <!-- הגדרות חיפוש -->
+        <div class="activity-settings">
+            <div class="section-label">⚙️ הגדרות חיפוש לוז</div>
+
+            <label for="user-email">כתובת מייל</label>
+            <input type="email" id="user-email" placeholder="your@gmail.com"
+                   style="margin-bottom:8px"
+                   oninput="localStorage.setItem('loopie_email', this.value)">
+
+            <label for="activity-keywords">מילות חיפוש חוגים (מופרדות בפסיק)</label>
+            <input type="text" id="activity-keywords"
+                   value="חוג,mma,קראטה,כדורגל,שחייה,צופים,כושר,אימון,ריצה,gym,yoga,יוגה,פילאטיס"
+                   style="margin-bottom:8px"
+                   oninput="localStorage.setItem('loopie_keywords', this.value)">
+
+            <button class="btn btn-gmail" style="font-size:12px;padding:9px;margin-bottom:6px"
+                    onclick="showGmailSetup()">
+                📧 חבר Gmail וייבא חוגים
+            </button>
+        </div>
+
+        <button class="btn btn-memory" style="margin-bottom:12px;font-size:13px"
+                onclick="connectGoogleCalendar()">
+            📅 התחבר לגוגל קלנדר
+        </button>
+
+        <!-- הוספת פעילות -->
+        <div class="section-label">הוסף חוג/פעילות קבועה</div>
+
+        <input type="text" id="act-name"
+               placeholder="שם פעילות (למשל: MMA, ריצה, שחייה)"
+               style="margin-bottom:8px">
+
+        <select id="act-day">
+            <option value="0">ראשון</option>
+            <option value="1">שני</option>
+            <option value="2">שלישי</option>
+            <option value="3">רביעי</option>
+            <option value="4">חמישי</option>
+            <option value="5">שישי</option>
+            <option value="6">שבת</option>
+        </select>
+
+        <div class="time-grid">
+            <div>
+                <label for="act-from">משעה</label>
+                <input type="text" id="act-from" placeholder="16:00" style="margin-bottom:0;text-align:center">
+            </div>
+            <div>
+                <label for="act-to">עד שעה</label>
+                <input type="text" id="act-to" placeholder="17:30" style="margin-bottom:0;text-align:center">
+            </div>
+        </div>
+
+        <select id="act-intensity">
+            <option value="low">עצימות נמוכה (יוגה, הליכה)</option>
+            <option value="medium" selected>עצימות בינונית (שחייה, אופניים)</option>
+            <option value="high">עצימות גבוהה (MMA, ריצה, HIIT)</option>
+        </select>
+
+        <button class="btn" onclick="addActivity()" style="margin-bottom:16px">
+            ➕ הוסף פעילות
+        </button>
+
+        <!-- רשימת פעילויות שמורות -->
+        <div class="section-label">פעילויות שמורות</div>
+        <div id="activity-list">
+            <div class="text-muted text-sm">אין פעילויות שמורות</div>
+        </div>
+
+    </div><!-- /tab-activity -->
+
+
+    <!-- ════════════════════════════════════
+         TAB: דוחות
+    ═════════════════════════════════════════ -->
+    <div id="tab-reports" class="hidden" role="tabpanel">
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+            <button class="btn report-btn" onclick="generateReport(7)"
+                    style="font-size:12px;padding:10px 4px">📊 7 ימים</button>
+            <button class="btn report-btn" onclick="generateReport(14)"
+                    style="font-size:12px;padding:10px 4px">📊 14 ימים</button>
+            <button class="btn report-btn" onclick="generateReport(30)"
+                    style="font-size:12px;padding:10px 4px">📊 30 ימים</button>
+        </div>
+
+        <div class="text-muted text-sm text-center" style="padding:8px">
+            בחר טווח לייצור דוח
+        </div>
+
+    </div><!-- /tab-reports -->
+
+
+    <!-- ════════════════════════════════════
+         TAB: Nightscout iframe
+    ═════════════════════════════════════════ -->
+    <div id="tab-ns" class="hidden" role="tabpanel">
+
+        <div id="ns-frame-wrap">
+            <iframe id="ns-iframe"
+                    src="about:blank"
+                    title="Nightscout Dashboard"
+                    allow="fullscreen"></iframe>
+
+            <!-- הודעת חסימה -->
+            <div id="ns-frame-msg">
+                <div style="font-size:36px;margin-bottom:12px">🔒</div>
+                <b style="color:var(--text);margin-bottom:8px;display:block">NS חוסם iframe</b>
+                <button onclick="openNSExternal()" class="btn"
+                        style="width:auto;padding:10px 20px;margin-top:12px">
+                    🔗 פתח NS בטאב חדש
+                </button>
+            </div>
+        </div>
+
+        <div class="ns-actions">
+            <button class="btn" onclick="reloadNSFrame()"
+                    style="font-size:13px;padding:10px">🔄 רענן</button>
+            <button class="btn btn-memory" onclick="openNSExternal()"
+                    style="font-size:13px;padding:10px">🔗 פתח בטאב</button>
+        </div>
+
+    </div><!-- /tab-ns -->
+
+
+    <!-- ════════════════════════════════════
+         TAB: פרופיל
+    ═════════════════════════════════════════ -->
+    <div id="tab-profile" class="hidden" role="tabpanel">
+        <div id="profile-view"></div>
+        <div id="reminders-view" style="margin-top:12px"></div>
+    </div><!-- /tab-profile -->
+
+
+    <!-- ════════════════════════════════════
+         TAB: לוגים
+    ═════════════════════════════════════════ -->
+    <div id="tab-logs" class="hidden" role="tabpanel">
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">
+            <button class="btn" onclick="loadLogs('all')"
+                    style="font-size:12px;padding:8px">📋 הכל</button>
+            <button class="btn" onclick="loadLogs('food')"
+                    style="font-size:12px;padding:8px">🍽️ ארוחות</button>
+            <button class="btn" onclick="loadLogs('rescue')"
+                    style="font-size:12px;padding:8px">🔵 חילוץ</button>
+            <button class="btn" onclick="loadLogs('sport')"
+                    style="font-size:12px;padding:8px">🏃 ספורט</button>
+            <button class="btn btn-memory" onclick="exportLogs()"
+                    style="font-size:12px;padding:8px;grid-column:span 2">📤 ייצוא CSV</button>
+        </div>
+
+        <input type="text" id="logs-search"
+               placeholder="חיפוש..."
+               oninput="filterLogs()"
+               style="margin-bottom:8px">
+
+        <div id="logs-stats"></div>
+        <div id="logs-list"></div>
+
+    </div><!-- /tab-logs -->
+
+</div><!-- /main-screen -->
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     Popup / Modal (גלובלי)
+════════════════════════════════════════════════════════════════ -->
+<div class="popup-overlay" id="popup-overlay" onclick="closePopup(event)">
+    <div class="popup-box" role="dialog" aria-modal="true" aria-labelledby="popup-title">
+        <div class="popup-title" id="popup-title">Loopie</div>
+        <div class="popup-body"  id="popup-body"></div>
+        <div class="popup-footer">
+            <button class="popup-close" onclick="closePopup()">אישור</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     Scripts — טעינה בסוף ה-body
+     סדר חשוב: nightscout.js קודם (מגדיר state + helpers),
+     loopie-ai.js שני (קורא ל-state)
+════════════════════════════════════════════════════════════════ -->
+<script src="nightscout.js"></script>
+<script src="loopie-ai.js"></script>
+
+</body>
+</html>

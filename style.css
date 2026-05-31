@@ -1,0 +1,1261 @@
+/* ============================================================
+   style.css  —  LOOPIE Design System  (v1.0 Modular)
+   כולל: ערכת נושא, Layout, טאבים, אומניבוקס, Modals,
+         פעילויות, גרף, לוגים, פרופיל, Media Queries.
+   אין JavaScript ואין תגיות <style> / <script>.
+   ============================================================ */
+
+
+/* ─── 1. CSS VARIABLES (ערכת נושא) ─────────────────────────── */
+:root {
+    --bg:        #0e0e12;
+    --card:      #16161e;
+    --border:    #2a2a38;
+    --blue:      #3b82f6;
+    --blue-dim:  #1d3a6e;
+    --green:     #10b981;
+    --red:       #f43f5e;
+    --amber:     #f59e0b;
+    --indigo:    #818cf8;
+    --text:      #e8e8f0;
+    --muted:     #6b6b80;
+    --mono:      'Courier New', monospace;
+
+    /* כרטיסי מידע פנימיים */
+    --inner-bg:  #0a0a14;
+    --inner-bg2: #0a0a10;
+
+    /* Border-radius */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-xl: 16px;
+}
+
+
+/* ─── 2. RESET & BASE ───────────────────────────────────────── */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    /* מניעת zoom בגלל input ב-iOS */
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    background:   var(--bg);
+    color:        var(--text);
+    font-family:  'Segoe UI', system-ui, -apple-system, sans-serif;
+    min-height:   100vh;
+    display:      flex;
+    align-items:  center;
+    justify-content: center;
+    padding:      16px;
+    direction:    rtl;
+    overflow-x:   hidden;
+}
+
+/* מניעת גלילה אופקית גלובלית */
+body, .card, [id^="tab-"] {
+    max-width: 100vw;
+    overflow-x: hidden;
+}
+
+
+/* ─── 3. CARD (מעטפת ראשית) ─────────────────────────────────── */
+.card {
+    background:   var(--card);
+    border:       1px solid var(--border);
+    border-radius: var(--radius-xl);
+    padding:      28px 24px;
+    width:        100%;
+    max-width:    440px;
+    box-shadow:   0 20px 60px rgba(0,0,0,0.5);
+}
+
+
+/* ─── 4. LOGO & HEADER ──────────────────────────────────────── */
+.logo {
+    display:     flex;
+    align-items: center;
+    gap:         10px;
+    margin-bottom: 20px;
+}
+
+.logo-icon {
+    width:           36px;
+    height:          36px;
+    background:      var(--blue);
+    border-radius:   10px;
+    display:         flex;
+    align-items:     center;
+    justify-content: center;
+    font-size:       18px;
+    flex-shrink:     0;
+}
+
+.logo h1 {
+    font-size:   18px;
+    font-weight: 700;
+    color:       var(--text);
+}
+
+/* תג ביה"ס */
+#school-badge {
+    display:       none;
+    font-size:     10px;
+    background:    rgba(16,185,129,0.15);
+    color:         var(--green);
+    border:        1px solid var(--green);
+    border-radius: 10px;
+    padding:       2px 8px;
+    margin-right:  6px;
+    flex-shrink:   0;
+}
+
+
+/* ─── 5. FORM ELEMENTS ──────────────────────────────────────── */
+label {
+    display:        block;
+    font-size:      11px;
+    color:          var(--muted);
+    margin-bottom:  5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"] {
+    width:         100%;
+    padding:       11px 12px;
+    background:    var(--inner-bg2);
+    border:        1px solid var(--border);
+    color:         var(--text);
+    border-radius: var(--radius-md);
+    font-size:     14px;
+    outline:       none;
+    margin-bottom: 14px;
+    transition:    border-color 0.2s;
+    /* מניעת zoom ב-iOS */
+    font-size:     max(14px, 1rem);
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus {
+    border-color: var(--blue);
+}
+
+input[type="checkbox"] {
+    width:  16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--blue);
+}
+
+select {
+    width:         100%;
+    padding:       10px 12px;
+    background:    var(--inner-bg2);
+    border:        1px solid var(--border);
+    color:         var(--text);
+    border-radius: var(--radius-sm);
+    font-size:     14px;
+    outline:       none;
+    margin-bottom: 10px;
+    cursor:        pointer;
+}
+
+/* remember-me row */
+.remember-row {
+    display:         flex;
+    align-items:     center;
+    gap:             8px;
+    margin:          8px 0;
+    justify-content: center;
+}
+
+.remember-row label {
+    color:       var(--muted);
+    font-size:   13px;
+    cursor:      pointer;
+    text-transform: none;
+    letter-spacing: 0;
+    margin-bottom: 0;
+}
+
+
+/* ─── 6. BUTTONS ────────────────────────────────────────────── */
+.btn {
+    width:         100%;
+    padding:       11px 14px;
+    background:    var(--blue);
+    color:         white;
+    border:        none;
+    border-radius: var(--radius-md);
+    cursor:        pointer;
+    font-weight:   600;
+    font-size:     14px;
+    margin-top:    4px;
+    transition:    opacity 0.15s, background 0.15s;
+    text-align:    center;
+}
+
+.btn:hover   { opacity: 0.88; }
+.btn:active  { opacity: 0.75; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Report buttons */
+.report-btn {
+    background: rgba(59,130,246,0.12) !important;
+    color:      var(--blue) !important;
+    border:     1px solid var(--blue-dim) !important;
+}
+.report-btn:hover {
+    background: var(--blue) !important;
+    color:      white !important;
+}
+
+/* Ghost / secondary buttons */
+.btn-ghost {
+    background: transparent;
+    border:     1px solid var(--border);
+    color:      var(--muted);
+}
+
+/* Gemini AI button */
+.btn-gemini {
+    background: rgba(99,102,241,0.15);
+    color:      var(--indigo);
+    border:     1px solid rgba(99,102,241,0.3);
+}
+
+/* Gmail button */
+.btn-gmail {
+    background: rgba(234,67,53,0.15);
+    color:      #ea4335;
+    border:     1px solid rgba(234,67,53,0.3);
+}
+
+/* Memory button */
+.btn-memory {
+    background: var(--blue-dim);
+    color:      var(--blue);
+    border:     1px solid var(--blue-dim);
+}
+
+
+/* ─── 7. STATUS / ALERTS ────────────────────────────────────── */
+.status {
+    font-size:    13px;
+    padding:      10px 12px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 14px;
+    display:      none;
+}
+.status.show  { display: block; }
+.status.error {
+    background: rgba(244,63,94,0.1);
+    color:      var(--red);
+    border:     1px solid var(--red);
+}
+.status.success {
+    background: rgba(16,185,129,0.1);
+    color:      var(--green);
+    border:     1px solid var(--green);
+}
+
+/* Override banner */
+#override-banner {
+    display:       none;
+    background:    rgba(59,130,246,0.15);
+    border:        1px solid var(--blue);
+    border-radius: var(--radius-sm);
+    padding:       6px 12px;
+    margin-bottom: 8px;
+    font-size:     13px;
+    text-align:    center;
+    color:         var(--blue);
+}
+
+/* Battery warning */
+#battery-warn {
+    display:       none;
+    background:    rgba(239,68,68,0.1);
+    border:        1px solid #ef4444;
+    border-radius: var(--radius-sm);
+    padding:       6px 12px;
+    margin-bottom: 8px;
+    font-size:     12px;
+    text-align:    center;
+    color:         #ef4444;
+}
+
+/* Override status row */
+#override-status {
+    font-size:    12px;
+    color:        var(--muted);
+    text-align:   center;
+    margin-bottom: 8px;
+    padding:      4px 8px;
+    border-radius: var(--radius-sm);
+    background:   rgba(107,107,128,0.08);
+}
+
+/* Rising/low alert */
+#rising-alert {
+    border-radius: var(--radius-md);
+    padding:       10px 14px;
+    margin-bottom: 12px;
+    font-size:     13px;
+    cursor:        pointer;
+}
+
+
+/* ─── 8. BG DISPLAY (גלוקוז גדול) ─────────────────────────── */
+.bg-display {
+    text-align:    center;
+    padding:       18px 0;
+    border:        1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background:    var(--inner-bg2);
+    margin-bottom: 14px;
+}
+
+.bg-value {
+    font-size:   64px;
+    font-weight: 800;
+    color:       var(--green);
+    line-height: 1;
+}
+.bg-value.low  { color: var(--red); }
+.bg-value.high { color: var(--amber); }
+
+#trend-label {
+    font-size:      28px;
+    font-weight:    700;
+    color:          var(--muted);
+    letter-spacing: -2px;
+    margin-top:     4px;
+}
+
+
+/* ─── 9. STATS GRID ─────────────────────────────────────────── */
+.stats-grid {
+    display:       grid;
+    grid-template-columns: 1fr 1fr;
+    gap:           10px;
+    margin-bottom: 14px;
+}
+
+.stat-box {
+    background:    var(--inner-bg2);
+    border:        1px solid var(--border);
+    border-radius: 12px;
+    padding:       12px;
+    text-align:    center;
+}
+
+.stat-val {
+    font-weight: 700;
+    font-size:   16px;
+    display:     block;
+    color:       var(--text);
+}
+
+.stat-lbl {
+    font-size:      10px;
+    color:          var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display:        block;
+    margin-bottom:  3px;
+}
+
+
+/* ─── 10. MINI CHART ────────────────────────────────────────── */
+#mini-chart-wrap {
+    background:    var(--inner-bg);
+    border-radius: var(--radius-md);
+    padding:       8px;
+    margin-bottom: 10px;
+    display:       none;
+}
+
+#mini-chart-wrap .chart-header,
+#mini-chart-wrap .chart-footer {
+    display:         flex;
+    justify-content: space-between;
+    font-size:       10px;
+    color:           #555;
+}
+
+#mini-chart-wrap .chart-header { margin-bottom: 4px; }
+#mini-chart-wrap .chart-footer { margin-top: 2px; }
+
+#mini-chart-wrap .chart-legend {
+    display: flex;
+    gap:     10px;
+}
+
+#mini-chart {
+    width:  100%;
+    height: 80px;
+    display: block;
+}
+
+
+/* ─── 11. NAVIGATION TABS ───────────────────────────────────── */
+.nav-tabs {
+    display:       grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap:           4px;
+    margin-bottom: 14px;
+}
+
+.nav-tab {
+    padding:       8px 2px;
+    background:    var(--inner-bg2);
+    border:        1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color:         var(--muted);
+    font-size:     20px;
+    cursor:        pointer;
+    text-align:    center;
+    font-weight:   600;
+    transition:    background 0.15s, color 0.15s, border-color 0.15s;
+    user-select:   none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.nav-tab:hover {
+    background: rgba(59,130,246,0.12);
+    color:      var(--blue);
+}
+
+.nav-tab.active {
+    background:   var(--blue);
+    color:        white;
+    border-color: var(--blue);
+}
+
+/* Tab content panes */
+[id^="tab-"] {
+    width:     100%;
+    min-width: 0;
+}
+
+
+/* ─── 12. OMNIBOX ROW ───────────────────────────────────────── */
+.omni-row {
+    display:       flex;
+    gap:           8px;
+    margin-bottom: 10px;
+    align-items:   center;
+}
+
+.omni-row input {
+    margin-bottom: 0;
+    flex:          1;
+    min-width:     0;
+}
+
+.omnibox {
+    border:      1px solid var(--blue);
+    color:       var(--green);
+    font-family: var(--mono);
+    background:  var(--inner-bg2);
+}
+
+.omni-send {
+    width:         auto;
+    padding:       11px 16px;
+    flex-shrink:   0;
+    margin-top:    0;
+    border-radius: var(--radius-md);
+}
+
+/* Camera button */
+.omni-camera {
+    padding:       8px 10px;
+    background:    rgba(107,107,128,0.15);
+    border:        1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color:         var(--muted);
+    font-size:     18px;
+    cursor:        pointer;
+    flex-shrink:   0;
+    line-height:   1;
+}
+
+/* Action buttons row */
+.action-row {
+    display:       flex;
+    gap:           8px;
+    margin-bottom: 8px;
+}
+
+.action-row .btn {
+    flex: 1;
+    margin-top: 0;
+}
+
+/* Image preview */
+#img-preview-wrap {
+    display:       none;
+    margin-bottom: 8px;
+    position:      relative;
+}
+
+#img-preview {
+    max-height:   80px;
+    border-radius: var(--radius-sm);
+    border:        1px solid var(--border);
+    display:       block;
+}
+
+.img-clear-btn {
+    position:      absolute;
+    top:           -6px;
+    right:         -6px;
+    background:    #ef4444;
+    border:        none;
+    border-radius: 50%;
+    color:         white;
+    width:         20px;
+    height:        20px;
+    font-size:     11px;
+    cursor:        pointer;
+    line-height:   20px;
+    text-align:    center;
+}
+
+
+/* ─── 13. ACTIVITY BANNER ───────────────────────────────────── */
+#activity-banner {
+    margin-bottom: 10px;
+}
+
+.act-active-banner {
+    background:    rgba(245,158,11,0.12);
+    border:        1px solid var(--amber);
+    border-radius: var(--radius-md);
+    padding:       10px 14px;
+    margin-bottom: 10px;
+    font-size:     13px;
+    line-height:   1.7;
+    direction:     rtl;
+}
+
+
+/* ─── 14. ACTIVITY LIST ─────────────────────────────────────── */
+.activity-item {
+    background:      var(--inner-bg2);
+    border:          1px solid var(--border);
+    border-radius:   var(--radius-md);
+    padding:         10px 12px;
+    margin-bottom:   8px;
+    display:         flex;
+    justify-content: space-between;
+    align-items:     center;
+    gap:             8px;
+}
+
+.activity-item .act-info {
+    font-size: 13px;
+    flex:      1;
+    min-width: 0;
+}
+
+.activity-item .act-name {
+    font-weight:   700;
+    color:         var(--text);
+    white-space:   nowrap;
+    overflow:      hidden;
+    text-overflow: ellipsis;
+}
+
+.activity-item .act-time {
+    font-size:  11px;
+    color:      var(--muted);
+    margin-top: 2px;
+}
+
+.activity-item .act-del {
+    background: none;
+    border:     none;
+    color:      var(--red);
+    font-size:  18px;
+    cursor:     pointer;
+    padding:    0 4px;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+/* Activity settings box */
+.activity-settings {
+    background:    var(--inner-bg);
+    border-radius: var(--radius-md);
+    padding:       12px;
+    margin-bottom: 14px;
+}
+
+/* Time inputs grid */
+.time-grid {
+    display:               grid;
+    grid-template-columns: 1fr 1fr;
+    gap:                   8px;
+    margin-bottom:         10px;
+}
+
+.time-grid input {
+    margin-bottom: 0;
+    text-align:    center;
+}
+
+/* Section label (uppercase muted) */
+.section-label {
+    font-size:      12px;
+    color:          var(--muted);
+    margin-bottom:  8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+
+/* ─── 15. POPUP / MODAL ─────────────────────────────────────── */
+.popup-overlay {
+    position:        fixed;
+    inset:           0;
+    background:      rgba(0,0,0,0.65);
+    display:         flex;
+    align-items:     center;
+    justify-content: center;
+    z-index:         1000;
+    padding:         16px;
+    opacity:         0;
+    transition:      opacity 0.2s;
+    pointer-events:  none;
+}
+
+.popup-overlay.show {
+    opacity:        1;
+    pointer-events: all;
+}
+
+.popup-box {
+    background:    #1a1a26;
+    border:        1px solid var(--blue);
+    border-radius: var(--radius-xl);
+    padding:       22px 20px;
+    max-width:     420px;
+    width:         100%;
+    max-height:    82vh;
+    overflow-y:    auto;
+    box-shadow:    0 20px 60px rgba(0,0,0,0.7);
+    transform:     translateY(20px);
+    transition:    transform 0.2s;
+    direction:     rtl;
+}
+
+.popup-overlay.show .popup-box {
+    transform: translateY(0);
+}
+
+.popup-title {
+    font-size:      13px;
+    color:          var(--muted);
+    margin-bottom:  12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.popup-body {
+    font-size:   14px;
+    line-height: 1.75;
+    color:       var(--text);
+}
+
+.popup-footer {
+    margin-top: 18px;
+    text-align: center;
+}
+
+.popup-close {
+    background:    var(--blue);
+    color:         white;
+    border:        none;
+    border-radius: var(--radius-md);
+    padding:       10px 32px;
+    cursor:        pointer;
+    font-weight:   600;
+    font-size:     14px;
+    transition:    opacity 0.15s;
+}
+.popup-close:hover { opacity: 0.85; }
+
+/* Loopie AI Modal — custom (from loopie-ai.js) */
+#loopie-ai-modal .ai-pump-bar {
+    padding:       10px 14px;
+    border-radius: var(--radius-sm);
+    font-size:     13px;
+    font-weight:   600;
+    text-align:    right;
+    direction:     rtl;
+    margin-bottom: 14px;
+    background:    rgba(59,130,246,0.1);
+    border-right:  4px solid var(--blue);
+}
+
+#loopie-ai-modal .ai-body {
+    font-size:   14px;
+    line-height: 1.75;
+    color:       var(--text);
+    direction:   rtl;
+    text-align:  right;
+}
+
+
+/* ─── 16. CARD INNER PANELS (sport plan, report sections) ───── */
+.panel {
+    background:    var(--inner-bg);
+    border-radius: var(--radius-md);
+    padding:       12px 14px;
+    margin-bottom: 10px;
+}
+
+.panel-amber {
+    background: rgba(245,158,11,0.08);
+    border:     1px solid var(--amber);
+}
+
+.panel-green {
+    background: rgba(16,185,129,0.08);
+    border:     1px solid var(--green);
+}
+
+.panel-blue {
+    background: rgba(59,130,246,0.08);
+    border:     1px solid var(--blue-dim);
+}
+
+.panel-dark {
+    background:    #111120;
+    border-radius: var(--radius-md);
+    padding:       12px 14px;
+    margin-bottom: 10px;
+    font-size:     12px;
+}
+
+
+/* ─── 17. PROFILE TAB ───────────────────────────────────────── */
+#tab-profile {
+    padding:   12px;
+    max-width: 450px;
+    margin:    0 auto;
+}
+
+.profile-row {
+    display:         flex;
+    justify-content: space-between;
+    align-items:     center;
+    width:           100%;
+    margin-bottom:   8px;
+    padding:         6px 0;
+    border-bottom:   1px solid #1a1a2e;
+}
+
+.profile-row span:first-child {
+    color:      var(--muted);
+    font-size:  12px;
+    flex-shrink: 0;
+}
+
+.profile-row span:last-child {
+    font-size:   13px;
+    font-weight: 600;
+    text-align:  left;
+}
+
+.reminder-row {
+    display:     flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap:         8px;
+    width:       100%;
+    border-bottom: 1px solid #1a1a2e;
+    padding:     8px 0;
+    font-size:   12px;
+}
+
+.reminder-row .r-info { flex: 1; min-width: 0; }
+
+.reminder-row .r-btn {
+    flex-shrink:   0;
+    padding:       3px 8px;
+    background:    rgba(16,185,129,0.15);
+    border:        1px solid var(--green);
+    border-radius: var(--radius-sm);
+    color:         var(--green);
+    font-size:     11px;
+    cursor:        pointer;
+    white-space:   nowrap;
+}
+
+
+/* ─── 18. LOGS TAB ──────────────────────────────────────────── */
+#logs-list {
+    max-height: 55vh;
+    overflow-y: auto;
+    /* thin scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+}
+
+#logs-list::-webkit-scrollbar { width: 4px; }
+#logs-list::-webkit-scrollbar-track { background: transparent; }
+#logs-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+#logs-stats {
+    font-size:    12px;
+    color:        var(--muted);
+    margin-bottom: 8px;
+    text-align:   center;
+}
+
+/* Log item */
+.log-item {
+    background:    var(--inner-bg);
+    border:        1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding:       8px 10px;
+    margin-bottom: 6px;
+    font-size:     12px;
+    direction:     rtl;
+    text-align:    right;
+}
+
+.log-item .log-header {
+    display:         flex;
+    justify-content: space-between;
+    align-items:     center;
+    margin-bottom:   4px;
+}
+
+.log-item .log-title { font-weight: 700; font-size: 13px; }
+.log-item .log-time  { font-size: 11px; color: var(--muted); }
+.log-item .log-body  { color: var(--muted); line-height: 1.5; }
+
+
+/* ─── 19. NS IFRAME TAB ─────────────────────────────────────── */
+#ns-frame-wrap {
+    position:      relative;
+    width:         100%;
+    height:        70vh;
+    border-radius: var(--radius-md);
+    overflow:      hidden;
+    background:    #000;
+}
+
+#ns-iframe {
+    width:         100%;
+    height:        100%;
+    border:        none;
+    border-radius: var(--radius-md);
+}
+
+#ns-frame-msg {
+    display:         none;
+    position:        absolute;
+    inset:           0;
+    background:      var(--inner-bg);
+    border-radius:   var(--radius-md);
+    flex-direction:  column;
+    align-items:     center;
+    justify-content: center;
+    color:           #888;
+    font-size:       14px;
+    text-align:      center;
+    padding:         20px;
+}
+
+#ns-frame-msg.visible { display: flex; }
+
+.ns-actions {
+    display:               grid;
+    grid-template-columns: 1fr 1fr;
+    gap:                   8px;
+    margin-top:            10px;
+}
+
+
+/* ─── 20. GCAL BANNER ───────────────────────────────────────── */
+#gcal-banner {
+    background:    rgba(59,130,246,0.08);
+    border:        1px solid var(--blue-dim);
+    border-radius: var(--radius-md);
+    padding:       10px 12px;
+    margin-bottom: 12px;
+    font-size:     13px;
+    display:       none;
+    direction:     rtl;
+}
+
+
+/* ─── 21. SPINNER / LOADING ─────────────────────────────────── */
+.hidden { display: none !important; }
+
+.spinner {
+    display:          inline-block;
+    width:            12px;
+    height:           12px;
+    border:           2px solid transparent;
+    border-top-color: white;
+    border-radius:    50%;
+    animation:        spin 0.7s linear infinite;
+    vertical-align:   middle;
+}
+
+.spinner-lg {
+    width:  24px;
+    height: 24px;
+    border-width: 3px;
+}
+
+.spinner-md {
+    width:  16px;
+    height: 16px;
+    border-width: 2px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Loading center */
+.loading-center {
+    text-align: center;
+    padding:    20px;
+    color:      var(--muted);
+    font-size:  14px;
+}
+
+
+/* ─── 22. ANIMATIONS ────────────────────────────────────────── */
+@keyframes flashGreen {
+    0%, 100% { border-color: var(--border); }
+    50%       { border-color: var(--green); }
+}
+
+.refresh-flash { animation: flashGreen 0.6s ease; }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in { animation: fadeIn 0.25s ease forwards; }
+
+@keyframes pulseRed {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.6; }
+}
+
+.pulse-red { animation: pulseRed 1.2s ease infinite; color: var(--red); }
+
+
+/* ─── 23. MISC UTILITY ──────────────────────────────────────── */
+.text-center   { text-align: center; }
+.text-right    { text-align: right; }
+.text-muted    { color: var(--muted); }
+.text-green    { color: var(--green); }
+.text-red      { color: var(--red); }
+.text-amber    { color: var(--amber); }
+.text-blue     { color: var(--blue); }
+.text-xs       { font-size: 11px; }
+.text-sm       { font-size: 12px; }
+.text-base     { font-size: 14px; }
+.text-lg       { font-size: 16px; }
+.font-bold     { font-weight: 700; }
+.mt-2          { margin-top: 8px; }
+.mb-2          { margin-bottom: 8px; }
+.mb-4          { margin-bottom: 16px; }
+.rtl           { direction: rtl; }
+
+/* Inline input (edit-activity שעות) */
+.input-inline {
+    width:         70px;
+    background:    #111;
+    border:        1px solid var(--border);
+    color:         white;
+    border-radius: var(--radius-sm);
+    padding:       4px 6px;
+    direction:     ltr;
+    text-align:    center;
+    font-size:     13px;
+}
+
+/* Intensity button grid */
+.intensity-grid {
+    display:               grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap:                   6px;
+    margin:                8px 0;
+}
+
+.intensity-btn {
+    padding:       8px;
+    border-radius: var(--radius-sm);
+    border:        2px solid var(--border);
+    background:    transparent;
+    color:         var(--muted);
+    cursor:        pointer;
+    font-size:     12px;
+    transition:    border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.intensity-btn.active {
+    border-color: var(--green);
+    background:   rgba(16,185,129,0.15);
+    color:        var(--green);
+}
+
+
+/* ─── 24. REPORT CONTENT (נוצר ב-JS, עיצוב כאן) ────────────── */
+.report-section {
+    background:    var(--inner-bg);
+    border:        1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding:       12px 14px;
+    margin-bottom: 10px;
+    font-size:     13px;
+    line-height:   1.7;
+    direction:     rtl;
+    text-align:    right;
+}
+
+.report-section h3 {
+    font-size:     13px;
+    font-weight:   700;
+    margin-bottom: 8px;
+    color:         var(--blue);
+}
+
+.tir-bar-wrap {
+    background:    var(--inner-bg2);
+    border-radius: 4px;
+    height:        10px;
+    overflow:      hidden;
+    margin:        4px 0;
+    width:         100%;
+}
+
+.tir-bar-fill {
+    height:     100%;
+    border-radius: 4px;
+    transition: width 0.4s ease;
+}
+
+
+/* ─── 25. SAFETY BOX (ריבוע כתום / ביטחון) ─────────────────── */
+.safety-box {
+    background:    rgba(245,158,11,0.10);
+    border:        1px solid var(--amber);
+    border-radius: var(--radius-md);
+    padding:       12px 14px;
+    margin-bottom: 12px;
+    font-size:     13px;
+    direction:     rtl;
+    text-align:    right;
+    line-height:   1.7;
+}
+
+.safety-box b { color: var(--amber); }
+
+/* Pod failure alert box */
+.pod-alert-box {
+    background:    rgba(244,63,94,0.10);
+    border:        1px solid var(--red);
+    border-radius: var(--radius-md);
+    padding:       12px 14px;
+    margin-bottom: 12px;
+    font-size:     13px;
+    direction:     rtl;
+    text-align:    right;
+    line-height:   1.7;
+}
+
+
+/* ─── 26. MEMORY / HISTORY LIST ─────────────────────────────── */
+.memory-item {
+    background:    var(--inner-bg);
+    border:        1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding:       8px 10px;
+    margin-bottom: 6px;
+    font-size:     12px;
+    direction:     rtl;
+    text-align:    right;
+    line-height:   1.6;
+}
+
+.memory-item .mem-header {
+    display:         flex;
+    justify-content: space-between;
+    margin-bottom:   3px;
+    font-weight:     700;
+    font-size:       13px;
+}
+
+
+/* ─── 27. MEDIA QUERIES ─────────────────────────────────────── */
+
+/* ── Narrow mobile (≤ 380px) ── */
+@media (max-width: 380px) {
+    body { padding: 8px; }
+
+    .card {
+        padding:       18px 14px;
+        border-radius: 12px;
+    }
+
+    .bg-value { font-size: 52px; }
+    #trend-label { font-size: 22px; }
+
+    .nav-tab { font-size: 17px; padding: 6px 1px; }
+
+    .btn { font-size: 13px; padding: 10px 10px; }
+
+    .stats-grid { gap: 6px; }
+    .stat-val   { font-size: 15px; }
+
+    /* אומניבוקס — הקטן כפתור שלח */
+    .omni-send { padding: 10px 10px; font-size: 13px; }
+
+    /* Popup */
+    .popup-box { padding: 16px 14px; }
+    .popup-close { padding: 8px 20px; }
+
+    /* הפחתת gap בגריד לוגים */
+    #tab-logs > div:first-child { gap: 4px; }
+}
+
+/* ── Standard mobile (≤ 440px) ── */
+@media (max-width: 440px) {
+    body { padding: 10px; }
+
+    .card { padding: 20px 16px; }
+
+    /* Nav tabs — keep 6 columns, shrink font */
+    .nav-tabs { gap: 3px; }
+    .nav-tab  { font-size: 18px; padding: 7px 1px; }
+
+    /* Omnibox — don't let it overflow */
+    .omni-row { gap: 6px; }
+    .omnibox  { font-size: 13px; }
+
+    /* Popup max width */
+    .popup-box { max-width: 100%; }
+
+    /* Stats */
+    .stat-box { padding: 10px 8px; }
+    .stat-val { font-size: 15px; }
+
+    /* NS iframe — shorter on small screen */
+    #ns-frame-wrap { height: 58vh; }
+
+    /* Logs list */
+    #logs-list { max-height: 48vh; }
+
+    /* Intensity grid — 1 column on very small */
+    .intensity-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* ── Tablet and above (≥ 500px) ── */
+@media (min-width: 500px) {
+    body { padding: 24px; }
+
+    .card { padding: 32px 28px; }
+
+    .bg-value { font-size: 72px; }
+
+    .nav-tab { font-size: 20px; padding: 9px 4px; }
+
+    /* Popup bigger */
+    .popup-box { max-width: 460px; padding: 26px 24px; }
+}
+
+/* ── Desktop (≥ 700px) ── */
+@media (min-width: 700px) {
+    body { padding: 32px; }
+
+    .card {
+        max-width: 480px;
+        padding:   36px 32px;
+    }
+
+    .bg-value { font-size: 80px; }
+
+    .popup-box { max-width: 500px; }
+}
+
+/* ── Portrait phone — prevent horizontal scroll ── */
+@media (max-width: 440px) and (orientation: portrait) {
+    html, body {
+        overflow-x: hidden;
+        width:      100%;
+    }
+
+    .card {
+        width:         100%;
+        border-radius: 12px;
+    }
+
+    /* NS iframe full height on portrait */
+    #ns-frame-wrap { height: 65vh; }
+
+    /* Popup scrollable on portrait */
+    .popup-box {
+        max-height: 88vh;
+        overflow-y: auto;
+    }
+}
+
+/* ── Landscape phone ── */
+@media (max-width: 812px) and (orientation: landscape) {
+    body { padding: 8px; align-items: flex-start; }
+
+    .card {
+        max-width:  100%;
+        padding:    14px 16px;
+        border-radius: 10px;
+    }
+
+    .bg-display { padding: 10px 0; }
+    .bg-value   { font-size: 48px; }
+    #trend-label { font-size: 20px; }
+
+    #ns-frame-wrap { height: 80vh; }
+
+    .popup-box { max-height: 90vh; }
+
+    .nav-tab { padding: 5px 1px; font-size: 16px; }
+}
+
+/* ── Accessibility: prefer reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration:        0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration:       0.01ms !important;
+    }
+}
