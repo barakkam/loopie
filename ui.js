@@ -1103,23 +1103,33 @@ Override פעיל → הפחת המלצות בהתאם למכפיל.
 
                             // זיהוי "יום X במקום יום Y" — fromDay=Y, toDay=X
                             var fromDay = null, toDay = null;
-                            var swapRx = /(?:ב)?יום\s+(ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת).*?במקום.*?(?:ב)?יום\s+(ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)/;
-                            var swapRx2= /במקום\s+(?:ב)?יום\s+(ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת).*?(?:ב)?יום\s+(ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)/;
-                            var swapMatch = userQuestion.match(swapRx) || userQuestion.match(swapRx2);
-                            if (swapMatch) {
-                                // "יום שלישי במקום יום שני" → toDay=שלישי, fromDay=שני
-                                toDay   = DAY_MAP_UPD[swapMatch[1]];
-                                fromDay = DAY_MAP_UPD[swapMatch[2]];
-                            } else if (actObj.day !== undefined && actObj.day !== '') {
-                                // Gemini החזיר יום חדש — זה ה-toDay
-                                toDay = DAY_MAP_UPD[actObj.day];
-                            }
+                            // זיהוי שינוי יום — כל הפורמטים
+                            var DAYS_RX = '(ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)';
+                            var uq = userQuestion;
 
-                            // זיהוי "שנה מ-X ל-Y" בלי "במקום"
-                            if (fromDay === null && toDay === null) {
-                                var changeRx = /(?:שנה|עדכן|העבר).*?(?:מ-?|מ)(?:ב)?יום\s+(ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת).*?(?:ל-?|ל)(?:ב)?יום\s+(ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)/;
-                                var cMatch2 = userQuestion.match(changeRx);
-                                if (cMatch2) { fromDay = DAY_MAP_UPD[cMatch2[1]]; toDay = DAY_MAP_UPD[cMatch2[2]]; }
+                            // "ביום X במקום ביום Y" / "יום X במקום יום Y"
+                            var swapRx = new RegExp('ב?יום\\s+' + DAYS_RX + '[\\s\\S]*?במקום[\\s\\S]*?ב?יום\\s+' + DAYS_RX);
+                            // "במקום ביום Y ... ביום X"
+                            var swapRx2 = new RegExp('במקום[\\s\\S]*?ב?יום\\s+' + DAYS_RX + '[\\s\\S]*?ב?יום\\s+' + DAYS_RX);
+                            // "מיום X ליום Y" / "מיום X לשישי"
+                            var changeRx = new RegExp('מ(?:יום\\s+|ב)?' + DAYS_RX + '[\\s\\S]*?ל(?:יום\\s+|ב)?' + DAYS_RX);
+
+                            var sm = uq.match(swapRx);
+                            var sm2 = sm ? null : uq.match(swapRx2);
+                            var cm = (!sm && !sm2) ? uq.match(changeRx) : null;
+
+                            if (sm) {
+                                // "ביום שישי במקום ביום שבת" → toDay=שישי, fromDay=שבת
+                                toDay   = DAY_MAP_UPD[sm[1]];
+                                fromDay = DAY_MAP_UPD[sm[2]];
+                            } else if (sm2) {
+                                toDay   = DAY_MAP_UPD[sm2[2]];
+                                fromDay = DAY_MAP_UPD[sm2[1]];
+                            } else if (cm) {
+                                fromDay = DAY_MAP_UPD[cm[1]];
+                                toDay   = DAY_MAP_UPD[cm[2]];
+                            } else if (actObj.day !== undefined && actObj.day !== '') {
+                                toDay = DAY_MAP_UPD[actObj.day];
                             }
 
                             // חלץ שם חוג אם Gemini לא החזיר
