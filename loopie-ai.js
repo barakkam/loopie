@@ -17,19 +17,43 @@ const SYSTEM_PROMPT = `
 חוק ברזל: אסור לך לפלוט דוח סטטוס יבש של מדדי המשאבה (סוכר, IOB, COB, בזאלי וכו') כתגובה ראשית — גם אם הנתונים נמסרו לך ברקע. הם שם כהקשר בלבד.
 
 חוקי יסוד — ניתוח ארוחות וחוק ה-3:
-1. זהה את המאכל וחשב פחמימות לפי ידע תזונתי (דוגמאות: פיתה = ~50g, כוס פסטה = ~40g, בננה = ~25g, לחם פרוס = ~15g).
-2. החל פיצול חוק ה-3 למניעת היפו בשעה הראשונה:
-   • 70% מהפחמימות — הצהרה מיידית באייפון כעת.
-   • 30% מהפחמימות — נשארות כ"חוב לוגי"; המשתמש יקבל תזכורת רק אם הסוכר יחצה 150 בעוד שעתיים.
-3. תזמון Pre-Bolus לפי סוג אינסולין (מגיע ב-state.insulinType):
-   • Lyumjev / Fiasp → המתן 0–2 דקות בלבד לפני האכילה.
-   • Novorapid / Humalog → Pre-Bolus קשיח: 15–20 דקות לפני האכילה.
-4. אם המשאבה מציעה בולוס (state.recommendedBolus) — אל תציע ערך אחר. ציין בסוף בלבד: "⚠️ הלופ מציע כעת XU — אל תחרוג."
+1. זהה את המאכל וחשב פחמימות לפי ידע תזונתי:
+   פיתה=50g, לחם פרוס=15g, כוס פסטה=40g, כוס אורז=45g, בננה=25g, תפוח=15g,
+   פיצה פרוסה=30g, המבורגר ללא לחמנייה=5g, לחמנייה=25g, שניצל=10g,
+   קרואסון=25g, בייגלה=55g, וופל=20g, עוגיה=10g, כוס מיץ=25g, שוקו=30g.
+   לכל מאכל לא מוכר — הערך הגיוני לפי הידע שלך.
 
-מבנה פלט חובה (ענה תמיד בעברית, ממוקד, ללא משפטי פתיחה):
+2. חשב זמן ספיגה צפוי לפי סוג המאכל:
+   • פחמימות מהירות (מיץ, סוכר, פרי) → 1–1.5 שעות
+   • פחמימות רגילות (לחם, אורז, פסטה, פיתה) → 2–3 שעות
+   • ארוחה שומנית (פיצה, המבורגר, שניצל מטוגן) → 3–5 שעות
+   • ארוחה מעורבת (בשר + לחם + ירקות) → 2.5–4 שעות
+
+3. החל פיצול חוק ה-3 למניעת היפו:
+   • 70% מהפחמימות — הצהרה מיידית באייפון כעת.
+   • 30% מהפחמימות — חוב לוגי; תזכורת אם סוכר > 150 בעוד ~2 שעות.
+
+4. תזמון Pre-Bolus לפי סוג אינסולין (מגיע ב-state.insulinType):
+   • Lyumjev / Fiasp → 0–2 דקות לפני האכילה.
+   • Novorapid / Humalog → Pre-Bolus קשיח: 15–20 דקות לפני האכילה.
+
+5. אם המשאבה מציעה בולוס (state.recommendedBolus > 0) — ציין בסוף: "⚠️ הלופ מציע כעת XU — אל תחרוג."
+
+מבנה פלט חובה (עברית, ממוקד, ללא משפטי פתיחה):
 • 🍏 סך פחמימות מוערך: [X] גרם.
-• 📊 חוק ה-3 — הצהרה עכשיו: הזן באייפון [70% מ-X = Y] גרם פחמימה.
-• ⏳ תזמון: [הנחיית Pre-Bolus לפי סוג האינסולין].
+• ⏱️ זמן ספיגה צפוי: [N–M שעות] — [סוג: מהיר/רגיל/שומני/מעורב].
+• 🧮 הערכת בולוס בסיסי (כמו הלופ): ([X] ÷ CR=[CR_VALUE]) − IOB=[IOB_VALUE]U = [תוצאה] יחידות.
+• 🎯 המלצת LOOPIE (מותאמת אישית): התחשב בכל הגורמים הבאים ותן המלצה מעודכנת:
+   — אם יש Override פעיל (override_active=true): הפחת לפי המכפיל.
+   — אם יש פעילות גופנית פעילה עכשיו (מגיע מ-context של activities): הפחת לפי עצימות.
+   — אם יש פעילות גופנית מתוכננת תוך 3 שעות: הפחת 10–30%.
+   — אם אחרי ספורט (post_activity=true): הפחת 20–30% ואזהר מהיפו מאוחר.
+   — שלב לילי (שעה 22:00–06:00): ספיגה איטית יותר, הפחת 10–15%.
+   — Dawn Phenomenon (שעה 05:00–08:00): סוכר עולה טבעית, הוסף 10%.
+   — מאכל שומני (פיצה/המבורגר/שניצל מטוגן): פצל הזרקה — 60% עכשיו + 40% בעוד 90 דק'.
+   סכם: "המלצת LOOPIE: [N]U עכשיו" + הסבר קצר למה שונה מהבסיסי.
+• 📊 חוק ה-3 — הצהרה עכשיו: הזן באייפון [70%×X = Y] גרם פחמימה.
+• ⏳ תזמון הזרקה: [הנחיית Pre-Bolus לפי סוג האינסולין].
 • 🛡️ חוב פחמימות (30%): [Z] גרם — תזכורת תישלח אם סוכר > 150 בעוד ~2 שעות.
 `.trim();
 
@@ -45,15 +69,64 @@ async function triggerLoopieAI(userInput) {
   // ── 1. אסוף State מספרי בלבד ──────────────────────────────
   const s = (typeof state !== 'undefined') ? state : {};
 
+  // שלוף CR מהפרופיל הנוכחי (nightscout.js)
+  let crNow = s.cr ?? 15;
+  try {
+    const prof = (typeof fullHistory !== 'undefined' && fullHistory.profile) ? fullHistory.profile : null;
+    if (prof) {
+      const h = new Date().getHours();
+      const crArr = prof.carbratio || prof.carbRatio || prof.ic;
+      if (typeof profileValueAt === 'function') crNow = parseFloat(profileValueAt(crArr, h) || crNow);
+    }
+  } catch(e) {}
+
+  // ── גורמים נוספים מהקשר LOOPIE ──────────────────────────
+  let activityContext = 'none';
+  let postActivity    = false;
+  let activityFactor  = 1.0;
+  try {
+    if (typeof checkActiveActivity === 'function') {
+      const actResult = checkActiveActivity();
+      if (actResult) {
+        const sp = actResult.sp || {};
+        if (actResult.type === 'during') {
+          activityContext = 'during_' + (actResult.act.intensity || 'medium');
+          activityFactor  = 1 - (sp.basalReduction || 30) / 100;
+        } else if (actResult.type === 'after') {
+          postActivity    = true;
+          activityContext = 'post_' + (actResult.act.intensity || 'medium') + '_' + (actResult.minsAgo || 0) + 'min_ago';
+          activityFactor  = 1 - (sp.postReduction || 20) / 100;
+        } else if (actResult.type === 'before') {
+          activityContext = 'upcoming_' + (actResult.act.intensity || 'medium') + '_in_' + (actResult.minsLeft || 0) + 'min';
+          activityFactor  = actResult.minsLeft < 60 ? 0.8 : 0.9;
+        }
+      }
+    }
+  } catch(e) {}
+
+  // ── שעה ביום ──────────────────────────────────────────────
+  const nowHour = new Date().getHours();
+  const isNight = nowHour >= 22 || nowHour < 6;
+  const isDawn  = nowHour >= 5  && nowHour < 8;
+
   const numericContext = [
     `SGV=${s.sgv ?? 0}`,
     `trend=${s.trend ?? 'Flat'}`,
     `IOB=${+(s.iob ?? 0).toFixed(2)}`,
     `COB=${+(s.cob ?? 0).toFixed(1)}`,
-    `CR=${s.cr ?? 15}`,
+    `CR=${crNow}`,
     `ISF=${s.isf ?? 120}`,
     `insulin=${s.insulinType ?? 'Novorapid'}`,
     `pumpBolus=${s.recommendedBolus ?? 0}`,
+    `override_active=${s.overrideActive ?? false}`,
+    `override_name=${s.overrideName ?? 'none'}`,
+    `override_multiplier=${s.overrideMultiplier ?? 1}`,
+    `activity=${activityContext}`,
+    `post_activity=${postActivity}`,
+    `activity_factor=${activityFactor.toFixed(2)}`,
+    `hour=${nowHour}`,
+    `is_night=${isNight}`,
+    `is_dawn=${isDawn}`,
   ].join(' | ');
 
   const fullPrompt =
@@ -124,24 +197,20 @@ function _aiShowModal(foodInput, aiText, pumpBolus, loading) {
     document.body.appendChild(modal);
   }
 
-  // בנה פס המשאבה
+  // בנה פס המשאבה — רק אם הלופ ממליץ על הזרקה חיובית
   const pumpVal = parseFloat(pumpBolus);
   let pumpBar = '';
-  if (!isNaN(pumpVal) && pumpVal >= 0) {
-    const pumpColor = pumpVal === 0 ? '#ef4444' : '#3b82f6';
-    const pumpMsg  = pumpVal === 0
-      ? '🚫 בלימה מלאה! אל תזריק.'
-      : `💉 המלצת המשאבה (JavaScript): <b style="color:${pumpColor}">${pumpVal}U</b>`;
+  if (!isNaN(pumpVal) && pumpVal > 0) {
     pumpBar = `
       <div style="
         padding:10px 14px;
         background:rgba(59,130,246,0.1);
-        border-right:4px solid ${pumpColor};
+        border-right:4px solid #3b82f6;
         border-radius:8px;
         font-size:13px; font-weight:600;
         text-align:right; direction:rtl;
         margin-bottom:14px;
-      ">${pumpMsg}</div>`;
+      ">💉 הלופ ממליץ: <b style="color:#3b82f6">${pumpVal}U</b> — אשר באייפון</div>`;
   }
 
   // בנה גוף תוכן
