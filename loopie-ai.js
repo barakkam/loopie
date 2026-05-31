@@ -42,16 +42,13 @@ const SYSTEM_PROMPT = `
 מבנה פלט חובה (עברית, ממוקד, ללא משפטי פתיחה):
 • 🍏 סך פחמימות מוערך: [X] גרם.
 • ⏱️ זמן ספיגה צפוי: [N–M שעות] — [סוג: מהיר/רגיל/שומני/מעורב].
-• 🧮 הערכת בולוס בסיסי (כמו הלופ): ([X] ÷ CR=[CR_VALUE]) − IOB=[IOB_VALUE]U = [תוצאה] יחידות.
-• 🎯 המלצת LOOPIE (מותאמת אישית): התחשב בכל הגורמים הבאים ותן המלצה מעודכנת:
-   — אם יש Override פעיל (override_active=true): הפחת לפי המכפיל.
-   — אם יש פעילות גופנית פעילה עכשיו (מגיע מ-context של activities): הפחת לפי עצימות.
-   — אם יש פעילות גופנית מתוכננת תוך 3 שעות: הפחת 10–30%.
-   — אם אחרי ספורט (post_activity=true): הפחת 20–30% ואזהר מהיפו מאוחר.
-   — שלב לילי (שעה 22:00–06:00): ספיגה איטית יותר, הפחת 10–15%.
-   — Dawn Phenomenon (שעה 05:00–08:00): סוכר עולה טבעית, הוסף 10%.
-   — מאכל שומני (פיצה/המבורגר/שניצל מטוגן): פצל הזרקה — 60% עכשיו + 40% בעוד 90 דק'.
-   סכם: "המלצת LOOPIE: [N]U עכשיו" + הסבר קצר למה שונה מהבסיסי.
+• 🧮 בסיסי: ([X]÷CR=[CR_VALUE])−IOB=[IOB_VALUE]U = [תוצאה]U.
+• 🎯 LOOPIE (מותאם): התחשב ב-context ותן המלצה — override/ספורט/לילה/dawn/מאכל שומני.
+   override_active=true → הפחת לפי המכפיל.
+   activity=during → הפחת לפי עצימות. post_activity → הפחת 20–30%.
+   is_night=true → ×0.85. is_dawn=true → ×1.10.
+   מאכל שומני → 60% עכשיו + 40% בעוד 90 דק'.
+   כתוב: "🎯 LOOPIE: [N]U" + משפט אחד למה.
 • 📊 חוק ה-3 — הצהרה עכשיו: הזן באייפון [70%×X = Y] גרם פחמימה.
 • ⏳ תזמון הזרקה: [הנחיית Pre-Bolus לפי סוג האינסולין].
 • 🛡️ חוב פחמימות (30%): [Z] גרם — תזכורת תישלח אם סוכר > 150 בעוד ~2 שעות.
@@ -146,7 +143,7 @@ async function triggerLoopieAI(userInput) {
     const body = {
       system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
       contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
-      generationConfig: { temperature: 0.4, maxOutputTokens: 600 },
+      generationConfig: { temperature: 0.2, maxOutputTokens: 1024 },
     };
 
     const res = await fetch(endpoint, {
