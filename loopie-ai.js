@@ -11,40 +11,45 @@
    אסור: דוחות סטטוס יבשים של מדדי המשאבה.
 ─────────────────────────────────────────────────────────────*/
 const SYSTEM_PROMPT = `
-אתה מנוע הבינה המלאכותית הרשמי של אפליקציית LOOPIE לניהול סוכרת מסוג 1.
-תפקידך הבלעדי הוא לנתח את האוכל שהמשתמש מזין, לחשב פחמימות, ולהחיל את חוק ה-3 הטיפולי במדויק.
+אתה מנוע חישוב טיפולי של LOOPIE לניהול סוכרת סוג 1.
+תפקיד: ניתוח מאכל, חישוב פחמימות, חוק ה-3 (70/30), תזמון לפי סוג אינסולין.
+אסור: דוח סטטוס יבש של מדדים. אסור: שיטת חישוב — רק תוצאות.
 
-חוק ברזל: אסור לך לפלוט דוח סטטוס יבש של מדדי המשאבה (סוכר, IOB, COB, בזאלי וכו') כתגובה ראשית — גם אם הנתונים נמסרו לך ברקע. הם שם כהקשר בלבד.
+── מסד מאכלים (ערכים קשיחים — השתמש בהם תמיד) ──
+פיתה=50g/3ש' | לחם פרוס=15g/3ש' | כוס פסטה=40g/4ש' | כוס אורז=45g/3ש'
+בננה=25g/1.5ש' | תפוח=15g/1.5ש' | ענב כוס=25g/1.5ש' | תמר=18g/1.5ש'
+פיצה פרוסה=30g/4ש' | המבורגר (עם לחמנייה)=30g/4ש' | שניצל מטוגן=10g/4ש'
+קרואסון=25g/3ש' | בייגלה=55g/3ש' | וופל=20g/2ש' | עוגיה=10g/2ש'
+כוס מיץ=25g/1ש' | שוקו=30g/2ש' | פתיבר=7.5g/1ש' | גלוקוז/סוכריה=5g/0.5ש'
+חביתה=2g/1ש' | גבינה=2g/1ש' | יוגורט מתוק=15g/2ש' | קפיר=10g/2ש'
+ג'חנון 100g=50g/5ש' | מלאווח=40g/4ש' | בורקס=25g/3ש'
 
-חוקי יסוד — ניתוח ארוחות וחוק ה-3:
-1. זהה את המאכל וחשב פחמימות לפי ידע תזונתי:
-   פיתה=50g, לחם פרוס=15g, כוס פסטה=40g, כוס אורז=45g, בננה=25g, תפוח=15g,
-   פיצה פרוסה=30g, המבורגר ללא לחמנייה=5g, לחמנייה=25g, שניצל=10g,
-   קרואסון=25g, בייגלה=55g, וופל=20g, עוגיה=10g, כוס מיץ=25g, שוקו=30g.
-   לכל מאכל לא מוכר — הערך הגיוני לפי הידע שלך.
+── מאכל לא מוכר: ברירת מחדל 3 שעות ──
+אם המאכל לא ברשימה — הערך הגיוני + ספיגה=3ש'.
 
-2. חשב זמן ספיגה צפוי לפי סוג המאכל:
-   • פחמימות מהירות (מיץ, סוכר, פרי) → 1–1.5 שעות
-   • פחמימות רגילות (לחם, אורז, פסטה, פיתה) → 2–3 שעות
-   • ארוחה שומנית (פיצה, המבורגר, שניצל מטוגן) → 3–5 שעות
-   • ארוחה מעורבת (בשר + לחם + ירקות) → 2.5–4 שעות
+── תזמון הזרקה לפי סוג אינסולין (insulin=... מה-context) ──
+Lyumjev / Fiasp / lyumjev / fiasp → הזרק 0-2 דקות לפני האכילה (אינסולין מהיר מאוד!)
+Novorapid / Humalog / novorapid / humalog → Pre-Bolus: 15-20 דקות לפני האכילה
 
-3. החל פיצול חוק ה-3 למניעת היפו:
-   • 70% מהפחמימות — הצהרה מיידית באייפון כעת.
-   • 30% מהפחמימות — חוב לוגי; תזכורת אם סוכר > 150 בעוד ~2 שעות.
+── חוק ה-3 (70/30) ──
+70% מהפחמימות → הצהרה מיידית באייפון.
+30% מהפחמימות → חוב; תזכורת אם סוכר > 150 בעוד ~2ש'.
 
-4. תזמון Pre-Bolus לפי סוג אינסולין (מגיע ב-state.insulinType):
-   • Lyumjev / Fiasp → 0–2 דקות לפני האכילה.
-   • Novorapid / Humalog → Pre-Bolus קשיח: 15–20 דקות לפני האכילה.
+── המלצת LOOPIE (מותאמת) ──
+חשב: (פחמימות ÷ CR) − IOB = בסיס.
+אז התאם לפי context:
+• override_active=true → הכפל במכפיל override
+• activity=during_high → ×0.60 | during_medium → ×0.75 | during_low → ×0.90
+• post_activity → ×0.70 עד ×0.80 (סכנת היפו מאוחר!)
+• is_night=true → ×0.85
+• is_dawn=true → ×1.10
+• מאכל שומני (ספיגה>3.5ש') → 60% עכשיו + 40% בעוד 90 דק'
 
-5. אם המשאבה מציעה בולוס (state.recommendedBolus > 0) — ציין בסוף: "⚠️ הלופ מציע כעת XU — אל תחרוג."
-
-פלט — 6 שורות בדיוק, ללא משפטי פתיחה:
-🍏 פחמימות: [X]g | ⏱️ ספיגה: [N–M]ש' ([סוג])
-🧮 לופ בסיסי: [X]÷[CR]−IOB[IOB]=[תוצאה]U
-🎯 LOOPIE: [N]U — [משפט קצר: למה שונה מהבסיסי]
+פלט — 5 שורות בדיוק, ללא משפטי פתיחה, ללא שיטת חישוב:
+🍏 [שם מאכל]: [X]g | ⏱️ ספיגה: [N]ש'
+🎯 LOOPIE: [N]U עכשיו[אם שומני: + [M]U בעוד 90 דק'] — [סיבה אם שונה מבסיסי, אחרת ריק]
 📊 חוק ה-3: הזן [Y]g (70%) באייפון עכשיו
-⏳ תזמון: [Pre-Bolus לפי אינסולין]
+⏳ תזמון: [0-2 דק' / 15-20 דק'] לפני האכילה ([שם אינסולין])
 🛡️ חוב: [Z]g (30%) — תזכורת אם סוכר > 150
 `.trim();
 
@@ -56,112 +61,12 @@ const SYSTEM_PROMPT = `
 ─────────────────────────────────────────────────────────────*/
 async function triggerLoopieAI(userInput) {
   if (!userInput || !userInput.trim()) return;
-
-  // ── 1. אסוף State מספרי בלבד ──────────────────────────────
-  const s = (typeof state !== 'undefined') ? state : {};
-
-  // שלוף CR מהפרופיל הנוכחי (nightscout.js)
-  let crNow = s.cr ?? 15;
-  try {
-    const prof = (typeof fullHistory !== 'undefined' && fullHistory.profile) ? fullHistory.profile : null;
-    if (prof) {
-      const h = new Date().getHours();
-      const crArr = prof.carbratio || prof.carbRatio || prof.ic;
-      if (typeof profileValueAt === 'function') crNow = parseFloat(profileValueAt(crArr, h) || crNow);
-    }
-  } catch(e) {}
-
-  // ── גורמים נוספים מהקשר LOOPIE ──────────────────────────
-  let activityContext = 'none';
-  let postActivity    = false;
-  let activityFactor  = 1.0;
-  try {
-    if (typeof checkActiveActivity === 'function') {
-      const actResult = checkActiveActivity();
-      if (actResult) {
-        const sp = actResult.sp || {};
-        if (actResult.type === 'during') {
-          activityContext = 'during_' + (actResult.act.intensity || 'medium');
-          activityFactor  = 1 - (sp.basalReduction || 30) / 100;
-        } else if (actResult.type === 'after') {
-          postActivity    = true;
-          activityContext = 'post_' + (actResult.act.intensity || 'medium') + '_' + (actResult.minsAgo || 0) + 'min_ago';
-          activityFactor  = 1 - (sp.postReduction || 20) / 100;
-        } else if (actResult.type === 'before') {
-          activityContext = 'upcoming_' + (actResult.act.intensity || 'medium') + '_in_' + (actResult.minsLeft || 0) + 'min';
-          activityFactor  = actResult.minsLeft < 60 ? 0.8 : 0.9;
-        }
-      }
-    }
-  } catch(e) {}
-
-  // ── שעה ביום ──────────────────────────────────────────────
-  const nowHour = new Date().getHours();
-  const isNight = nowHour >= 22 || nowHour < 6;
-  const isDawn  = nowHour >= 5  && nowHour < 8;
-
-  const numericContext = [
-    `SGV=${s.sgv ?? 0}`,
-    `trend=${s.trend ?? 'Flat'}`,
-    `IOB=${+(s.iob ?? 0).toFixed(2)}`,
-    `COB=${+(s.cob ?? 0).toFixed(1)}`,
-    `CR=${crNow}`,
-    `ISF=${s.isf ?? 120}`,
-    `insulin=${s.insulinType ?? 'Novorapid'}`,
-    `pumpBolus=${s.recommendedBolus ?? 0}`,
-    `override_active=${s.overrideActive ?? false}`,
-    `override_name=${s.overrideName ?? 'none'}`,
-    `override_multiplier=${s.overrideMultiplier ?? 1}`,
-    `activity=${activityContext}`,
-    `post_activity=${postActivity}`,
-    `activity_factor=${activityFactor.toFixed(2)}`,
-    `hour=${nowHour}`,
-    `is_night=${isNight}`,
-    `is_dawn=${isDawn}`,
-  ].join(' | ');
-
-  const fullPrompt =
-    `[context: ${numericContext}]\n` +
-    `המשתמש אוכל: ${userInput.trim()}`;
-
-  // ── 2. פתח Modal עם Spinner ────────────────────────────────
-  _aiShowModal(userInput, null, s.recommendedBolus ?? 0, true);
-
-  // ── 3. קריאה ישירה ל-Gemini generateContent (ללא streaming) ─
-  let aiText = '';
-  try {
-    const apiKey = (typeof geminiKey === 'function') ? geminiKey() : (typeof GEMINI_KEY !== 'undefined' ? GEMINI_KEY : '');
-    const endpoint =
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-
-    const body = {
-      system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
-      generationConfig: { temperature: 0.2, maxOutputTokens: 4000 },
-    };
-
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`Gemini ${res.status}: ${err.slice(0, 120)}`);
-    }
-
-    const data = await res.json();
-    aiText =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text ??
-      'לא התקבלה תשובה מג\'מיני.';
-  } catch (e) {
-    aiText = `⚠️ שגיאת AI: ${e.message}`;
+  // מפנה ל-askGeminiAdvisor שמכיל את כל הלוגיקה הנכונה עם buildGeminiPrompt
+  if (typeof askGeminiAdvisor === 'function') {
+    askGeminiAdvisor(userInput);
   }
-
-  // ── 4. עדכן Modal עם התשובה הסופית ───────────────────────
-  _aiShowModal(userInput, aiText, s.recommendedBolus ?? 0, false);
 }
+
 
 
 /* ─── _aiShowModal (פנימי) ──────────────────────────────────
