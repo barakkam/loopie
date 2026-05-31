@@ -648,6 +648,169 @@ async function askOmnibox() {
 }
 
 
+// ─── Local Activity Parser ────────────────────────────────────
+function _parseActivityLocally(q) {
+    var DAY_MAP = {'ראשון':0,'שני':1,'שלישי':2,'רביעי':3,'חמישי':4,'שישי':5,'שבת':6};
+    var DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+
+    function normTime(t) {
+        if (!t) return null;
+        t = String(t).replace('.', ':');
+        if (!t.includes(':')) t = t.length <= 2 ? t + ':00' : t.slice(0,-2) + ':' + t.slice(-2);
+        var p = t.split(':');
+        return p[0].padStart(2,'0') + ':' + (p[1]||'00').padStart(2,'0');
+    }
+
+    var isAdd    = /^(הוסף|הכנס|צור|הוסיף)\s/i.test(q);
+    var isUpdate = /^(עדכן|שנה|ערוך|העבר)\s/i.test(q);
+    var isDelete = /^(מחק|הסר|מחק)\s/i.test(q);
+
+    // שעות
+    var timeRx   = /(\d{1,2}[:.:]?\d{0,2})\s*[-–]\s*(\d{1,2}[:.:]?\d{0,2})/;
+    var tMatch   = q.match(timeRx);
+    var fromTime = tMatch ? normTime(tMatch[1]) : null;
+    var toTime   = tMatch ? normTime(tMatch[2]) : null;
+
+    // ימים
+    var dayRx = new RegExp('(ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)', 'g');
+    var dayMatches = [], dm;
+    while ((dm = dayRx.exec(q)) !== null) dayMatches.push({name: dm[1], idx: dm.index});
+
+    // עצימות
+    var intensity = 'medium';
+    if (/נמוכ|קל |יוגה|הליכה|פילאטיס/i.test(q)) intensity = 'low';
+    if (/גבוה|מאומץ|mma|ריצה|hiit|אגרוף|קראטה/i.test(q)) intensity = 'high';
+
+    // שם — הסר מילות פעולה, ימים, שעות
+    var actName = q
+        .replace(/^(הוסף|הכנס|צור|עדכן|שנה|ערוך|מחק|הסר|חוג|אימון|שיעור|פעילות)\s*/gi, '')
+        .replace(new RegExp('(ב?יום\s+)?(ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)', 'g'), '')
+        .replace(timeRx, '')
+        .replace(/במקום|ב-?שעה|בשעות|מ-|עד|עצימות.*/gi, '')
+        .replace(/\s+/g, ' ').trim();
+
+    if (isAdd && actName && dayMatches.length > 0 && fromTime) {
+        return { action: 'add_routine', name: actName, day: DAY_NAMES[DAY_MAP[dayMatches[0].name]], startTime: fromTime, endTime: toTime, intensity: intensity, _rawDays: dayMatches };
+    }
+    if (isUpdate && dayMatches.length >= 1) {
+        return { action: 'update_routine', name: actName, day: DAY_NAMES[DAY_MAP[dayMatches[0].name]], startTime: fromTime, endTime: toTime, intensity: null, _rawDays: dayMatches };
+    }
+    if (isDelete && actName) {
+        return { action: 'delete_routine', name: actName };
+    }
+    return null;
+}
+
+function _handleActivityObj(actObj, userQuestion) {
+    var DAY_MAP2   = {'ראשון':0,'שני':1,'שלישי':2,'רביעי':3,'חמישי':4,'שישי':5,'שבת':6};
+    var DAY_NAMES2 = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+    function toEn(v) { if(!v)return'medium'; v=String(v).toLowerCase(); if(v==='גבוהה'||v==='high')return'high'; if(v==='נמוכה'||v==='low')return'low'; return'medium'; }
+    function save() { try { localStorage.setItem('loopie_activities', JSON.stringify(ACTIVITIES)); saveMemory('activities', ACTIVITIES).catch(function(){}); } catch(e){} }
+
+    if (actObj.action === 'add_routine') {
+        // ריבוי ימים
+        var rawDays = actObj._rawDays || [];
+        var slots = [];
+        // בדוק שעות נפרדות לכל יום
+        var timeRxM = /(\d{1,2}[:.:]?\d{0,2})\s*[-–]\s*(\d{1,2}[:.:]?\d{0,2})/g;
+        function normT(t) { if(!t)return null; t=String(t).replace('.',':'); if(!t.includes(':')) t=t.length<=2?t+':00':t.slice(0,-2)+':'+t.slice(-2); var p=t.split(':'); return p[0].padStart(2,'0')+':'+(p[1]||'00').padStart(2,'0'); }
+        var allTimes2 = []; var tm3; while((tm3=timeRxM.exec(userQuestion))!==null) allTimes2.push({from:normT(tm3[1]),to:normT(tm3[2]),idx:tm3.index});
+
+        if (rawDays.length > 1 && allTimes2.length >= rawDays.length) {
+            // שעות נפרדות לכל יום
+            rawDays.forEach(function(d,i) {
+                var t = allTimes2[i] || allTimes2[0];
+                slots.push({ day: DAY_MAP2[d.name], from: t.from, to: t.to });
+            });
+        } else {
+            rawDays.forEach(function(d) {
+                slots.push({ day: DAY_MAP2[d.name], from: actObj.startTime, to: actObj.endTime });
+            });
+        }
+        if (!slots.length && DAY_MAP2[actObj.day] !== undefined)
+            slots = [{ day: DAY_MAP2[actObj.day], from: actObj.startTime, to: actObj.endTime }];
+
+        slots.forEach(function(sl) {
+            ACTIVITIES.push({ id: Date.now() + sl.day + Math.random(), name: actObj.name, day: sl.day, from: sl.from||'00:00', to: sl.to||'01:00', intensity: toEn(actObj.intensity) });
+        });
+        save(); try { renderActivities(); } catch(e) {}
+        var summary = slots.map(function(sl){ return 'יום ' + DAY_NAMES2[sl.day] + ' ' + (sl.from||'') + '–' + (sl.to||''); }).join('<br>');
+        showPopup('✅ חוג נוסף!', '<b>' + actObj.name + '</b><br>' + summary);
+
+    } else if (actObj.action === 'update_routine') {
+        // העבר ל-update_routine handler הקיים
+        var dayMap2 = DAY_MAP2, dayNames2 = DAY_NAMES2;
+        var _toEn2 = toEn, _saveActs = save;
+        // בנה actObj תואם לפורמט הישן
+        var actObj2 = { action:'update_routine', name: actObj.name, day: actObj.day, startTime: actObj.startTime, endTime: actObj.endTime, intensity: actObj.intensity };
+        // שלח לטיפול
+        var fakeData = { candidates:[{ content:{ parts:[{ text: JSON.stringify(actObj2) }] } }] };
+        var fakeText = JSON.stringify(actObj2);
+        var fakeMatch = fakeText.match(/\{[\s\S]*?\}/);
+        if (fakeMatch) {
+            try {
+                var parsedAct = JSON.parse(fakeMatch[0]);
+                // העבר ישירות לטיפול
+                _processUpdateRoutine(parsedAct, userQuestion);
+            } catch(e) {}
+        }
+
+    } else if (actObj.action === 'delete_routine') {
+        var beforeD = ACTIVITIES.length;
+        ACTIVITIES = ACTIVITIES.filter(function(a){ return !a.name.toLowerCase().includes((actObj.name||'').toLowerCase()); });
+        save(); try { renderActivities(); } catch(e) {}
+        showPopup(ACTIVITIES.length < beforeD ? '🗑️ נמחק' : '❓',
+            ACTIVITIES.length < beforeD ? "<b>" + actObj.name + "</b> — " + (beforeD-ACTIVITIES.length) + " רשומות הוסרו." : "לא מצאתי חוג בשם '" + actObj.name + "'.");
+    }
+}
+
+function _processUpdateRoutine(actObj, userQuestion) {
+    var DAY_MAP3   = {'ראשון':0,'שני':1,'שלישי':2,'רביעי':3,'חמישי':4,'שישי':5,'שבת':6};
+    var DAY_NAMES3 = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+    function toEn3(v) { if(!v)return'medium'; v=String(v).toLowerCase(); if(v==='גבוהה'||v==='high')return'high'; if(v==='נמוכה'||v==='low')return'low'; return'medium'; }
+    function save3() { try { localStorage.setItem('loopie_activities',JSON.stringify(ACTIVITIES)); saveMemory('activities',ACTIVITIES).catch(function(){}); } catch(e){} }
+
+    function normT3(t) { if(!t)return null; t=String(t).replace('.',':'); if(!t.includes(':')) t=t.length<=2?t+':00':t.slice(0,-2)+':'+t.slice(-2); var p=t.split(':'); return p[0].padStart(2,'0')+':'+(p[1]||'00').padStart(2,'0'); }
+    var timeRx3 = /(\d{1,2}[:.:]?\d{0,2})\s*[-–]\s*(\d{1,2}[:.:]?\d{0,2})/;
+    var tM3 = userQuestion.match(timeRx3);
+    if (!actObj.startTime && tM3) actObj.startTime = normT3(tM3[1]);
+    if (!actObj.endTime   && tM3) actObj.endTime   = normT3(tM3[2]);
+
+    // זיהוי שינוי יום
+    var DAYS_RX3 = '(ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)';
+    var fromDay3 = null, toDay3 = null;
+    var swM = userQuestion.match(new RegExp('ב?יום\s+' + DAYS_RX3 + '[\s\S]*?במקום[\s\S]*?ב?יום\s+' + DAYS_RX3));
+    var chM = userQuestion.match(new RegExp('מ(?:יום\s+|ב)?' + DAYS_RX3 + '[\s\S]*?ל(?:יום\s+|ב)?' + DAYS_RX3));
+    if (swM) { toDay3=DAY_MAP3[swM[1]]; fromDay3=DAY_MAP3[swM[2]]; }
+    else if (chM) { fromDay3=DAY_MAP3[chM[1]]; toDay3=DAY_MAP3[chM[2]]; }
+    else if (actObj.day) toDay3 = DAY_MAP3[actObj.day];
+
+    if (!actObj.name) ACTIVITIES.forEach(function(a){ if(userQuestion.toLowerCase().includes(a.name.toLowerCase())) actObj.name=a.name; });
+
+    var updCnt3 = 0;
+    ACTIVITIES.forEach(function(a) {
+        var nm=a.name.toLowerCase().trim(), qn=(actObj.name||'').toLowerCase().trim();
+        if (qn && !nm.includes(qn) && !qn.includes(nm)) return;
+        if (fromDay3 !== null && a.day !== fromDay3) return;
+        if (toDay3 !== null)   a.day = toDay3;
+        if (actObj.startTime)  a.from = actObj.startTime;
+        if (actObj.endTime)    a.to   = actObj.endTime;
+        if (actObj.intensity)  a.intensity = toEn3(actObj.intensity);
+        updCnt3++;
+    });
+    save3(); try { renderActivities(); } catch(e) {}
+
+    var details = [];
+    if (fromDay3!==null && toDay3!==null) details.push('📅 יום ' + DAY_NAMES3[fromDay3] + ' → ' + DAY_NAMES3[toDay3]);
+    else if (toDay3!==null) details.push('📅 יום ' + DAY_NAMES3[toDay3]);
+    if (actObj.startTime && actObj.endTime) details.push('🕐 ' + actObj.startTime + '–' + actObj.endTime);
+
+    showPopup(updCnt3 > 0 ? '✅ עודכן!' : '❓',
+        updCnt3 > 0 ? '<b>' + (actObj.name||'החוג') + '</b><br>' + details.join('<br>') :
+        "לא מצאתי חוג בשם '" + (actObj.name||'') + "'.<br><small style='color:#888'>בדוק שהשם נכון</small>");
+}
+
+
 async function askGeminiAdvisor(userQuestion) {
     if (!userQuestion||!userQuestion.trim()) return;
     var qlLocal = userQuestion.toLowerCase().trim();
@@ -995,15 +1158,22 @@ Override פעיל → הפחת המלצות בהתאם למכפיל.
 
         // בדוק אם זו בקשת חוג — שלח ל-Gemini ללא Streaming (צריך JSON מלא)
         var isActivityRequest = /הוסף|הכנס|צור|שנה|עדכן|ערוך|מחק|הסר|חוג|אימון|שיעור/i.test(userQuestion) &&
-                                /חוג|אימון|שיעור|פעילות|mma|כדורגל|כדורסל|שחייה|ריצה|צופים|קראטה|כושר|עצימות/i.test(userQuestion);
+                                /חוג|אימון|שיעור|פעילות|mma|כדורגל|כדורסל|שחייה|ריצה|צופים|קראטה|כושר|עצימות|אופניים|יוגה|פילאטיס|הליכה/i.test(userQuestion);
         if (isActivityRequest) {
+            // ── פרסור מקומי ראשוני — לפני Gemini ──
+            var localActObj = _parseActivityLocally(userQuestion);
+            if (localActObj) {
+                _handleActivityObj(localActObj, userQuestion);
+                return;
+            }
+            // fallback → Gemini
             var actResp = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + geminiKey(), {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({
                     contents: [{role:"user", parts:[{text: userQuestion}]}],
                     systemInstruction: {parts:[{text: sysPrompt}]},
-                    generationConfig: {maxOutputTokens: 300, temperature: 0.0}
+                    generationConfig: {maxOutputTokens: 150, temperature: 0.0}
                 })
             });
             if (actResp.ok) {
