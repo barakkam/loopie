@@ -249,7 +249,7 @@ async function askOmnibox() {
             var tgtRng  = raw.currentCorrectionRange
                 ? (raw.currentCorrectionRange.minValue + '–' + raw.currentCorrectionRange.maxValue + ' mg/dL')
                 : null;
-            var duration= raw.duration ? (raw.duration / 60).toFixed(0) + ' דק'' : null;
+            var duration= raw.duration ? (raw.duration / 60).toFixed(0) + " דק'" : null;
             var symbol  = raw.symbol || '';
             var name    = raw.name || 'Override פעיל';
 
@@ -377,8 +377,8 @@ async function askOmnibox() {
                 "<b>הוסף חוג [שם] יום [יום] [HH:MM] עד [HH:MM]</b><br><br>" +
                 "לדוגמה:<br>• הוסף חוג MMA יום שלישי 17:00 עד 18:30<br>" +
                 "• הוסף חוג שחייה יום חמישי 16:00 עד 17:00<br><br>" +
-                "<button onclick="switchTab('tab-activity',document.querySelectorAll('.nav-tab')[1]);closePopup()" " +
-                "style='width:100%;padding:10px;background:#3b82f6;border:none;border-radius:8px;color:#fff;cursor:pointer;font-size:13px'>" +
+                "<button onclick=\"switchTab(\'tab-activity\',document.querySelectorAll(\'.nav-tab\')[1]);closePopup()\" " +
+                "style=\"width:100%;padding:10px;background:#3b82f6;border:none;border-radius:8px;color:#fff;cursor:pointer;font-size:13px\">" +
                 "📋 פתח טאב פעילויות</button></div>");
             return;
         }
