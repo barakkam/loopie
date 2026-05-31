@@ -124,35 +124,94 @@ function _clearImage() {
 async function askOmnibox() {
     var input = document.getElementById('omnibox');
     var q     = input ? input.value.trim() : '';
-    var ql    = q.toLowerCase();
+    var ql    = q.toLowerCase().trim();
     if (!q) return;
+    if (input) input.value = '';
 
-    // ציוד
+    // ── ציוד / פוד / חיישן ──
     if (ql === 'ציוד' || ql === 'פוד' || ql === 'pod' || ql === 'חיישן' ||
         ql.includes('גיל פוד') || ql.includes('גיל חיישן') || ql.includes('החלפ')) {
-        if (input) input.value = '';
         await showEquipmentStatus();
         return;
     }
 
-    // מצב מהיר
-    if ((ql === 'מה המצב' || ql === 'סטטוס' || ql === 'status') && ql.length < 15) {
-        if (input) input.value = '';
+    // ── סטטוס מהיר ──
+    if (ql === 'מה המצב' || ql === 'סטטוס' || ql === 'status' || ql === 'מה קורה') {
         var sgv = nsData.currentSgv || 0;
         showPopup('🛡️ סטטוס נוכחי',
             "<div style='font-size:14px;line-height:1.9;text-align:right'>" +
             "🩸 סוכר: <b>" + sgv + "</b> " + (nsData.trend||'') + "<br>" +
             "💉 IOB: <b>" + (parseFloat(nsData.iob)||0).toFixed(2) + "U</b><br>" +
             "🍞 COB: <b>" + (parseFloat(nsData.cob)||0).toFixed(0) + "g</b><br>" +
-            "⏱ בזאלי: <b>" + (nsData.basal||0) + " U/ש'</b>" +
-            (nsData.overrideActive ? "<br>🔄 Override: <b style='color:#f59e0b'>" + nsData.overrideName + "</b>" : "") +
+            "\u23f1 בזאלי: <b>" + (nsData.basal||0) + " U/\u05e9'</b>" +
+            (nsData.overrideActive ? "<br>\ud83d\udd04 Override: <b style='color:#f59e0b'>" + nsData.overrideName + "</b>" : "") +
             "</div>");
         return;
     }
 
-    // כל שאר → Gemini AI
-    if (input) input.value = '';
-    askGeminiAdvisor(q);
+    // ── IOB ──
+    if (ql === 'iob' || ql === '\u05d0\u05d9\u05e0\u05e1\u05d5\u05dc\u05d9\u05df \u05e4\u05e2\u05d9\u05dc' || ql === '\u05d0\u05d9\u05d9\u05d5\u05d1') {
+        showPopup('\ud83d\udc89 \u05d0\u05d9\u05e0\u05e1\u05d5\u05dc\u05d9\u05df \u05e4\u05e2\u05d9\u05dc (IOB)',
+            "<div style='font-size:16px;text-align:right'>" +
+            "<span style='font-size:32px;color:#3b82f6;font-weight:700'>" + (parseFloat(nsData.iob)||0).toFixed(2) + "U</span></div>");
+        return;
+    }
+
+    // ── COB ──
+    if (ql === 'cob' || ql === '\u05e4\u05d7\u05de\u05d9\u05de\u05d5\u05ea \u05e4\u05e2\u05d9\u05dc\u05d5\u05ea' || ql === '\u05db\u05d5\u05d1') {
+        showPopup('\ud83c\udf4f COB',
+            "<div style='font-size:16px;text-align:right'>" +
+            "<span style='font-size:32px;color:#f59e0b;font-weight:700'>" + (parseFloat(nsData.cob)||0).toFixed(0) + "g</span></div>");
+        return;
+    }
+
+    // ── בזאלי ──
+    if (ql === '\u05d1\u05d6\u05d0\u05dc\u05d9' || ql === '\u05d1\u05d6\u05d0\u05dc' || ql === '\u05ea\u05d5\u05db\u05e0\u05d9\u05ea \u05d1\u05d6\u05d0\u05dc\u05d9\u05ea') {
+        var prof    = fullHistory && fullHistory.profile;
+        var basalNow = nsData.basal || 0;
+        var basalArr = prof && Array.isArray(prof.basal) ? prof.basal : null;
+        var toMin = function(t){ var p=t.split(':'); return parseInt(p[0])*60+parseInt(p[1]||0); };
+        var rows = basalArr
+            ? basalArr.map(function(b,i){
+                var nx = basalArr[i+1] ? basalArr[i+1].time : '24:00';
+                return '\u2022 ' + b.time + '\u2013' + nx + ': <b>' + b.value + " U/\u05e9'</b>";
+              }).join('<br>')
+            : "\u2022 00:00\u201324:00: <b>" + basalNow + " U/\u05e9'</b>";
+        var totalDaily = 0;
+        if (basalArr) {
+            basalArr.forEach(function(b,i){
+                var nx = basalArr[i+1] || {time:'24:00'};
+                totalDaily += b.value * (toMin(nx.time)-toMin(b.time)) / 60;
+            });
+        } else { totalDaily = basalNow * 24; }
+        showPopup('\u23f3 \u05e7\u05e6\u05d1 \u05d1\u05d6\u05d0\u05dc\u05d9',
+            "<div style='font-size:14px;line-height:1.8;text-align:right'>" +
+            "\u23f3 <b>\u05db\u05e8\u05d2\u05e2:</b> " + basalNow + " U/\u05e9'<br>" +
+            "\ud83d\udcca <b>\u05e1\u05da \u05d9\u05d5\u05de\u05d9:</b> <span style='font-size:18px;color:#3b82f6;font-weight:700'>" + totalDaily.toFixed(2) + "U</span><br><br>" +
+            "<b>\u05ea\u05d5\u05db\u05e0\u05d9\u05ea:</b><br>" + rows + "</div>");
+        return;
+    }
+
+    // ── CR ──
+    if (ql === 'cr' || ql === 'icr' || ql === '\u05d9\u05d7\u05e1 \u05e4\u05d7\u05de\u05d9\u05de\u05d5\u05ea') {
+        var prof2 = fullHistory && fullHistory.profile;
+        var crNow = prof2 ? parseFloat(profileValueAt(prof2.carbratio||prof2.carbRatio||prof2.ic, new Date().getHours())||15) : 15;
+        showPopup('\ud83d\udcca CR',
+            "<div style='font-size:16px;text-align:right'>1U / <span style='font-size:28px;color:#10b981;font-weight:700'>" + crNow + "g</span></div>");
+        return;
+    }
+
+    // ── ISF ──
+    if (ql === 'isf' || ql === '\u05e8\u05d2\u05d9\u05e9\u05d5\u05ea') {
+        var prof3 = fullHistory && fullHistory.profile;
+        var isfNow = prof3 ? parseFloat(profileValueAt(prof3.sens||prof3.sensitivity, new Date().getHours())||120) : 120;
+        showPopup('\ud83c\udfaf ISF',
+            "<div style='font-size:16px;text-align:right'><span style='font-size:28px;color:#f59e0b;font-weight:700'>" + isfNow + "</span> mg/dL/U</div>");
+        return;
+    }
+
+    // ── כל שאר → Gemini AI ──
+    triggerLoopieAI(q);
 }
 
 
