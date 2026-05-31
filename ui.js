@@ -1022,34 +1022,146 @@ Override פעיל → הפחת המלצות בהתאם למכפיל.
                         var _saveActs = function(){ try { localStorage.setItem('loopie_activities', JSON.stringify(ACTIVITIES)); } catch(e2) {} };
 
                         if (actObj.action === 'add_routine') {
-                            var dayNum = dayMap2[actObj.day];
-                            if (dayNum !== undefined) {
-                                ACTIVITIES.push({ id: Date.now(), name: actObj.name, day: dayNum, from: actObj.startTime, to: actObj.endTime, intensity: _toEn2(actObj.intensity) });
+                            // פרסור ריבוי ימים עם שעות נפרדות מהטקסט המקורי
+                            // תמיכה ב: "יום שני 09:00-10:00 וביום רביעי 16:00-17:00"
+                            var DAY_NAMES_LIST = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+                            var DAY_MAP_LOCAL  = {'ראשון':0,'שני':1,'שלישי':2,'רביעי':3,'חמישי':4,'שישי':5,'שבת':6};
+                            var timeRx  = /(\d{1,2}[:.:]?\d{0,2})\s*[-–]\s*(\d{1,2}[:.:]?\d{0,2})/g;
+                            var dayRx   = new RegExp('(' + DAY_NAMES_LIST.join('|') + ')', 'g');
+
+                            function normalizeTime(t) {
+                                t = t.replace('.',':');
+                                if (!t.includes(':')) t = t.length <= 2 ? t + ':00' : t.slice(0,-2) + ':' + t.slice(-2);
+                                var p = t.split(':');
+                                return p[0].padStart(2,'0') + ':' + (p[1]||'00').padStart(2,'0');
+                            }
+
+                            // מצא כל הופעות יום+שעות ברצף
+                            var rawQ   = userQuestion;
+                            var slots  = [];  // [{day, from, to}]
+                            var dMatch, tMatch;
+                            var allDays = []; var dm2;
+                            while ((dm2 = dayRx.exec(rawQ)) !== null) allDays.push({name: dm2[1], idx: dm2.index});
+
+                            var allTimes = []; var tm2; timeRx.lastIndex = 0;
+                            while ((tm2 = timeRx.exec(rawQ)) !== null) allTimes.push({from: normalizeTime(tm2[1]), to: normalizeTime(tm2[2]), idx: tm2.index});
+
+                            if (allDays.length > 0 && allTimes.length > 0) {
+                                // שייך כל זוג שעות ליום הכי קרוב לפניו
+                                allDays.forEach(function(d, di) {
+                                    var nextDayIdx = allDays[di+1] ? allDays[di+1].idx : rawQ.length;
+                                    // מצא שעות בין היום הנוכחי לבא
+                                    var timesForDay = allTimes.filter(function(t){ return t.idx > d.idx && t.idx < nextDayIdx; });
+                                    if (timesForDay.length === 0) {
+                                        // אין שעות ספציפיות — קח את הראשונות הכלליות
+                                        timesForDay = allTimes.slice(0, 1);
+                                    }
+                                    timesForDay.forEach(function(t) {
+                                        slots.push({ day: DAY_MAP_LOCAL[d.name], from: t.from, to: t.to });
+                                    });
+                                });
+                            }
+
+                            // fallback — שיטה ישנה אם לא הצלחנו לפרסר
+                            if (slots.length === 0) {
+                                var dayStr   = (actObj.day || '').replace(/[,+ו]/g, ' ');
+                                var dayWords = dayStr.split(/\s+/).filter(Boolean);
+                                dayWords.forEach(function(dw) {
+                                    var dn = DAY_MAP_LOCAL[dw.trim()];
+                                    if (dn !== undefined) slots.push({ day: dn, from: actObj.startTime, to: actObj.endTime });
+                                });
+                                if (slots.length === 0 && DAY_MAP_LOCAL[actObj.day] !== undefined)
+                                    slots = [{ day: DAY_MAP_LOCAL[actObj.day], from: actObj.startTime, to: actObj.endTime }];
+                            }
+
+                            if (slots.length > 0) {
+                                slots.forEach(function(sl) {
+                                    ACTIVITIES.push({ id: Date.now() + sl.day + Math.random(), name: actObj.name, day: sl.day, from: sl.from, to: sl.to, intensity: _toEn2(actObj.intensity) });
+                                });
                                 _saveActs(); try { renderActivities(); } catch(e) {}
-                                showPopup("✅ חוג נוסף!", "<b>" + actObj.name + "</b><br>יום " + dayNames2[dayNum] + " | " + actObj.startTime + "–" + actObj.endTime);
+                                var summary = slots.map(function(sl){ return 'יום ' + DAY_NAMES_LIST[sl.day] + ' ' + sl.from + '–' + sl.to; }).join('<br>');
+                                showPopup("✅ חוג נוסף!", "<b>" + actObj.name + "</b><br>" + summary);
                                 return;
                             }
 
                         } else if (actObj.action === 'update_routine') {
+                            var DAY_NAMES_UPD  = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+                            var DAY_MAP_UPD    = {'ראשון':0,'שני':1,'שלישי':2,'רביעי':3,'חמישי':4,'שישי':5,'שבת':6};
+
+                            // חלץ שעות מהטקסט אם Gemini לא החזיר
+                            function normT(t) {
+                                if (!t) return null;
+                                t = String(t).replace('.', ':');
+                                if (!t.includes(':')) t = t.length <= 2 ? t + ':00' : t.slice(0,-2) + ':' + t.slice(-2);
+                                var p = t.split(':');
+                                return p[0].padStart(2,'0') + ':' + (p[1]||'00').padStart(2,'0');
+                            }
+                            var timeRx2 = /(\d{1,2}[:.:]?\d{0,2})\s*[-–]\s*(\d{1,2}[:.:]?\d{0,2})/;
+                            var tMatch2 = userQuestion.match(timeRx2);
+                            if (!actObj.startTime && tMatch2) actObj.startTime = normT(tMatch2[1]);
+                            if (!actObj.endTime   && tMatch2) actObj.endTime   = normT(tMatch2[2]);
+
+                            // זיהוי "יום X במקום יום Y" — fromDay=Y, toDay=X
+                            var fromDay = null, toDay = null;
+                            var swapRx = /(?:ב)?יום\s+(ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת).*?במקום.*?(?:ב)?יום\s+(ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)/;
+                            var swapRx2= /במקום\s+(?:ב)?יום\s+(ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת).*?(?:ב)?יום\s+(ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)/;
+                            var swapMatch = userQuestion.match(swapRx) || userQuestion.match(swapRx2);
+                            if (swapMatch) {
+                                // "יום שלישי במקום יום שני" → toDay=שלישי, fromDay=שני
+                                toDay   = DAY_MAP_UPD[swapMatch[1]];
+                                fromDay = DAY_MAP_UPD[swapMatch[2]];
+                            } else if (actObj.day !== undefined && actObj.day !== '') {
+                                // Gemini החזיר יום חדש — זה ה-toDay
+                                toDay = DAY_MAP_UPD[actObj.day];
+                            }
+
+                            // זיהוי "שנה מ-X ל-Y" בלי "במקום"
+                            if (fromDay === null && toDay === null) {
+                                var changeRx = /(?:שנה|עדכן|העבר).*?(?:מ-?|מ)(?:ב)?יום\s+(ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת).*?(?:ל-?|ל)(?:ב)?יום\s+(ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)/;
+                                var cMatch2 = userQuestion.match(changeRx);
+                                if (cMatch2) { fromDay = DAY_MAP_UPD[cMatch2[1]]; toDay = DAY_MAP_UPD[cMatch2[2]]; }
+                            }
+
+                            // חלץ שם חוג אם Gemini לא החזיר
+                            if (!actObj.name || actObj.name === '') {
+                                ACTIVITIES.forEach(function(a) {
+                                    if (userQuestion.toLowerCase().includes(a.name.toLowerCase())) actObj.name = a.name;
+                                });
+                            }
+
                             var updCnt = 0;
                             ACTIVITIES.forEach(function(a) {
                                 var nm = a.name.toLowerCase().trim(), qn = (actObj.name||'').toLowerCase().trim();
-                                if (nm === qn || nm.includes(qn) || qn.includes(nm)) {
-                                    var dm = !actObj.day || dayMap2[actObj.day] === undefined || a.day === dayMap2[actObj.day];
-                                    if (dm) {
-                                        if (actObj.intensity) a.intensity = _toEn2(actObj.intensity);
-                                        if (actObj.day && dayMap2[actObj.day] !== undefined) a.day = dayMap2[actObj.day];
-                                        if (actObj.startTime) a.from = actObj.startTime;
-                                        if (actObj.endTime)   a.to   = actObj.endTime;
-                                        updCnt++;
-                                    }
-                                }
+                                var nameMatch = !qn || nm === qn || nm.includes(qn) || qn.includes(nm);
+                                if (!nameMatch) return;
+
+                                // אם יש fromDay — עדכן רק את הרשומה של אותו יום
+                                var dayMatch = fromDay !== null ? a.day === fromDay : true;
+                                if (!dayMatch) return;
+
+                                if (actObj.intensity) a.intensity = _toEn2(actObj.intensity);
+                                // עדכן יום — אם fromDay→toDay
+                                if (toDay !== null) a.day = toDay;
+                                if (actObj.startTime) a.from = actObj.startTime;
+                                if (actObj.endTime)   a.to   = actObj.endTime;
+                                updCnt++;
                             });
+
                             _saveActs(); try { renderActivities(); } catch(e) {}
+
                             var lbl = (INTENSITY_LABELS||{})[ _toEn2(actObj.intensity) ] || actObj.intensity || '';
+                            var updDetails = [];
+                            if (fromDay !== null && toDay !== null)
+                                updDetails.push('📅 יום ' + DAY_NAMES_UPD[fromDay] + ' → יום ' + DAY_NAMES_UPD[toDay]);
+                            else if (toDay !== null)
+                                updDetails.push('📅 יום ' + DAY_NAMES_UPD[toDay]);
+                            if (actObj.startTime && actObj.endTime) updDetails.push('🕐 ' + actObj.startTime + '–' + actObj.endTime);
+                            if (lbl) updDetails.push('⚡ ' + lbl);
+
                             showPopup(updCnt > 0 ? "✅ עודכן!" : "❓",
-                                updCnt > 0 ? "חוג <b>" + actObj.name + "</b> — " + updCnt + " רשומות עודכנו" + (lbl ? " → " + lbl : "") :
-                                "לא מצאתי חוג בשם '" + actObj.name + "'.");
+                                updCnt > 0
+                                    ? "<b>" + (actObj.name||'החוג') + "</b><br>" + updDetails.join('<br>')
+                                    : "לא מצאתי חוג בשם '" + (actObj.name||'') + "' ביום הזה.<br><small style='color:#888'>נסה: 'עדכן חוג MMA מיום שני ליום שלישי'</small>");
                             return;
 
                         } else if (actObj.action === 'delete_routine') {
