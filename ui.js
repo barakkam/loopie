@@ -2048,30 +2048,393 @@ async function showMemoryHistory() {
 
 
 // ─── Profile Render ───────────────────────────────────────────
+// ─── Profile Tab — Personal + Medical Checks + Doctor Appointments ──────────
+
+var _PROF_CHECKS_DEFAULT = [
+    {id:'hba1c',   name:'HbA1c',             freq:90,  note:'כל 3 חודשים', gp:false, results:[]},
+    {id:'kidney',  name:'בדיקת כליות',        freq:365, note:'פעם בשנה',    gp:true,  results:[]},
+    {id:'thyroid', name:'בלוטת התריס',        freq:365, note:'פעם בשנה',    gp:true,  results:[]},
+    {id:'celiac',  name:'צליאק (anti-tTG)',    freq:365, note:'פעם בשנה',    gp:true,  results:[]},
+    {id:'eyes',    name:'בדיקת עיניים',       freq:365, note:'פעם בשנה',    gp:false, results:[]},
+    {id:'bp',      name:'לחץ דם',            freq:90,  note:'כל 3 חודשים', gp:true,  results:[]},
+    {id:'chol',    name:'פרופיל שומנים',      freq:365, note:'פעם בשנה',    gp:true,  results:[]},
+    {id:'urine',   name:'בדיקת שתן',         freq:180, note:'כל חצי שנה',  gp:true,  results:[]},
+    {id:'feet',    name:'בדיקת כפות רגליים', freq:365, note:'פעם בשנה',    gp:false, results:[]},
+];
+
+var _profChecks = [];
+var _profAppt   = {};
+var _profData   = {};
+
+function _profLoadData() {
+    try { _profData   = JSON.parse(localStorage.getItem('loopie_profile_v2') || '{}'); }   catch(e){}
+    try { _profAppt   = JSON.parse(localStorage.getItem('loopie_appt_v1')    || '{}'); }   catch(e){}
+    try { _profChecks = JSON.parse(localStorage.getItem('loopie_checks_v4')  || 'null'); } catch(e){}
+    if (!_profChecks || !_profChecks.length) {
+        _profChecks = _PROF_CHECKS_DEFAULT.map(function(c){ return Object.assign({done:false, doneDate:null}, c); });
+    } else {
+        ['celiac'].forEach(function(cid) {
+            if (!_profChecks.some(function(c){ return c.id === cid; })) {
+                var def = _PROF_CHECKS_DEFAULT.find(function(c){ return c.id === cid; });
+                if (def) _profChecks.push(Object.assign({done:false, doneDate:null}, def));
+                _profSaveData();
+            }
+        });
+    }
+}
+
+function _profSaveData() {
+    try {
+        localStorage.setItem('loopie_profile_v2', JSON.stringify(_profData));
+        localStorage.setItem('loopie_checks_v4',  JSON.stringify(_profChecks));
+        localStorage.setItem('loopie_appt_v1',    JSON.stringify(_profAppt));
+    } catch(e) {}
+}
+
+function _profDaysAgo(d)   { return d ? Math.floor((Date.now() - new Date(d)) / 86400000) : null; }
+function _profDaysUntil(d) { return d ? Math.ceil((new Date(d) - Date.now()) / 86400000)  : null; }
+
+function _profCalcAge() {
+    var dob = document.getElementById('prof-dob');
+    var el  = document.getElementById('prof-age');
+    if (!dob || !el || !dob.value) { if(el) el.textContent=''; return; }
+    el.textContent = 'גיל: ' + Math.floor((Date.now() - new Date(dob.value)) / (365.25 * 86400000));
+}
+
+function _profSavePersonal() {
+    _profData.name   = (document.getElementById('prof-name')   || {}).value || '';
+    _profData.gender = (document.getElementById('prof-gender') || {}).value || '';
+    _profData.dob    = (document.getElementById('prof-dob')    || {}).value || '';
+    _profData.height = (document.getElementById('prof-height') || {}).value || '';
+    _profData.weight = (document.getElementById('prof-weight') || {}).value || '';
+    _profSaveData(); _profCalcAge();
+    var btn = document.getElementById('prof-save-btn');
+    if (btn) { btn.textContent = '✓ נשמר'; setTimeout(function(){ btn.textContent = '💾 שמור פרטים'; }, 1500); }
+}
+
+function _profSaveAppt() {
+    _profAppt.last         = (document.getElementById('appt-last')          || {}).value || '';
+    _profAppt.next         = (document.getElementById('appt-next')          || {}).value || '';
+    _profAppt.time         = (document.getElementById('appt-time')          || {}).value || '';
+    _profAppt.doctor       = (document.getElementById('appt-doctor')        || {}).value || '';
+    _profAppt.remindBefore = parseInt((document.getElementById('appt-remind') || {}).value) || 3;
+    _profSaveData();
+    _profRenderApptBanners();
+    _profRenderChecksBanners();
+    var btn = document.getElementById('appt-save-btn');
+    if (btn) { btn.textContent = '✓ נשמר'; setTimeout(function(){ btn.textContent = '💾 שמור ביקורים'; }, 1500); }
+}
+
+function _profStatusFor(c) {
+    if (!c.done || !c.doneDate) return { label: 'לא בוצע', cls: 'status-overdue' };
+    var left = c.freq - _profDaysAgo(c.doneDate);
+    if (left >  7) return { label: 'הבא בעוד ' + left + ' ימים', cls: 'status-ok' };
+    if (left >  0) return { label: '⚠️ פג בעוד ' + left + ' ימים', cls: 'status-due' };
+    return { label: 'פג לפני ' + Math.abs(left) + ' ימים', cls: 'status-overdue' };
+}
+
+function _profA1cLabel(v) {
+    v = parseFloat(v);
+    if (isNaN(v)) return null;
+    if (v < 7) return { txt: 'מצוין', cls: 'a1c-good' };
+    if (v < 8) return { txt: 'סביר',  cls: 'a1c-warn' };
+    return           { txt: 'גבוה',  cls: 'a1c-bad'  };
+}
+
+function _profRenderApptBanners() {
+    var el = document.getElementById('prof-appt-banners');
+    if (!el) return;
+    var html = '';
+    if (_profAppt.next) {
+        var until   = _profDaysUntil(_profAppt.next);
+        var remB    = _profAppt.remindBefore || 3;
+        var timeStr = _profAppt.time   ? ' בשעה ' + _profAppt.time   : '';
+        var drStr   = _profAppt.doctor ? ' — '    + _profAppt.doctor : '';
+        var dateStr = new Date(_profAppt.next).toLocaleDateString('he-IL', {day:'2-digit',month:'2-digit',year:'numeric'});
+        var bannerCls = until <= 0 ? 'banner-warn' : until <= remB ? 'banner-warn' : until === 0 ? 'banner-info' : 'banner-ok';
+        var icon = until <= 0 ? '📅' : until <= remB ? '🔔' : '✅';
+        var msg  = until < 0  ? 'ביקור שהיה ב-' + dateStr + drStr + ' — עדכן תאריך הבא' :
+                   until === 0 ? '<b>היום</b> — ביקור רופא סוכרת' + timeStr + drStr :
+                   until <= remB ? 'בעוד <b>' + until + ' ימים</b> — ביקור' + drStr + ' (' + dateStr + timeStr + ')' :
+                   'ביקור הבא: ' + dateStr + timeStr + drStr + ' (בעוד ' + until + ' ימים)';
+        html += '<div class="prof-banner ' + bannerCls + '">' + icon + ' ' + msg + '</div>';
+    }
+    if (_profAppt.last) {
+        var ago = _profDaysAgo(_profAppt.last);
+        html += '<div class="prof-appt-box"><span>📋 ביקור אחרון</span><span>' +
+            new Date(_profAppt.last).toLocaleDateString('he-IL') + (ago !== null ? ' (לפני ' + ago + ' ימים)' : '') + '</span></div>';
+    }
+    el.innerHTML = html;
+}
+
+function _profRenderChecksBanners() {
+    var el = document.getElementById('prof-checks-banners');
+    if (!el) return;
+    var WARN = 7, html = '';
+    var expiringSoon = [], expired = [], gpExpired = [], specExpired = [];
+
+    _profChecks.forEach(function(c) {
+        if (!c.done || !c.doneDate) { expired.push(c); (c.gp ? gpExpired : specExpired).push(c); return; }
+        var left = c.freq - _profDaysAgo(c.doneDate);
+        if (left <= 0)    { expired.push(c); (c.gp ? gpExpired : specExpired).push(c); }
+        else if (left <= WARN) expiringSoon.push(c);
+    });
+
+    if (expiringSoon.length) {
+        html += '<div class="prof-banner banner-warn">⏰ <b>' + expiringSoon.length + ' בדיקות מסתיימות בשבוע הקרוב</b> — הזמן תור:<br>' +
+            expiringSoon.map(function(c) {
+                var left = c.freq - _profDaysAgo(c.doneDate);
+                return '• ' + c.name + ' — עוד ' + left + ' ימים' + (c.gp ? ' <small>(גם רופא משפחה)</small>' : '');
+            }).join('<br>') + '</div>';
+    }
+    if (gpExpired.length) {
+        html += '<div class="prof-banner banner-danger">🏥 <b>בדיקות שפגו — ניתן לבקש מרופא משפחה:</b><br>' +
+            gpExpired.map(function(c){ return '• ' + c.name; }).join('<br>') + '</div>';
+    }
+    if (specExpired.length) {
+        html += '<div class="prof-banner banner-danger">👨‍⚕️ <b>בדיקות שפגו — דרוש רופא סוכרת:</b><br>' +
+            specExpired.map(function(c){ return '• ' + c.name; }).join('<br>') + '</div>';
+    }
+    if (_profAppt.next && expired.length) {
+        var until2 = _profDaysUntil(_profAppt.next);
+        if (until2 !== null && until2 >= 0 && until2 <= 14) {
+            html += '<div class="prof-banner banner-info">📋 <b>ביקור בעוד ' + until2 + ' ימים</b> — הכן רשימה לרופא:<br>' +
+                expired.map(function(c){ return '• ' + c.name; }).join('<br>') + '</div>';
+        }
+    }
+    el.innerHTML = html;
+}
+
+function _profRenderChecks() {
+    var list = document.getElementById('prof-checks-list');
+    if (!list) return;
+
+    list.innerHTML = _profChecks.map(function(c, i) {
+        var st  = _profStatusFor(c);
+        var ago = c.doneDate ? _profDaysAgo(c.doneDate) : null;
+        var left = c.doneDate ? (c.freq - ago) : null;
+        var doneLabel = c.doneDate
+            ? 'בוצע: ' + new Date(c.doneDate).toLocaleDateString('he-IL') + (ago !== null ? ' (לפני ' + ago + ' ימים)' : '')
+            : '';
+        var rowBg = left !== null ? (left <= 0 ? 'background:rgba(244,63,94,0.06);border-right:3px solid #f43f5e' :
+                                     left <= 7 ? 'background:rgba(245,158,11,0.06);border-right:3px solid #f59e0b' : '') : 'border-right:3px solid #ef4444';
+        var gpTag = c.gp ? '<small style="color:var(--muted);margin-right:4px;font-size:10px">גם רופא משפחה</small>' : '';
+
+        var a1cHtml = '';
+        if (c.id === 'hba1c' && c.results && c.results.length) {
+            var last = c.results[c.results.length - 1];
+            var lbl  = _profA1cLabel(last.val);
+            a1cHtml  = '<span style="display:inline-flex;align-items:center;gap:5px;margin-top:3px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:2px 8px">' +
+                '<span style="font-size:13px;font-weight:700">' + last.val + '%</span>' +
+                (lbl ? '<span style="font-size:11px;padding:1px 6px;border-radius:10px;' +
+                    (lbl.cls==='a1c-good'?'background:rgba(16,185,129,0.2);color:#10b981':
+                     lbl.cls==='a1c-warn'?'background:rgba(245,158,11,0.2);color:#f59e0b':
+                     'background:rgba(239,68,68,0.2);color:#ef4444') + '">' + lbl.txt + '</span>' : '') +
+                '</span>';
+            if (c.results.length > 1) {
+                var prev = c.results.slice(-4).reverse().slice(1);
+                a1cHtml += '<div style="font-size:11px;color:var(--muted);margin-top:2px">קודם: ' +
+                    prev.map(function(r){ return new Date(r.date).toLocaleDateString('he-IL',{month:'2-digit',year:'2-digit'}) + ' — ' + r.val + '%'; }).join(' | ') + '</div>';
+            }
+        }
+
+        var doneBtn = !c.done
+            ? (c.id === 'hba1c'
+                ? '<button onclick="_profMarkDoneA1c(' + i + ')" style="font-size:11px;padding:4px 9px;border-radius:16px;border:1px solid #10b981;background:rgba(16,185,129,0.1);color:#10b981;cursor:pointer">✅ בוצע + תוצאה</button>'
+                : '<button onclick="_profMarkDone(' + i + ')" style="font-size:11px;padding:4px 9px;border-radius:16px;border:1px solid #10b981;background:rgba(16,185,129,0.1);color:#10b981;cursor:pointer">✅ בוצע</button>')
+            : '<button onclick="_profUndoDone(' + i + ')" style="font-size:11px;padding:4px 9px;border-radius:16px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer">בטל</button>';
+
+        return '<div id="profchk-' + i + '" style="display:flex;align-items:flex-start;gap:10px;padding:10px 10px;margin-bottom:4px;border-radius:8px;' + rowBg + '">' +
+            '<div style="flex:1;min-width:0">' +
+                '<div style="font-size:13px;font-weight:700">' + c.name + gpTag + '</div>' +
+                '<div style="font-size:11px;color:var(--muted)">' + c.note + '</div>' +
+                a1cHtml +
+                (c.done && doneLabel
+                    ? '<div style="font-size:11px;margin-top:2px;color:' + (st.cls==='status-ok'?'#10b981':st.cls==='status-due'?'#f59e0b':'#ef4444') + '">' + doneLabel + ' | ' + st.label + '</div>'
+                    : '<div style="font-size:11px;margin-top:2px;color:#ef4444">' + st.label + '</div>') +
+            '</div>' +
+            '<div style="display:flex;gap:4px;align-items:center">' +
+                doneBtn +
+                '<button onclick="_profEditCheck(' + i + ')" style="font-size:11px;padding:4px 8px;border-radius:16px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer">✏️</button>' +
+            '</div>' +
+        '</div>';
+    }).join('');
+
+    _profRenderChecksBanners();
+}
+
+function _profMarkDone(i) {
+    _profChecks[i].done = true;
+    _profChecks[i].doneDate = new Date().toISOString().split('T')[0];
+    _profSaveData(); _profRenderChecks();
+}
+function _profUndoDone(i) {
+    _profChecks[i].done = false;
+    _profChecks[i].doneDate = null;
+    _profSaveData(); _profRenderChecks();
+}
+function _profMarkDoneA1c(i) {
+    var val = prompt('תוצאת HbA1c (%):', '');
+    if (val === null) return;
+    var num = parseFloat(val);
+    _profChecks[i].done = true;
+    _profChecks[i].doneDate = new Date().toISOString().split('T')[0];
+    if (!isNaN(num) && num > 3 && num < 20) {
+        if (!_profChecks[i].results) _profChecks[i].results = [];
+        _profChecks[i].results.push({ date: _profChecks[i].doneDate, val: num.toFixed(1) });
+    }
+    _profSaveData(); _profRenderChecks();
+}
+function _profEditCheck(i) {
+    var c = _profChecks[i];
+    var lastVal = (c.results && c.results.length) ? c.results[c.results.length-1].val : '';
+    var row = document.getElementById('profchk-' + i);
+    var inp = function(id, type, val, extra) {
+        return '<input id="'+id+'" type="'+type+'" value="'+val+'" '+(extra||'')+
+               ' style="font-size:12px;padding:3px 7px;border-radius:6px;border:1px solid var(--border);background:#111;color:#fff;width:auto">';
+    };
+    row.innerHTML =
+        '<div style="flex:1;display:flex;flex-direction:column;gap:6px">' +
+            inp('pe-name-'+i, 'text', c.name, 'style="width:100%;font-size:13px;padding:5px 8px;border-radius:6px;border:1px solid var(--border);background:#111;color:#fff"') +
+            '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">' +
+                '<label style="font-size:11px;color:var(--muted)">כל</label>' +
+                inp('pe-freq-'+i, 'number', c.freq, 'style="width:56px;font-size:12px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);background:#111;color:#fff"') +
+                '<label style="font-size:11px;color:var(--muted)">ימים | תאריך:</label>' +
+                inp('pe-date-'+i, 'date', c.doneDate||'', 'style="font-size:12px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);background:#111;color:#fff"') +
+            '</div>' +
+            '<div style="display:flex;gap:6px;align-items:center">' +
+                '<input type="checkbox" id="pe-gp-'+i+'"' + (c.gp?' checked':'') + ' style="width:14px;height:14px">' +
+                '<label for="pe-gp-'+i+'" style="font-size:12px;color:var(--muted)">ניתן לבקש מרופא משפחה</label>' +
+            '</div>' +
+            (c.id==='hba1c'
+                ? '<div style="display:flex;gap:6px;align-items:center">' +
+                    '<label style="font-size:11px;color:var(--muted)">HbA1c (%):</label>' +
+                    '<input id="pe-a1c-'+i+'" type="number" step="0.1" min="4" max="15" value="'+lastVal+'" style="width:68px;font-size:12px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);background:#111;color:#fff">' +
+                  '</div>'
+                : '') +
+        '</div>' +
+        '<div style="display:flex;flex-direction:column;gap:4px">' +
+            '<button onclick="_profSaveEdit('+i+')" style="font-size:11px;padding:4px 9px;border-radius:16px;border:1px solid #10b981;background:rgba(16,185,129,0.1);color:#10b981;cursor:pointer">שמור</button>' +
+            '<button onclick="_profRenderChecks()" style="font-size:11px;padding:4px 9px;border-radius:16px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer">בטל</button>' +
+        '</div>';
+}
+function _profSaveEdit(i) {
+    var nm   = (document.getElementById('pe-name-'+i)||{}).value || '';
+    var fr   = parseInt((document.getElementById('pe-freq-'+i)||{}).value) || 90;
+    var dt   = (document.getElementById('pe-date-'+i)||{}).value || '';
+    var gp   = (document.getElementById('pe-gp-'+i)||{}).checked;
+    var a1cEl = document.getElementById('pe-a1c-'+i);
+    if (nm) _profChecks[i].name = nm;
+    _profChecks[i].freq = fr;
+    _profChecks[i].note = 'כל ' + fr + ' ימים';
+    _profChecks[i].gp   = gp;
+    if (dt) { _profChecks[i].doneDate = dt; _profChecks[i].done = true; }
+    else    { _profChecks[i].doneDate = null; _profChecks[i].done = false; }
+    if (a1cEl) {
+        var v = parseFloat(a1cEl.value);
+        if (!isNaN(v) && v > 3 && v < 20) {
+            if (!_profChecks[i].results) _profChecks[i].results = [];
+            var ex = _profChecks[i].results.find(function(r){ return r.date === dt; });
+            if (ex) ex.val = v.toFixed(1);
+            else if (dt) _profChecks[i].results.push({ date: dt, val: v.toFixed(1) });
+        }
+    }
+    _profSaveData(); _profRenderChecks();
+}
+function _profAddCheck() {
+    var name = prompt('שם הבדיקה:');
+    if (!name) return;
+    var freq = parseInt(prompt('כל כמה ימים?', '365')) || 365;
+    var gp   = confirm('ניתן לבקש מרופא משפחה?');
+    _profChecks.push({ id:'custom_'+Date.now(), name:name, freq:freq, note:'כל '+freq+' ימים', gp:gp, done:false, doneDate:null, results:[] });
+    _profSaveData(); _profRenderChecks();
+}
+
 function renderProfile() {
     var viewEl = document.getElementById('profile-view');
     if (!viewEl) return;
-    var prof = fullHistory && fullHistory.profile;
-    var dev  = fullHistory && fullHistory.devStatus;
-    var nowH = new Date().getHours();
 
-    if (!prof) { viewEl.innerHTML = "<div class='text-muted text-sm'>אין נתוני פרופיל. התחבר ל-NS תחילה.</div>"; return; }
+    _profLoadData();
 
-    var cr  = profileValueAt(prof.carbratio || prof.carbRatio || prof.ic, nowH) || '?';
-    var isf = profileValueAt(prof.sens || prof.sensitivity, nowH) || '?';
-    var bas = profileValueAt(prof.basal, nowH) || '?';
-    var tgt = prof.target_low && prof.target_high
-        ? (profileValueAt(prof.target_low, nowH) + '–' + profileValueAt(prof.target_high, nowH))
-        : '?';
+    // NS data row
+    var prof  = fullHistory && fullHistory.profile;
+    var nowH  = new Date().getHours();
+    var nsRow = '';
+    if (prof) {
+        var cr  = profileValueAt(prof.carbratio || prof.carbRatio || prof.ic, nowH) || '?';
+        var isf = profileValueAt(prof.sens || prof.sensitivity, nowH) || '?';
+        var bas = profileValueAt(prof.basal, nowH) || '?';
+        nsRow = '<div style="background:rgba(59,130,246,0.08);border:1px solid var(--blue-dim);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px">' +
+            '<div style="font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">ערכי NS כרגע</div>' +
+            '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">' +
+            '<div><div style="color:var(--muted);font-size:10px">CR</div><div style="font-weight:700">1U/'+cr+'g</div></div>' +
+            '<div><div style="color:var(--muted);font-size:10px">ISF</div><div style="font-weight:700">'+isf+'</div></div>' +
+            '<div><div style="color:var(--muted);font-size:10px">בזאלי</div><div style="font-weight:700">'+bas+'</div></div>' +
+            '</div></div>';
+    }
 
-    viewEl.innerHTML =
-        "<div class='panel panel-dark'>" +
-        "<div class='profile-row'><span>יחס פחמימות (CR)</span><span>1U / " + cr + "g</span></div>" +
-        "<div class='profile-row'><span>רגישות (ISF)</span><span>" + isf + " mg/dL/U</span></div>" +
-        "<div class='profile-row'><span>בזאלי כרגע</span><span>" + bas + " U/ש'</span></div>" +
-        "<div class='profile-row'><span>יעד סוכר</span><span>" + tgt + " mg/dL</span></div>" +
-        "<div class='profile-row'><span>אינסולין</span><span>" + getInsulinProfile().label + "</span></div>" +
-        "</div>";
+    var css = '<style>' +
+        '.prof-banner{border-radius:8px;padding:8px 12px;font-size:12px;margin-bottom:8px;line-height:1.6}' +
+        '.banner-warn{background:rgba(245,158,11,0.1);border:1px solid #f59e0b;color:#f59e0b}' +
+        '.banner-info{background:rgba(59,130,246,0.1);border:1px solid #3b82f6;color:#3b82f6}' +
+        '.banner-ok{background:rgba(16,185,129,0.1);border:1px solid #10b981;color:#10b981}' +
+        '.banner-danger{background:rgba(239,68,68,0.1);border:1px solid #ef4444;color:#ef4444}' +
+        '.prof-appt-box{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:8px;padding:8px 12px;margin-bottom:6px;font-size:12px;display:flex;justify-content:space-between}' +
+        '.prof-field{display:flex;flex-direction:column;gap:3px;margin-bottom:8px}' +
+        '.prof-field label{font-size:11px;color:var(--muted)}' +
+        '.prof-field input,.prof-field select{font-size:13px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:#0a0a14;color:#fff;width:100%}' +
+        '.prof-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}' +
+        '.prof-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}' +
+        '.prof-section{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 8px}' +
+        '.prof-save{width:100%;padding:9px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:#fff;font-size:13px;cursor:pointer;margin-top:4px}' +
+        '</style>';
+
+    viewEl.innerHTML = css +
+        // NS values
+        nsRow +
+
+        // Personal
+        '<div class="prof-section">👤 פרטים אישיים</div>' +
+        '<div class="prof-grid-2">' +
+            '<div class="prof-field"><label>שם</label><input id="prof-name" value="' + (_profData.name||'') + '"></div>' +
+            '<div class="prof-field"><label>מין</label><select id="prof-gender">' +
+                '<option value="male"'  + (_profData.gender==='male'  ?' selected':'') + '>זכר</option>' +
+                '<option value="female"'+ (_profData.gender==='female'?' selected':'') + '>נקבה</option>' +
+                '<option value="other"' + (_profData.gender==='other' ?' selected':'') + '>אחר</option>' +
+            '</select></div>' +
+        '</div>' +
+        '<div class="prof-grid-3">' +
+            '<div class="prof-field"><label>תאריך לידה</label><input id="prof-dob" type="date" value="' + (_profData.dob||'') + '" oninput="_profCalcAge()"><span id="prof-age" style="font-size:11px;color:#3b82f6;margin-top:2px"></span></div>' +
+            '<div class="prof-field"><label>גובה (ס"מ)</label><input id="prof-height" type="number" value="' + (_profData.height||'') + '"></div>' +
+            '<div class="prof-field"><label>משקל (ק"ג)</label><input id="prof-weight" type="number" value="' + (_profData.weight||'') + '"></div>' +
+        '</div>' +
+        '<button id="prof-save-btn" class="prof-save" onclick="_profSavePersonal()">💾 שמור פרטים</button>' +
+
+        // Appointments
+        '<div class="prof-section">📅 ביקורי רופא סוכרת</div>' +
+        '<div id="prof-appt-banners"></div>' +
+        '<div class="prof-grid-2">' +
+            '<div class="prof-field"><label>ביקור אחרון</label><input id="appt-last" type="date" value="' + (_profAppt.last||'') + '"></div>' +
+            '<div class="prof-field"><label>ביקור הבא</label><input id="appt-next" type="date" value="' + (_profAppt.next||'') + '"></div>' +
+        '</div>' +
+        '<div class="prof-grid-2">' +
+            '<div class="prof-field"><label>שעת הביקור</label><input id="appt-time" type="time" value="' + (_profAppt.time||'') + '"></div>' +
+            '<div class="prof-field"><label>רופא / מרפאה</label><input id="appt-doctor" value="' + (_profAppt.doctor||'') + '" placeholder=\'ד"ר כהן\'></div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-bottom:6px">' +
+            '🔔 תזכורת <input id="appt-remind" type="number" min="1" max="30" value="' + (_profAppt.remindBefore||3) + '" style="width:44px;font-size:12px;padding:3px 5px;border-radius:6px;border:1px solid var(--border);background:#0a0a14;color:#fff"> ימים לפני הביקור' +
+        '</div>' +
+        '<button id="appt-save-btn" class="prof-save" onclick="_profSaveAppt()">💾 שמור ביקורים</button>' +
+
+        // Checks
+        '<div class="prof-section">🩺 בדיקות רפואיות</div>' +
+        '<div id="prof-checks-banners"></div>' +
+        '<div id="prof-checks-list"></div>' +
+        '<button class="prof-save" style="margin-top:8px" onclick="_profAddCheck()">➕ הוסף בדיקה</button>';
+
+    _profCalcAge();
+    _profRenderApptBanners();
+    _profRenderChecks();
 }
 
 
