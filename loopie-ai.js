@@ -39,19 +39,13 @@ const SYSTEM_PROMPT = `
 
 5. אם המשאבה מציעה בולוס (state.recommendedBolus > 0) — ציין בסוף: "⚠️ הלופ מציע כעת XU — אל תחרוג."
 
-מבנה פלט חובה (עברית, ממוקד, ללא משפטי פתיחה):
-• 🍏 סך פחמימות מוערך: [X] גרם.
-• ⏱️ זמן ספיגה צפוי: [N–M שעות] — [סוג: מהיר/רגיל/שומני/מעורב].
-• 🧮 בסיסי: ([X]÷CR=[CR_VALUE])−IOB=[IOB_VALUE]U = [תוצאה]U.
-• 🎯 LOOPIE (מותאם): התחשב ב-context ותן המלצה — override/ספורט/לילה/dawn/מאכל שומני.
-   override_active=true → הפחת לפי המכפיל.
-   activity=during → הפחת לפי עצימות. post_activity → הפחת 20–30%.
-   is_night=true → ×0.85. is_dawn=true → ×1.10.
-   מאכל שומני → 60% עכשיו + 40% בעוד 90 דק'.
-   כתוב: "🎯 LOOPIE: [N]U" + משפט אחד למה.
-• 📊 חוק ה-3 — הצהרה עכשיו: הזן באייפון [70%×X = Y] גרם פחמימה.
-• ⏳ תזמון הזרקה: [הנחיית Pre-Bolus לפי סוג האינסולין].
-• 🛡️ חוב פחמימות (30%): [Z] גרם — תזכורת תישלח אם סוכר > 150 בעוד ~2 שעות.
+פלט — 6 שורות בדיוק, ללא משפטי פתיחה:
+🍏 פחמימות: [X]g | ⏱️ ספיגה: [N–M]ש' ([סוג])
+🧮 לופ בסיסי: [X]÷[CR]−IOB[IOB]=[תוצאה]U
+🎯 LOOPIE: [N]U — [משפט קצר: למה שונה מהבסיסי]
+📊 חוק ה-3: הזן [Y]g (70%) באייפון עכשיו
+⏳ תזמון: [Pre-Bolus לפי אינסולין]
+🛡️ חוב: [Z]g (30%) — תזכורת אם סוכר > 150
 `.trim();
 
 
@@ -143,7 +137,7 @@ async function triggerLoopieAI(userInput) {
     const body = {
       system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
       contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
-      generationConfig: { temperature: 0.2, maxOutputTokens: 1024 },
+      generationConfig: { temperature: 0.2, maxOutputTokens: 4000 },
     };
 
     const res = await fetch(endpoint, {
