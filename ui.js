@@ -503,1019 +503,328 @@ function _clearImage() {
 // ─── Omnibox ─────────────────────────────────────────────────
 async function askOmnibox() {
     var input = document.getElementById('omnibox');
-    var q     = input.value.trim();
-    var ql    = q.toLowerCase();
+    var q     = (input ? input.value : '').trim();
+    var ql    = q.toLowerCase().trim();
     if (!q) return;
+    if (input) input.value = '';
 
-    // ציוד — CAGE/SAGE
-    if (ql === 'ציוד' || ql === 'חיישן' || ql === 'פוד' || ql === 'pod' ||
-        ql === 'סנסור' || ql.includes('גיל פוד') || ql.includes('גיל חיישן') || ql.includes('החלפ')) {
-        input.value = '';
-        await showEquipmentStatus();
-        return;
+    // ══════════════════════════════════════════════════════
+    // 1. פקודות נתונים מקומיות — TIER 1 (תמיד ראשון)
+    // ══════════════════════════════════════════════════════
+
+    // ── ציוד / פוד / חיישן ──
+    if (/^(ציוד|חיישן|פוד|pod|סנסור|גיל פוד|גיל חיישן|החלפ)/.test(ql)) {
+        await showEquipmentStatus(); return;
     }
 
-    // מציג "מנתח..." בפופאפ בינוני
-    showPopup("Loopie 🧠", "<div style='text-align:center;padding:20px;color:#888'>מנתח... 🧠</div>");
-
-    var tr   = fullHistory.treatments || [];
-    var ent  = fullHistory.entries    || [];
-    var prof = fullHistory.profile;
-    var dev  = fullHistory.devStatus;
-    var ans  = "";
-    var nowH = new Date().getHours();
-
-    // === מספר מאכלים ביחד (מופרדים ב-ו/,/+) ===
-    var multiSep = /\s+ו[-]?\s*|\s*,\s*|\s*\+\s*/;
-    var qParts = q.split(multiSep).map(function(p){ return p.trim(); }).filter(function(p){ return p.length > 1; });
-    if (qParts.length > 1) {
-        // בדוק שכולם מאכלים (לא פקודות)
-        var allFoods = qParts.every(function(p){
-            var pl = p.toLowerCase();
-            var nonF = ['פוד','חיישן','ציוד','בזאלי','isf','cr','iob','cob','תיקון','ספורט','smb'];
-            return !nonF.some(function(w){ return pl === w; });
-        });
-        if (allFoods) {
-            var totalCarbs2 = 0, maxDur2 = 0, foodNames2 = [];
-            var allFound2 = true;
-            qParts.forEach(function(part) {
-                // חלץ כמות מתחילת המחרוזת
-                var qtyMatchM = part.match(/^(\d+\.?\d*)\s+/); // מספר בהתחלה = כמות
-                var carbsMatchM = part.match(/\s+(\d+\.?\d*)g?$/); // מספר בסוף = פחמימות
-                var qty2 = 1, manualCarbsM = null;
-                var fname2 = part;
-                if (qtyMatchM) { qty2 = parseFloat(qtyMatchM[1]); fname2 = part.replace(qtyMatchM[0],'').trim(); }
-                else if (carbsMatchM) { manualCarbsM = parseFloat(carbsMatchM[1]); fname2 = part.replace(carbsMatchM[0],'').trim(); }
-                var fd2 = findFood(fname2);
-                if (fd2) {
-                    var c2 = manualCarbsM !== null ? manualCarbsM : fd2.data.carbs * qty2;
-                    totalCarbs2 += c2;
-                    if (fd2.data.durationH > maxDur2) maxDur2 = fd2.data.durationH;
-                    foodNames2.push(qty2 > 1 ? qty2 + ' ' + fd2.key : fd2.key);
-                } else {
-                    allFound2 = false;
-                }
-            });
-            if (allFound2 && totalCarbs2 > 0) {
-                LAST_FOOD_QUERY = foodNames2.join(' + ');
-                closePopup();
-                askGeminiAdvisor(foodNames2.join(' + ') + " — " + Math.round(totalCarbs2) + " גרם סה\"כ");
-                input.value = '';
-                return;
-            }
-        }
+    // ── סטטוס כללי ──
+    if (/^(מה המצב|סטטוס|status|מה קורה)$/.test(ql)) {
+        var sgv=nsData.currentSgv||0;
+        showPopup('🛡️ סטטוס נוכחי',
+            "<div style='font-size:14px;line-height:1.9;text-align:right'>" +
+            "🩸 סוכר: <b>"+sgv+"</b> "+(nsData.trend||'')+"<br>" +
+            "💉 IOB: <b>"+(parseFloat(nsData.iob)||0).toFixed(2)+"U</b><br>" +
+            "🍞 COB: <b>"+(parseFloat(nsData.cob)||0).toFixed(0)+"g</b><br>" +
+            "⏱ בזאלי: <b>"+(nsData.basal||0)+" U/ש'</b>" +
+            (nsData.overrideActive?"<br>🔄 Override: <b style='color:#f59e0b'>"+nsData.overrideName+"</b>":"") +
+            "</div>"); return;
     }
 
-    // === חסימה מוקדמת — מילים שאינן מאכל ===
-    var nonFoodWords = ['פוד','pod','חיישן','סנסור','ציוד','בזאלי','isf','cr','iob','cob',
-                        'אינסולין','insulin','תיקון','ספורט','אימון','ים','בריכה','smb','זיכרון','דוח','לוגים',
-                        'ניתוח','מצב','סטטוס','status','פרופיל','profile','מה המצב',
-                        'היסטוריה','מאכלים','רשימה','חילוץ','היפו','נמוך','גבוה',
-                        'המלצות','המלצה','ניתוח','הצע','הצג','הראה','רשימת','מה אכלתי',
-                        'ביהס','בית ספר','לוח','פעילות','חוג','כשל','בדוק',
-                        'הוסף','הכנס','הזן','מחק','הסר','בימי','בשעות','עד שעה'];
-    var isNonFood = nonFoodWords.some(function(w){ return ql === w || ql.startsWith(w+' ') || ql.endsWith(' '+w); });
+    // ── IOB ──
+    if (/^(iob|אינסולין פעיל|איוב)$/.test(ql)) {
+        showPopup('💉 IOB',
+            "<div style='text-align:center;font-size:32px;font-weight:700;color:#3b82f6;padding:16px'>" +
+            (parseFloat(nsData.iob)||0).toFixed(2)+"U</div>"); return;
+    }
 
-    // זיהוי ישיר של שם מאכל ללא מילות שאלה
-    var directFood = isNonFood ? null : detectFoodName(q);
-    var knownInDB  = directFood ? findFood(directFood) : null;
-    var knownEmoji = directFood && Object.values(EMOJI_MAP).some(function(v){
-        return v && v.toLowerCase() === directFood.toLowerCase();
-    });
-    var isKnownFood  = !!(knownInDB || knownEmoji);
-    var isUnknownFood = directFood && !isKnownFood && directFood.length >= 2;
+    // ── COB ──
+    if (/^(cob|פחמימות פעילות|כוב)$/.test(ql)) {
+        showPopup('🍞 COB',
+            "<div style='text-align:center;font-size:32px;font-weight:700;color:#f59e0b;padding:16px'>" +
+            (parseFloat(nsData.cob)||0).toFixed(0)+"g</div>"); return;
+    }
 
-    var hasKeyword = ql.includes("להזריק") || ql.includes("כמה אינסולין") ||
-        ql.includes("מינון") || ql.includes("לתקן") || ql.includes("correction") ||
-        (ql.includes("כמה") && (ql.includes("יחידות") || ql.includes("יח'"))) ||
-        (ql.includes("תיקון") && !ql.includes("isf") && !ql.includes("רגישות") && !ql.includes("פרופיל"));
+    // ── בזאלי ──
+    if (/^(בזאלי|בזאל|תוכנית בזאלית)$/.test(ql)) {
+        var prof=fullHistory&&fullHistory.profile, basalNow=nsData.basal||0;
+        var basalArr=prof&&Array.isArray(prof.basal)?prof.basal:null;
+        var toMin=function(t){var p=t.split(':');return parseInt(p[0])*60+parseInt(p[1]||0);};
+        var rows=basalArr
+            ?basalArr.map(function(b,i){var nx=basalArr[i+1]?basalArr[i+1].time:'24:00';return '• '+b.time+'–'+nx+': <b>'+b.value+" U/ש'</b>";}).join('<br>')
+            :"• 00:00–24:00: <b>"+basalNow+" U/ש'</b>";
+        var total=0;
+        if(basalArr)basalArr.forEach(function(b,i){var nx=basalArr[i+1]||{time:'24:00'};total+=b.value*(toMin(nx.time)-toMin(b.time))/60;});
+        else total=basalNow*24;
+        showPopup('⏳ בזאלי',
+            "<div style='font-size:14px;line-height:1.8;text-align:right'>" +
+            "⏳ כרגע: <b>"+basalNow+" U/ש'</b><br>" +
+            "📊 יומי: <b style='color:#3b82f6;font-size:18px'>"+total.toFixed(2)+"U</b><br><br>" +
+            "<b>תוכנית:</b><br>"+rows+"</div>"); return;
+    }
 
-    // --- כל מאכל (מוכר או לא) וכל שאלת מינון → Gemini ===
-    if (hasKeyword || isKnownFood || isUnknownFood) {
-        closePopup();
-        input.value = '';
-        askGeminiAdvisor(q);
-        return;
+    // ── CR ──
+    if (/^(cr|icr|יחס פחמימות)$/.test(ql)) {
+        var p=fullHistory&&fullHistory.profile, h=new Date().getHours();
+        var crV=p?parseFloat(profileValueAt(p.carbratio||p.carbRatio||p.ic,h)||15):15;
+        var crArr=p&&Array.isArray(p.carbratio||p.carbRatio||p.ic)?(p.carbratio||p.carbRatio||p.ic):null;
+        var crRows=crArr?crArr.map(function(b,i){var nx=crArr[i+1]?crArr[i+1].time:'24:00';var cur=parseInt((b.time||'0').split(':')[0])<=h&&(!crArr[i+1]||parseInt(crArr[i+1].time.split(':')[0])>h);return "<span style='"+(cur?'color:#10b981;font-weight:700':'color:#aaa')+"'>• "+b.time+'–'+nx+': 1U / <b>'+b.value+"g</b></span>";}).join('<br>'):"• כל היום: 1U / <b>"+crV+"g</b>";
+        showPopup('📊 CR',"<div style='font-size:14px;line-height:1.8;text-align:right'>כרגע: 1U / <span style='font-size:22px;color:#10b981;font-weight:700'>"+crV+"g</span><br><br>"+crRows+"</div>"); return;
+    }
+
+    // ── ISF ──
+    if (/^(isf|רגישות|מדד רגישות)$/.test(ql)) {
+        var p2=fullHistory&&fullHistory.profile, h2=new Date().getHours();
+        var isfV=p2?parseFloat(profileValueAt(p2.sens||p2.sensitivity,h2)||120):120;
+        var isfArr=p2&&Array.isArray(p2.sens||p2.sensitivity)?(p2.sens||p2.sensitivity):null;
+        var isfRows=isfArr?isfArr.map(function(b,i){var nx=isfArr[i+1]?isfArr[i+1].time:'24:00';var cur=parseInt((b.time||'0').split(':')[0])<=h2&&(!isfArr[i+1]||parseInt(isfArr[i+1].time.split(':')[0])>h2);return "<span style='"+(cur?'color:#f59e0b;font-weight:700':'color:#aaa')+"'>• "+b.time+'–'+nx+': <b>'+b.value+" mg/dL/U</b></span>";}).join('<br>'):"• כל היום: <b>"+isfV+" mg/dL/U</b>";
+        showPopup('🎯 ISF',"<div style='font-size:14px;line-height:1.8;text-align:right'>כרגע: <span style='font-size:22px;color:#f59e0b;font-weight:700'>"+isfV+"</span> mg/dL/U<br><br>"+isfRows+"</div>"); return;
     }
 
     // ── SMB ──
-    if (ql === 'smb' || ql === 'מיקרובולוס' || ql === 'סמב') {
-        showPopup('💉 SMB אחרון', "<div style='text-align:center;padding:16px'><span class='spinner'></span></div>");
-        (async function() {
+    if (/^(smb|מיקרובולוס|סמב)$/.test(ql)) {
+        showPopup('💉 SMB',"<div style='text-align:center;padding:16px'><span class='spinner'></span></div>");
+        (async function(){
             try {
-                var since2h = new Date(Date.now() - 2*3600000).toISOString();
-                var res = await nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + since2h + '&count=50');
-                if (!res.ok) throw new Error('NS error');
-                var treats = await res.json();
+                var since2h=new Date(Date.now()-2*3600000).toISOString();
+                var res=await nsGet('/api/v1/treatments.json?find[created_at][$gte]='+since2h+'&count=50');
+                if(!res.ok)throw new Error('NS error');
+                var treats=await res.json();
+                var smbs=treats.filter(function(t){var ev=(t.eventType||'').toLowerCase();var ins=parseFloat(t.insulin||0);return ev.includes('smb')||ev.includes('microbolus')||(ins>0&&ins<0.5&&!t.carbs);});
+                if(!smbs.length){showPopup('💉 SMB',"לא נמצאו SMB ב-2 שעות האחרונות.");return;}
+                var total=smbs.reduce(function(s,t){return s+parseFloat(t.insulin||0);},0);
+                var html="<div style='font-size:13px;text-align:right'><div style='margin-bottom:8px;color:#888'>סה\"כ "+smbs.length+" SMB — <b style='color:#3b82f6'>"+total.toFixed(2)+"U</b></div>";
+                smbs.slice(0,8).forEach(function(t){var ma=Math.round((Date.now()-new Date(t.created_at).getTime())/60000);html+="<div style='background:#0a0a14;border-radius:8px;padding:7px 10px;margin-bottom:5px;display:flex;justify-content:space-between'><span>💉 <b>"+parseFloat(t.insulin||0).toFixed(2)+"U</b></span><span style='color:#888'>לפני "+ma+" דק'</span></div>";});
+                showPopup('💉 SMB',html+"</div>");
+            }catch(e){showPopup('💉 SMB','שגיאה: '+e.message);}
+        })(); return;
+    }
 
-                var smbs = treats.filter(function(t) {
-                    var ev = (t.eventType||'').toLowerCase();
-                    var ins = parseFloat(t.insulin||0);
-                    return (ev.includes('smb') || ev.includes('microbolus') ||
-                            (ins > 0 && ins < 0.5 && !t.carbs));
+    // ── Override ──
+    if (/^(override|אוברריד|החרגה|תוכנית ספורט|מה ה.?override|מה האוברריד)$/.test(ql)) {
+        var raw=nsData._overrideRaw;
+        if(nsData.overrideActive&&raw){
+            var pct=raw.multiplier?Math.round(raw.multiplier*100):null;
+            var tgt=raw.currentCorrectionRange?raw.currentCorrectionRange.minValue+'–'+raw.currentCorrectionRange.maxValue+' mg/dL':null;
+            var dur=raw.duration?Math.round(raw.duration/60)+" דק'":null;
+
+            var html2="<div style='font-size:14px;line-height:2;text-align:right'>" +
+                "<div style='background:rgba(245,158,11,0.12);border:1px solid #f59e0b;border-radius:8px;padding:10px;margin-bottom:10px'>" +
+                "🟢 <b style='color:#f59e0b;font-size:15px'>"+(raw.symbol||'')+" "+(raw.name||'Override פעיל')+"</b></div>" +
+                (pct?"⚡ עוצמה: <span style='color:"+(pct<100?'#3b82f6':'#ef4444')+";font-size:18px;font-weight:700'>"+pct+"%</span><br>":"")+
+                (tgt?"🎯 יעד: "+tgt+"<br>":"")+(dur?"⏳ משך: "+dur+"<br>":"")+"</div>";
+            showPopup('🔄 Override פעיל',html2);
+        } else {
+            showPopup('🔄 Override',"<div style='text-align:right;font-size:14px'>⚪ אין Override פעיל.</div>");
+        } return;
+    }
+
+    // ── מה אכלתי / ארוחות אחרונות ──
+    if (/^(מה אכלתי|ארוחות|ארוחות אחרונות|ארוחה אחרונה|היסטוריה)$/.test(ql) || ql.includes('אכלתי')) {
+        showPopup('🍽️ ארוחות',"<div style='text-align:center;padding:16px'><span class='spinner'></span></div>");
+        (async function(){
+            try{
+                var since6h=new Date(Date.now()-6*3600000).toISOString();
+                var res=await nsGet('/api/v1/treatments.json?find[created_at][$gte]='+since6h+'&count=30');
+                if(!res.ok)throw new Error('NS error');
+                var treats=await res.json();
+                var meals=treats.filter(function(t){return t.carbs&&parseFloat(t.carbs)>0;}).slice(0,3);
+                if(!meals.length){showPopup('🍽️ ארוחות',"לא נמצאו ארוחות ב-6 שעות האחרונות.");return;}
+                var html3="<div style='font-size:13px;text-align:right'>";
+                meals.forEach(function(m){
+                    var ma=Math.round((Date.now()-new Date(m.created_at).getTime())/60000);
+                    var ha=(ma/60).toFixed(1);
+                    var ts=new Date(m.created_at).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false});
+                    var c=parseFloat(m.carbs||0), ins=parseFloat(m.insulin||0);
+                    var nm=m.notes||m.foodType||'ארוחה';
+                    var dia=300, abs=Math.min(100,Math.round((ma/dia)*100)), rem=Math.max(0,100-abs);
+                    var iobEst=ins>0?(ins*rem/100).toFixed(2):null;
+                    var col=ma<60?'#f59e0b':ma<180?'#3b82f6':'#10b981';
+                    var bar="<div style='background:#1a1a28;border-radius:4px;height:5px;margin:3px 0'><div style='background:"+col+";width:"+abs+"%;height:100%;border-radius:4px'></div></div>";
+                    html3+="<div style='background:#0a0a14;border-radius:8px;padding:10px;margin-bottom:8px;border-right:3px solid "+col+"'>" +
+                        "<div style='display:flex;justify-content:space-between'><b>"+nm+"</b><span style='color:#888;font-size:11px'>"+ts+" ("+(ma<60?ma+" דק'":ha+" ש'")+") </span></div>" +
+                        "🍞 <b>"+c+"g</b>"+(ins>0?" | 💉 <b>"+ins.toFixed(1)+"U</b>":"")+bar+
+                        "ספיגה: <b>"+abs+"%</b>"+(iobEst&&parseFloat(iobEst)>0.05?" | ⏳ IOB: <b style='color:#3b82f6'>"+iobEst+"U</b>":"")+"</div>";
                 });
+                showPopup('🍽️ '+meals.length+' ארוחות אחרונות',html3+"</div>");
+            }catch(e){showPopup('🍽️ שגיאה',e.message);}
+        })(); return;
+    }
 
-                if (!smbs.length) {
-                    showPopup('💉 SMB', "<div style='text-align:right;font-size:14px'>לא נמצאו SMB ב-2 שעות האחרונות.</div>");
-                    return;
-                }
-
-                var totalSMB = smbs.reduce(function(s,t){ return s + parseFloat(t.insulin||0); }, 0);
-                var html = "<div style='font-size:13px;text-align:right;line-height:1.8'>";
-                html += "<div style='margin-bottom:10px;color:#888'>סה\"כ " + smbs.length + " SMB — <b style='color:#3b82f6'>" + totalSMB.toFixed(2) + "U</b> ב-2ש' האחרונות</div>";
-
-                smbs.slice(0,8).forEach(function(t) {
-                    var minsAgo = Math.round((Date.now() - new Date(t.created_at).getTime()) / 60000);
-                    var ins = parseFloat(t.insulin||0).toFixed(2);
-                    html += "<div style='background:#0a0a14;border-radius:8px;padding:8px 10px;margin-bottom:6px;display:flex;justify-content:space-between'>" +
-                        "<span>💉 <b>" + ins + "U</b></span>" +
-                        "<span style='color:#888'>לפני " + minsAgo + " דק'</span></div>";
-                });
-                html += "</div>";
-                showPopup('💉 SMB ב-2 שעות אחרונות', html);
-            } catch(e) {
-                showPopup('💉 SMB', 'שגיאה: ' + e.message);
-            }
-        })();
+    // ══════════════════════════════════════════════════════
+    // 2. ניהול חוגים — TIER 2
+    // ══════════════════════════════════════════════════════
+    var isActivityReq = /הוסף|הכנס|צור|שנה|עדכן|ערוך|מחק|הסר/i.test(q) &&
+                        /חוג|אימון|שיעור|פעילות|mma|כדורגל|כדורסל|שחייה|ריצה|צופים|קראטה|כושר|אופניים|יוגה|פילאטיס|הליכה/i.test(q);
+    if (isActivityReq) {
+        var localAct = _parseActivityLocally(q);
+        if (localAct) { _handleActivityObj(localAct, q); return; }
+        // fallback → Gemini
+        var actResp = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + geminiKey(), {
+            method:"POST", headers:{"Content-Type":"application/json"},
+            body: JSON.stringify({ contents:[{role:"user",parts:[{text:q}]}], systemInstruction:{parts:[{text:buildGeminiPrompt(buildNSContext(),'act').split('פורמט פלט')[0]+"פורמט: JSON בלבד: {action,name,day,startTime,endTime,intensity}. ימים: ראשון–שבת."}]}, generationConfig:{maxOutputTokens:150,temperature:0.0} })
+        });
+        if (actResp.ok) {
+            var actData = await actResp.json();
+            var actText = ((actData.candidates[0].content.parts[0].text)||'').trim().replace(/```json|```/g,'').trim();
+            var jm = actText.match(/\{[\s\S]*?\}/);
+            if (jm) { try { _processUpdateRoutine(JSON.parse(jm[0]), q); } catch(e){} }
+            else showPopup('❓', actText||"לא הצלחתי לפרסר. נסה: 'הוסף חוג MMA יום שלישי 17:00-18:30'");
+        }
         return;
     }
 
-    // ── זיהוי אוכל אוטומטי → triggerLoopieAI (חוק ה-3) ──────
-    // אם השאלה נראית כמו שם מאכל — שלח לניתוח אוכל מלא
-    var FOOD_KEYWORDS = /פיתה|לחם|אורז|פסטה|פיצה|המבורגר|שניצל|עוף|בשר|דג|סלט|ביצ|קינוח|עוגה|עוגיה|שוקולד|גלידה|פרי|בננה|תפוח|ענב|תמר|אבטיח|מלון|תפוז|פסיפלורה|חומוס|טחינה|פלאפל|שווארמה|בורגר|כריך|טוסט|קרואסון|בייגל|לחמנייה|צ'יפס|פופקורן|אגוז|שקד|וופל|פנקייק|שניצל|קציצ|סנדוויץ|ספגטי|לזניה|קוסקוס|בורקס|מאפה|שוקו|מיץ|קולה|גבינה|יוגורט|חלב|דגני|קוואקר|מוזלי|גרנולה|חביתה|שקשוקה|חלה|פוקאצ'ה|ריזוטו|קרי|חמין|עדשים|שעועית|תירס|קינואה|טמפה|טופו/i;
-    var QUESTION_KEYWORDS = /כמה|מה|האם|למה|מתי|איך|האם|כדאי|עדיף|תסביר|מה קורה|מה זה|ספר לי|תן לי/i;
-
-    var looksLikeFood     = FOOD_KEYWORDS.test(q) || (q.length < 25 && !QUESTION_KEYWORDS.test(q) && !/\d/.test(q));
-    var looksLikeQuestion = QUESTION_KEYWORDS.test(q) || q.endsWith('?') || q.endsWith('?');
-
-    if (looksLikeFood && !looksLikeQuestion) {
-        // מאכל → ניתוח חוק ה-3 מלא
-        triggerLoopieAI(q);
-    } else {
-        // שאלה כללית → Gemini Advisor
-        closePopup();
-        askGeminiAdvisor(q);
-    }
-    return;
-}
-
-
-// ─── Local Activity Parser ────────────────────────────────────
-function _parseActivityLocally(q) {
-    var DAY_MAP = {'ראשון':0,'שני':1,'שלישי':2,'רביעי':3,'חמישי':4,'שישי':5,'שבת':6};
-    var DAY_NAMES = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-
-    function normTime(t) {
-        if (!t) return null;
-        t = String(t).replace('.', ':');
-        if (!t.includes(':')) t = t.length <= 2 ? t + ':00' : t.slice(0,-2) + ':' + t.slice(-2);
-        var p = t.split(':');
-        return p[0].padStart(2,'0') + ':' + (p[1]||'00').padStart(2,'0');
+    // ══════════════════════════════════════════════════════
+    // 3. זיהוי אוכל → triggerLoopieAI — TIER 3
+    // ══════════════════════════════════════════════════════
+    var FOOD_RX = /פיתה|לחם|אורז|פסטה|פיצה|המבורגר|שניצל|עוף|בשר|דג|סלט|ביצ|קינוח|עוגה|עוגיה|שוקולד|גלידה|פרי|בננה|תפוח|ענב|תמר|אבטיח|מלון|תפוז|חומוס|טחינה|פלאפל|שווארמה|בורגר|כריך|טוסט|קרואסון|בייגל|לחמנייה|פופקורן|אגוז|שקד|וופל|פנקייק|קציצ|ספגטי|לזניה|קוסקוס|בורקס|מאפה|שוקו|מיץ|קולה|גבינה|יוגורט|חלב|דגני|קוואקר|מוזלי|גרנולה|חביתה|שקשוקה|חלה|ריזוטו|עדשים|שעועית|תירס|קינואה|טופו|אוכל|ארוחה|מנה|נשנוש|חטיף/i;
+    var QUESTION_RX = /^(כמה|מה|האם|למה|מתי|איך|כדאי|עדיף|תסביר|ספר|תן לי|הסבר)/i;
+    var isFood     = FOOD_RX.test(q) && !QUESTION_RX.test(q);
+    var detectFood = !isFood ? detectFoodName(q) : null;
+    if (isFood || (detectFood && findFood(detectFood))) {
+        triggerLoopieAI(q); return;
     }
 
-    var isAdd    = /^(הוסף|הכנס|צור|הוסיף)\s/i.test(q);
-    var isUpdate = /^(עדכן|שנה|ערוך|העבר)\s/i.test(q);
-    var isDelete = /^(מחק|הסר|מחק)\s/i.test(q);
-
-    // שעות
-    var timeRx   = /(\d{1,2}[:.:]?\d{0,2})\s*[-–]\s*(\d{1,2}[:.:]?\d{0,2})/;
-    var tMatch   = q.match(timeRx);
-    var fromTime = tMatch ? normTime(tMatch[1]) : null;
-    var toTime   = tMatch ? normTime(tMatch[2]) : null;
-
-    // ימים
-    var dayRx = new RegExp('(ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)', 'g');
-    var dayMatches = [], dm;
-    while ((dm = dayRx.exec(q)) !== null) dayMatches.push({name: dm[1], idx: dm.index});
-
-    // עצימות
-    var intensity = 'medium';
-    if (/נמוכ|קל |יוגה|הליכה|פילאטיס/i.test(q)) intensity = 'low';
-    if (/גבוה|מאומץ|mma|ריצה|hiit|אגרוף|קראטה/i.test(q)) intensity = 'high';
-
-    // שם — הסר מילות פעולה, ימים, שעות
-    var actName = q
-        .replace(/^(הוסף|הכנס|צור|עדכן|שנה|ערוך|מחק|הסר|חוג|אימון|שיעור|פעילות)\s*/gi, '')
-        .replace(new RegExp('(ב?יום\s+)?(ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)', 'g'), '')
-        .replace(timeRx, '')
-        .replace(/במקום|ב-?שעה|בשעות|מ-|עד|עצימות.*/gi, '')
-        .replace(/\s+/g, ' ').trim();
-
-    if (isAdd && actName && dayMatches.length > 0 && fromTime) {
-        return { action: 'add_routine', name: actName, day: DAY_NAMES[DAY_MAP[dayMatches[0].name]], startTime: fromTime, endTime: toTime, intensity: intensity, _rawDays: dayMatches };
-    }
-    if (isUpdate && dayMatches.length >= 1) {
-        return { action: 'update_routine', name: actName, day: DAY_NAMES[DAY_MAP[dayMatches[0].name]], startTime: fromTime, endTime: toTime, intensity: null, _rawDays: dayMatches };
-    }
-    if (isDelete && actName) {
-        return { action: 'delete_routine', name: actName };
-    }
-    return null;
-}
-
-function _handleActivityObj(actObj, userQuestion) {
-    var DAY_MAP2   = {'ראשון':0,'שני':1,'שלישי':2,'רביעי':3,'חמישי':4,'שישי':5,'שבת':6};
-    var DAY_NAMES2 = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-    function toEn(v) { if(!v)return'medium'; v=String(v).toLowerCase(); if(v==='גבוהה'||v==='high')return'high'; if(v==='נמוכה'||v==='low')return'low'; return'medium'; }
-    function save() { try { localStorage.setItem('loopie_activities', JSON.stringify(ACTIVITIES)); saveMemory('activities', ACTIVITIES).catch(function(){}); } catch(e){} }
-
-    if (actObj.action === 'add_routine') {
-        // ריבוי ימים
-        var rawDays = actObj._rawDays || [];
-        var slots = [];
-        // בדוק שעות נפרדות לכל יום
-        var timeRxM = /(\d{1,2}[:.:]?\d{0,2})\s*[-–]\s*(\d{1,2}[:.:]?\d{0,2})/g;
-        function normT(t) { if(!t)return null; t=String(t).replace('.',':'); if(!t.includes(':')) t=t.length<=2?t+':00':t.slice(0,-2)+':'+t.slice(-2); var p=t.split(':'); return p[0].padStart(2,'0')+':'+(p[1]||'00').padStart(2,'0'); }
-        var allTimes2 = []; var tm3; while((tm3=timeRxM.exec(userQuestion))!==null) allTimes2.push({from:normT(tm3[1]),to:normT(tm3[2]),idx:tm3.index});
-
-        if (rawDays.length > 1 && allTimes2.length >= rawDays.length) {
-            // שעות נפרדות לכל יום
-            rawDays.forEach(function(d,i) {
-                var t = allTimes2[i] || allTimes2[0];
-                slots.push({ day: DAY_MAP2[d.name], from: t.from, to: t.to });
-            });
-        } else {
-            rawDays.forEach(function(d) {
-                slots.push({ day: DAY_MAP2[d.name], from: actObj.startTime, to: actObj.endTime });
-            });
-        }
-        if (!slots.length && DAY_MAP2[actObj.day] !== undefined)
-            slots = [{ day: DAY_MAP2[actObj.day], from: actObj.startTime, to: actObj.endTime }];
-
-        slots.forEach(function(sl) {
-            ACTIVITIES.push({ id: Date.now() + sl.day + Math.random(), name: actObj.name, day: sl.day, from: sl.from||'00:00', to: sl.to||'01:00', intensity: toEn(actObj.intensity) });
-        });
-        save(); try { renderActivities(); } catch(e) {}
-        var summary = slots.map(function(sl){ return 'יום ' + DAY_NAMES2[sl.day] + ' ' + (sl.from||'') + '–' + (sl.to||''); }).join('<br>');
-        showPopup('✅ חוג נוסף!', '<b>' + actObj.name + '</b><br>' + summary);
-
-    } else if (actObj.action === 'update_routine') {
-        // העבר ל-update_routine handler הקיים
-        var dayMap2 = DAY_MAP2, dayNames2 = DAY_NAMES2;
-        var _toEn2 = toEn, _saveActs = save;
-        // בנה actObj תואם לפורמט הישן
-        var actObj2 = { action:'update_routine', name: actObj.name, day: actObj.day, startTime: actObj.startTime, endTime: actObj.endTime, intensity: actObj.intensity };
-        // שלח לטיפול
-        var fakeData = { candidates:[{ content:{ parts:[{ text: JSON.stringify(actObj2) }] } }] };
-        var fakeText = JSON.stringify(actObj2);
-        var fakeMatch = fakeText.match(/\{[\s\S]*?\}/);
-        if (fakeMatch) {
-            try {
-                var parsedAct = JSON.parse(fakeMatch[0]);
-                // העבר ישירות לטיפול
-                _processUpdateRoutine(parsedAct, userQuestion);
-            } catch(e) {}
-        }
-
-    } else if (actObj.action === 'delete_routine') {
-        var beforeD = ACTIVITIES.length;
-        ACTIVITIES = ACTIVITIES.filter(function(a){ return !a.name.toLowerCase().includes((actObj.name||'').toLowerCase()); });
-        save(); try { renderActivities(); } catch(e) {}
-        showPopup(ACTIVITIES.length < beforeD ? '🗑️ נמחק' : '❓',
-            ACTIVITIES.length < beforeD ? "<b>" + actObj.name + "</b> — " + (beforeD-ACTIVITIES.length) + " רשומות הוסרו." : "לא מצאתי חוג בשם '" + actObj.name + "'.");
-    }
-}
-
-function _processUpdateRoutine(actObj, userQuestion) {
-    var DAY_MAP3   = {'ראשון':0,'שני':1,'שלישי':2,'רביעי':3,'חמישי':4,'שישי':5,'שבת':6};
-    var DAY_NAMES3 = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-    function toEn3(v) { if(!v)return'medium'; v=String(v).toLowerCase(); if(v==='גבוהה'||v==='high')return'high'; if(v==='נמוכה'||v==='low')return'low'; return'medium'; }
-    function save3() { try { localStorage.setItem('loopie_activities',JSON.stringify(ACTIVITIES)); saveMemory('activities',ACTIVITIES).catch(function(){}); } catch(e){} }
-
-    function normT3(t) { if(!t)return null; t=String(t).replace('.',':'); if(!t.includes(':')) t=t.length<=2?t+':00':t.slice(0,-2)+':'+t.slice(-2); var p=t.split(':'); return p[0].padStart(2,'0')+':'+(p[1]||'00').padStart(2,'0'); }
-    var timeRx3 = /(\d{1,2}[:.:]?\d{0,2})\s*[-–]\s*(\d{1,2}[:.:]?\d{0,2})/;
-    var tM3 = userQuestion.match(timeRx3);
-    if (!actObj.startTime && tM3) actObj.startTime = normT3(tM3[1]);
-    if (!actObj.endTime   && tM3) actObj.endTime   = normT3(tM3[2]);
-
-    // זיהוי שינוי יום
-    var DAYS_RX3 = '(ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)';
-    var fromDay3 = null, toDay3 = null;
-    var swM = userQuestion.match(new RegExp('ב?יום\s+' + DAYS_RX3 + '[\s\S]*?במקום[\s\S]*?ב?יום\s+' + DAYS_RX3));
-    var chM = userQuestion.match(new RegExp('מ(?:יום\s+|ב)?' + DAYS_RX3 + '[\s\S]*?ל(?:יום\s+|ב)?' + DAYS_RX3));
-    if (swM) { toDay3=DAY_MAP3[swM[1]]; fromDay3=DAY_MAP3[swM[2]]; }
-    else if (chM) { fromDay3=DAY_MAP3[chM[1]]; toDay3=DAY_MAP3[chM[2]]; }
-    else if (actObj.day) toDay3 = DAY_MAP3[actObj.day];
-
-    if (!actObj.name) ACTIVITIES.forEach(function(a){ if(userQuestion.toLowerCase().includes(a.name.toLowerCase())) actObj.name=a.name; });
-
-    var updCnt3 = 0;
-    ACTIVITIES.forEach(function(a) {
-        var nm=a.name.toLowerCase().trim(), qn=(actObj.name||'').toLowerCase().trim();
-        if (qn && !nm.includes(qn) && !qn.includes(nm)) return;
-        if (fromDay3 !== null && a.day !== fromDay3) return;
-        if (toDay3 !== null)   a.day = toDay3;
-        if (actObj.startTime)  a.from = actObj.startTime;
-        if (actObj.endTime)    a.to   = actObj.endTime;
-        if (actObj.intensity)  a.intensity = toEn3(actObj.intensity);
-        updCnt3++;
-    });
-    save3(); try { renderActivities(); } catch(e) {}
-
-    var details = [];
-    if (fromDay3!==null && toDay3!==null) details.push('📅 יום ' + DAY_NAMES3[fromDay3] + ' → ' + DAY_NAMES3[toDay3]);
-    else if (toDay3!==null) details.push('📅 יום ' + DAY_NAMES3[toDay3]);
-    if (actObj.startTime && actObj.endTime) details.push('🕐 ' + actObj.startTime + '–' + actObj.endTime);
-
-    showPopup(updCnt3 > 0 ? '✅ עודכן!' : '❓',
-        updCnt3 > 0 ? '<b>' + (actObj.name||'החוג') + '</b><br>' + details.join('<br>') :
-        "לא מצאתי חוג בשם '" + (actObj.name||'') + "'.<br><small style='color:#888'>בדוק שהשם נכון</small>");
+    // ══════════════════════════════════════════════════════
+    // 4. כל שאר → Gemini Advisor
+    // ══════════════════════════════════════════════════════
+    askGeminiAdvisor(q);
 }
 
 
 async function askGeminiAdvisor(userQuestion) {
-    if (!userQuestion||!userQuestion.trim()) return;
-    var qlLocal = userQuestion.toLowerCase().trim();
+    if (!userQuestion || !userQuestion.trim()) return;
 
-    // === WHITELIST — רק מילות קוד מדויקות. כל שאר → Gemini ===
-    var LOCAL_STATUS  = ['מה המצב','סטטוס','מה קורה','status'];
-    var LOCAL_BASAL   = ['בזאלי','בזאל','תוכנית בזאלית'];
-    var LOCAL_CR      = ['cr','icr','rc','יחס פחמימות'];
-    var LOCAL_ISF     = ['isf','רגישות','מדד רגישות'];
-    var LOCAL_OVR     = ['override','אוברריד','תוכנית ספורט','מצב ספורט','החרגה','טמפ טרגט'];
-    var LOCAL_CANCEL_OVR = ['בוטל החוג','לא הלך לחוג','בטל אובריד','ביטול החרגה','ביטול אובריד'];
-    var LOCAL_MEALS   = ['מה אכלתי','היסטוריית ארוחות','ארוחות אחרונות'];
-    var LOCAL_COB     = ['cob','פחמימות פעילות','כוב'];
-    var LOCAL_IOB     = ['iob','אינסולין פעיל','איוב'];
-    var LOCAL_WEEKLY  = ['דוח שבועי','דוח שבועי','weekly','קליניקה','weekly clinic'];
-    var LOCAL_ANALYSIS = ['האם לשנות','לשנות','האם לתקן','לתקן','לשפר','מה דעתך'];
-
-    // ניתוח — תמיד ל-Gemini
-    var wantsAnalysis = LOCAL_ANALYSIS.some(function(w){ return qlLocal.includes(w); });
-
-    // סטטוס — הכלה חלקית אבל קצר
-    if (!wantsAnalysis && LOCAL_STATUS.some(function(w){ return qlLocal.includes(w); }) && qlLocal.length < 15) {
-        var sgvNowL = nsData.currentSgv || 0;
-        var html_s = "<div style='font-size:14px;line-height:1.9;text-align:right'>" +
-            "🩸 סוכר: <b>" + sgvNowL + "</b> " + (nsData.trend||'') + "<br>" +
-            "💉 IOB: <b>" + (parseFloat(nsData.iob)||0).toFixed(2) + "U</b><br>" +
-            "🍞 COB: <b>" + (parseFloat(nsData.cob)||0).toFixed(0) + "g</b><br>" +
-            "⏱ בזאלי: <b>" + (nsData.basal||0) + " U/ש'</b><br>" +
-            (nsData.overrideActive ? "🔄 Override: <b style='color:#f59e0b'>" + nsData.overrideName + "</b>" : "") +
-            "</div>";
-        showPopup("🛡️ סטטוס נוכחי", html_s); return;
-    }
-
-    // COB — exact match
-    if (LOCAL_COB.indexOf(qlLocal) >= 0) {
-        var cobVal = parseFloat(nsData.cob||0).toFixed(1);
-        showPopup("🍏 פחמימות פעילות (COB)", "<div style='font-size:16px;text-align:right'>" +
-            "פחמימות פעילות כרגע:<br>" +
-            "<span style='font-size:28px;color:#f59e0b;font-weight:700'>" + cobVal + "g</span>" +
-            "</div>"); return;
-    }
-
-    // IOB — exact match
-    if (LOCAL_IOB.indexOf(qlLocal) >= 0) {
-        var iobVal = parseFloat(nsData.iob||0).toFixed(2);
-        showPopup("💉 אינסולין פעיל (IOB)", "<div style='font-size:16px;text-align:right'>" +
-            "אינסולין פעיל כרגע:<br>" +
-            "<span style='font-size:28px;color:#3b82f6;font-weight:700'>" + iobVal + "U</span>" +
-            "</div>"); return;
-    }
-    // ביטול Override — includes כי המשתמש כותב משפט
-    if (LOCAL_CANCEL_OVR.some(function(w){ return qlLocal.includes(w); })) {
-        var targetNow = nsData.target || 100;
-        showPopup("🛑 ביטול Override", "<div style='font-size:14px;line-height:1.9;text-align:right'>" +
-            "⚠️ <b>החוג/הפעילות בוטלו — פעולה נדרשת!</b><br><br>" +
-            "📱 <b>כנס ללופ וכבה את ה-Override עכשיו!</b><br><br>" +
-            "🎯 <b>למה קריטי:</b> אם Override נשאר פעיל, המשאבה לא תיתן מספיק בזאלי בבית — הסוכר יזנק ל-200+.<br><br>" +
-            "המערכת צריכה לחזור ליעד הרגיל: <b>" + targetNow + " mg/dL</b>." +
-            "</div>");
-        return;
-    }
-
-    // דוח שבועי — Loopie Clinic
-    if (LOCAL_WEEKLY.indexOf(qlLocal) >= 0 || qlLocal.includes('דוח שבועי')) {
-        showPopup("📊 Loopie Clinic", "<div style='text-align:center;padding:20px'><div style='font-size:24px'>📊</div><br><small style='color:#888'>אוסף נתוני 14 ימים מ-NS...</small></div>");
-        _runWeeklyClinic();
-        return;
-    }
-
-    if (!wantsAnalysis && LOCAL_CR.indexOf(qlLocal) >= 0) {
-        var nowH3 = new Date().getHours();
-        var prof3 = fullHistory && fullHistory.profile;
-        var crNow3 = prof3 ? parseFloat(profileValueAt(prof3.carbratio||prof3.carbRatio||prof3.ic, nowH3)||15) : (nsData.cr||15);
-        var crRows = prof3 && Array.isArray(prof3.carbratio) ?
-            prof3.carbratio.map(function(b,i){ var nx=prof3.carbratio[i+1]?prof3.carbratio[i+1].time:'24:00'; return '• '+b.time+'–'+nx+': 1U/'+b.value+'g'; }).join('<br>') :
-            '• 00:00–24:00: 1U/' + crNow3 + 'g';
-        showPopup("📊 יחס פחמימות (CR)", "<div style='font-size:14px;line-height:1.8;text-align:right'><b>כרגע:</b> 1U לכל " + crNow3 + "g<br><br>" + crRows + "</div>"); return;
-    }
-
-    // ISF — exact match בלבד
-    if (!wantsAnalysis && LOCAL_ISF.indexOf(qlLocal) >= 0) {
-        var nowH4 = new Date().getHours();
-        var prof4 = fullHistory && fullHistory.profile;
-        var isfNow4 = prof4 ? parseFloat(profileValueAt(prof4.sens||prof4.sensitivity, nowH4)||120) : (nsData.isf||120);
-        var isfRows = prof4 && Array.isArray(prof4.sens) ?
-            prof4.sens.map(function(b,i){ var nx=prof4.sens[i+1]?prof4.sens[i+1].time:'24:00'; return '• '+b.time+'–'+nx+': '+b.value+' mg/dL'; }).join('<br>') :
-            '• 00:00–24:00: ' + isfNow4 + ' mg/dL';
-        showPopup("🎯 רגישות (ISF)", "<div style='font-size:14px;line-height:1.8;text-align:right'><b>כרגע:</b> " + isfNow4 + " mg/dL ליחידה<br><br>" + isfRows + "</div>"); return;
-    }
-
-    // בזאלי — exact match בלבד
-    if (!wantsAnalysis && LOCAL_BASAL.indexOf(qlLocal) >= 0) {
-        var prof5 = fullHistory && fullHistory.profile;
-        var basalNow5 = nsData.basal || 0;
-
-        // חישוב סך יחידות יומי
-        var totalDaily = 0;
-        var basalArr = prof5 && Array.isArray(prof5.basal) ? prof5.basal : null;
-        if (basalArr) {
-            for (var bi = 0; bi < basalArr.length; bi++) {
-                var cur = basalArr[bi], nxt = basalArr[bi+1] || {time:'24:00'};
-                var toMin = function(t){ var p=t.split(':'); return parseInt(p[0])*60+parseInt(p[1]||0); };
-                var durH = (toMin(nxt.time) - toMin(cur.time)) / 60;
-                totalDaily += cur.value * durH;
-            }
-        } else { totalDaily = basalNow5 * 24; }
-
-        var basalRows = basalArr ?
-            basalArr.map(function(b,i){ var nx=basalArr[i+1]?basalArr[i+1].time:'24:00'; return '• '+b.time+'–'+nx+': '+b.value+" U/ש'"; }).join('<br>') :
-            "• 00:00–24:00: " + basalNow5 + " U/ש'";
-
-        showPopup("⏳ קצב בזאלי", "<div style='font-size:14px;line-height:1.8;text-align:right'>" +
-            "⏳ <b>כרגע:</b> " + basalNow5 + " U/ש'<br>" +
-            "📊 <b>סך יחידות יומי:</b> <span style='font-size:18px;color:#3b82f6;font-weight:700'>" + totalDaily.toFixed(2) + " U</span><br><br>" +
-            "<b>תוכנית יומית:</b><br>" + basalRows + "</div>");
-        return;
-    }
-
-    // Override — exact match
-    if (LOCAL_OVR.indexOf(qlLocal) >= 0) {
-        var ovRaw = nsData._overrideRaw || null;
-        var html_ov = "<div style='font-size:14px;line-height:1.9;text-align:right'>";
-        if (nsData.overrideActive) {
-            var pctOv = nsData.overrideMultiplier ? Math.round(nsData.overrideMultiplier*100)+'%' : '';
-            var tLow  = ovRaw && ovRaw.currentCorrectionRange ? ovRaw.currentCorrectionRange.minValue || '---' : '---';
-            var tHigh = ovRaw && ovRaw.currentCorrectionRange ? ovRaw.currentCorrectionRange.maxValue || '---' : '---';
-            var durMin = ovRaw && ovRaw.duration ? Math.round(ovRaw.duration/60) + ' דק\'' : 'לא מוגבל';
-            html_ov += "🟢 <b style='color:#10b981'>החרגה פעילה כרגע!</b><br><br>" +
-                "• 🏃 <b>שם:</b> " + (nsData.overrideName||'פעיל') + "<br>" +
-                (pctOv ? "• 📉 <b>מכפיל:</b> " + pctOv + "<br>" : "") +
-                (tLow !== '---' ? "• 🎯 <b>יעד:</b> " + tLow + "–" + tHigh + " mg/dL<br>" : "") +
-                "• ⏱ <b>משך:</b> " + durMin;
-        } else {
-            var lastTs = ovRaw && ovRaw.timestamp ? new Date(ovRaw.timestamp).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false}) : null;
-            html_ov += "⚪ <b>אין החרגה פעילה כרגע.</b><br><br>";
-            if (lastTs) html_ov += "📋 עדכון אחרון: " + lastTs;
-        }
-        html_ov += "</div>";
-        showPopup("🏃 Override / החרגה", html_ov); return;
-    }
-
-    // ארוחות אחרונות — exact match בלבד
-    if (LOCAL_MEALS.indexOf(qlLocal) >= 0) {
-        var rawTr = (fullHistory.treatments || []).filter(function(t){ return t.carbs > 0 || parseFloat(t.insulin||0) > 0.1; });
-        function _evName(t) {
-            if (t.notes && t.notes.trim()) return t.notes.trim();
-            var et = (t.eventType||'').toLowerCase();
-            if (et.includes('carb')) return '🍏 דיווח פחמימות';
-            if (et.includes('correction bolus')) return '💉 בולוס תיקון';
-            if (et.includes('bolus')) return '💉 הזרקת אינסולין';
-            return t.eventType || 'ארוחה';
-        }
-        var merged = [], used = {};
-        rawTr.forEach(function(t, i) {
-            if (used[i]) return;
-            var g = { time: new Date(t.created_at).getTime(), carbs: t.carbs||0, insulin: parseFloat(t.insulin||0), name: _evName(t) };
-            for (var j=i+1; j<rawTr.length; j++) {
-                if (used[j]) continue;
-                if (Math.abs(new Date(rawTr[j].created_at).getTime()-g.time)/60000 <= 5) {
-                    g.carbs += rawTr[j].carbs||0; g.insulin += parseFloat(rawTr[j].insulin||0);
-                    if (rawTr[j].notes&&rawTr[j].notes.trim()) g.name = rawTr[j].notes.trim();
-                    used[j] = true;
-                }
-            }
-            merged.push(g); used[i] = true;
-        });
-        merged = merged.slice(0,3);
-        if (!merged.length) { showPopup("📜 היסטוריה", "לא נמצאו ארוחות ב-24ש' האחרונות."); return; }
-        var html3 = "<div style='font-size:13px;line-height:1.9;text-align:right'>";
-        merged.forEach(function(m) {
-            var a = Math.round((Date.now()-m.time)/60000);
-            var aStr = a>=60 ? Math.floor(a/60)+"ש' "+(a%60)+"דק'" : a+"דק'";
-            html3 += "<div style='border-bottom:1px solid #222;padding:8px 0'><b>" + (m.carbs>0&&m.insulin>0?"🍽️ ארוחה משולבת":m.name) + "</b> — לפני " + aStr + "<br>";
-            if (m.carbs>0)   html3 += "&nbsp;&nbsp;🍞 " + m.carbs + "g<br>";
-            if (m.insulin>0) html3 += "&nbsp;&nbsp;💉 " + m.insulin.toFixed(2) + "U<br>";
-            html3 += "</div>";
-        });
-        showPopup("📜 3 ארוחות אחרונות", html3+"</div>"); return;
-    }
-
-    // === כל שאר → Gemini ===
     try {
-        // הכן context מיד מנתונים קיימים — אין fetch!
         var ctx = buildNSContext();
+
+        // העשר context עם היסטוריית מאכל ספציפי
         var detectedFood = (typeof detectFoodName === 'function') ? detectFoodName(userQuestion) : null;
         if (detectedFood) {
             ctx.foodHistory = fetchFoodHistory(detectedFood);
-            ctx.foodName = detectedFood;
+            ctx.foodName    = detectedFood;
         }
+
+        // הוסף לוז חוגים לcontext
         if (typeof ACTIVITIES !== 'undefined' && ACTIVITIES.length) {
             var dayN2 = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-            var nowDay = new Date().getDay();
-            var nowH2 = new Date().getHours();
-            var nowM2 = new Date().getMinutes();
-            var actLines = ACTIVITIES.map(function(a) {
+            var nowDay = new Date().getDay(), nowH2 = new Date().getHours(), nowM2 = new Date().getMinutes();
+            ctx._scheduleStr = ACTIVITIES.map(function(a) {
                 var line = a.name + ' יום ' + dayN2[a.day] + ' ' + a.from + '-' + a.to;
                 if (a.day === nowDay) {
                     var fp = a.from.split(':'), diff = (parseInt(fp[0])*60+parseInt(fp[1])) - (nowH2*60+nowM2);
-                    if (diff > 0 && diff < 300) line += ' (בעוד ' + diff + ' דקות!)';
-                    else if (diff <= 0 && diff > -120) line += ' (מתנהל עכשיו!)';
+                    if (diff > 0 && diff < 300)  line += ' (בעוד ' + diff + ' דק!)';
+                    else if (diff <= 0 && diff > -120) line += ' (פעיל עכשיו!)';
                 }
                 return line;
-            });
-            ctx._scheduleStr = actLines.join(' | ');
+            }).join(' | ');
         }
 
+        // בנה prompt
         var prompt = buildGeminiPrompt(ctx, userQuestion);
         if (ctx._scheduleStr) prompt += "\nלו\"ז:" + ctx._scheduleStr;
 
-        // זיהוי סוג שאילתה — שלח לג'מיני רק מה שרלוונטי
-        var ql2 = userQuestion.toLowerCase().trim();
-        var isStatusCmd = ql2.includes('מה המצב') || ql2.includes('מה קורה') || ql2.includes('סטטוס') || ql2.includes('status') || ql2 === 'מצב';
-        var isBasalCmd  = ql2.includes('בזאלי') || ql2.includes('תוכנית בזאלית') || ql2.includes('בזאל');
-        var isCRCmd     = ql2.includes('cr') || ql2.includes('icr') || ql2.includes('rc') || ql2.includes('יחס פחמימ');
-        var isISFCmd    = ql2.includes('isf') || ql2.includes('רגישות') || ql2.includes('מדד רגישות');
-        var isProfileCmd = isBasalCmd || isCRCmd || isISFCmd;
-
-        if (isStatusCmd) {
-            // מצב — רק נתוני רגע, ללא טבלאות
-            prompt = [
-                "שאילתת סטטוס — הצג נתוני רגע בלבד, ללא טבלאות או לוחות שעות.",
-                "סוכר: " + ctx.sgv + " " + ctx.trend + " Δ" + (ctx.delta>=0?"+":"") + ctx.delta,
-                "אינסולין פעיל: " + ctx.iob + "U | פחמימות פעילות: " + ctx.cob + "g | בזאלי: " + ctx.basal + "U/ש'",
-                ctx.overrideActive ? "Override פעיל: " + ctx.overrideName : "Override: לא פעיל",
-                ctx.loopRec != null ? "המשאבה מציעה: " + ctx.loopRec + "U" : "",
-                "שאלה: " + userQuestion
-            ].filter(Boolean).join("\n");
-        } else if (!isProfileCmd) {
-            // שאילתה רגילה (לא פרופיל) — הסר טבלת בזאלי מהפרומפט
-            prompt = prompt.replace(/לוח בזאלי יומי:.*$/s, '').trim();
-        }
-        // isProfileCmd — שלח את כל הפרומפט כולל לוחות שעות
-
-        // אבחון חומרה אוטומטי
-        var hwWarnings = [];
-        if (ctx.sgv > 240 && ctx.iob > 1.0 && ctx.cage && ctx.cage > 48)
-            hwWarnings.push("⚠️ חשד לכשל ספיגה: סוכר " + ctx.sgv + " למרות " + ctx.iob + "U + פוד " + Math.round(ctx.cage) + "ש'");
-        if (ctx.sage && ctx.sage > 216 && ctx.basal === 0)
-            hwWarnings.push("⚠️ חיישן ישן (" + Math.floor(ctx.sage/24) + " ימים) + בזאלי 0 — שקול בדיקת אצבע");
-        if (hwWarnings.length) prompt += "\nאזהרת חומרה: " + hwWarnings.join(" | ");
-
-        var insName    = ctx.insulinName    || 'ליומג\'ב';
-        var insPreMeal = ctx.insulinPreMeal || 5;
-        var insPeak    = ctx.insulinPeak    || 30;
-
-        var sysPrompt = `אתה מנוע חישוב מתמטי וטיפולי קשיח עבור אפליקציית LOOPIE של הילד דניאל (בן 9).
-עליך להחזיר פלט קצר, פשוט ומבצעי לפי חוקי הבית הבאים בלבד. אסור להמציא נתונים, אסור להשתמש באנגלית, ואסור לכתוב משפטי פתיחה.
-
-🛡️ חוק פענוח קיצורים: אם המשתמש רושם "cob", "iob", "override", "בזאלי", "מצב" — דווח על הסטטוס בלבד, אל תמליץ על ארוחה.
-"cob" → "כרגע יש לך [X]g פחמימות פעילות." | "iob" → "יש לך [X]U אינסולין פעיל." | "override" → "תוכנית [שם] [פעילה/לא פעילה]."
-"בזאלי" → הצג: "קצב בזאלי נוכחי: [X]U/ש'." + "תוכנית בזאלית יומית:" + כל שעה בשורה "- HH:MM עד HH:MM: Y יחידות לשעה" מתוך הנתונים.
-
-חוקי חישוב פחמימות קשיחים:
-- פיתה / המבורגר = 50ג' | 3ש' ספיגה.
-- ג'חנון: 100ג' משקל = 50ג' פחמימה | 5ש' ספיגה. אם ציין משקל אחר — חשב יחסית (200ג' = 100ג' פחמימה).
-- פסטה/כוס = 30ג' | 5ש'. (2 כוסות = 60ג' בדיוק! כפל קשיח). אורז/כף = 5ג' | 3ש'. צ'יפס/10 = 15ג' | 3ש'. פתיבר = 7.5ג' | 3ש'. בננה = 25ג' | 2ש'. תפוח = 15ג' | 2ש'. לחם = 15ג' | 3ש'.
-
-🔴 חוק בטיחות — סוכר ≤100:
-איסור מוחלט על המתנה! "תן לדניאל לאכול מיד." הזרק רק 10-15 דק' לאחר שהתחיל לאכול.
-פיצול: 50% כעת, 50% חוב. "הסוכר נמוך — נזריק פחות כדי לתת לסוכר לעלות. חוב יושלם כשיעלה מעל 140."
-
-חוק ה-3 — פיצול קשיח 70/30:
-פיתה/ג'חנון/פסטה/המבורגר: חובה לפצל!
-- כעת: 70% מהפחמימות (50ג' → 35ג' כעת).
-- חוב: 30% (50ג' → 15ג' חוב). לופי תתריע להשלים כשסוכר יעלה מעל 150.
-
-תזמון לפי אינסולין (INS מהנתונים):
-ליומג'ב/Lyumjev: 2-3 דק' לפני. נובורפיד/Novorapid: 20 דק' לפני.
-
-נוסחת סימולציית לופ יבש (מנה מלאה):
-(סך פחמימות / ICR) + תיקון סוכר אם נדרש = כמה הלופ היה מציע.
-
-👁️ מודול ראייה ותרגום (Vision):
-אם מתקבלת תמונה — קרא ונתח כל טקסט בכל שפה. תרגם ערכי תזונה לעברית.
-זהה מוצרים ממותגים וחשב פחמימות מדויקות מהמוצר שזיהית.
-השתמש בפחמימות שחילצת מהתמונה + CR הנוכחי + סוכר מ-NS, והצג המלצה לפי חוק ה-3.
-
-
-אם המשתמש שואל "מה המצב הרפואי" או "בדיקות דם" — קרא מנתוני הפרופיל (שם, גיל, משקל) ותזכורות ב-state וציין:
-- אילו בדיקות תקופתיות בתוקף / עומדות לפוג / באיחור.
-- מתי מומלץ לעדכן גובה ומשקל (כל 3 חודשים).
-
-
-כשמועברים נתוני דוח שבועי — פעל כמנהל מרפאת סוכרת. ענה בדיוק בפורמט:
-⚠️ תזכורת מעקב: [המלצות קודמות יושמו/לא יושמו].
-🎯 עדוף שינויים (מדחוף לפחות):
-• קדימות 1 [קריטי]: [שינוי] | למה: [הסבר].
-• קדימות 2 [בינוני]: [שינוי].
-• קדימות 3 [נמוך]: [שינוי].
-⏱️ כל שינוי = 3 ימי הסתגלות. נעל ואל תשנה נוסף.
-
-🎯 ניתוח ISF/CR:
-אם המשתמש שואל "האם לשנות ISF" או "האם לשנות CR" — נתח את הנתונים שקיבלת:
-- בדוק מגמת סוכר, IOB, וגובה הסוכר הנוכחי.
-- החזר המלצה קצרה: האם לשנות (כן/לא), לאיזה ערך מדויק, ובאילו שעות ביום לבצע שינוי באייפון.
-- דוגמה: "כן — העלה ISF מ-120 ל-130 בשעות 02:00-06:00 בלבד, כדי למנוע ירידות לילה."
-
-
-אם המשתמש מדווח שהילד עצר את הארוחה באמצע (למשל: "אכל רק חצי פיתה", "הפסיק לאכול", "לא סיים"):
-1. חשב כמה גרם נאכלו בפועל לעומת כמה הוזרק עליהם.
-2. בטל מיד את חוב ה-30% — אין להשלים אותו!
-3. חשב את הפער: אינסולין שהוזרק על [X]ג' אבל נאכלו רק [Y]ג' → פער של [X-Y]ג' פחמימה חסרה.
-4. המלץ במפורש: "תן לדניאל עכשיו [Z]ג' פחמימה מהירה (פתיבר / מיץ / גלוקוז) כדי לכסות את עודף האינסולין ולמנוע היפו!"
-5. עקוב: "עקוב אחרי הסוכר בדקות הקרובות — אם יורד מתחת ל-80, הוסף עוד 15ג' מהר!"
-
-📜 היסטוריית ארוחות:
-אם המשתמש שואל "מה אכלתי?" — השתמש ב-MEALS וב-BOLUSES שקיבלת והצג 3 אחרונות בפורמט:
-• [שם] לפני [X]דק': [Y]g פחמימה | [Z]U אינסולין.
-אסור להמציא נתונים שאינם ב-MEALS/BOLUSES.
-
-
-אם המשתמש מדווח על מאכל שנאכל בעבר ולא דווח (למשל: "אכלתי פתיבר לפני חצי שעה"):
-1. חשב פחמימות לפי חוקי הבית (חצי פתיבר = 3.75ג') והסבר שעברו X דקות — הן כבר נספגו.
-2. השווה מול IOB נוכחי: אם IOB מכסה את הפחמימות → "אין צורך להזריק! האינסולין הפעיל כבר בלם את האוכל."
-3. סיים תמיד: "אין לדווח במשאבה — יגרום לכפל אינסולין מסוכן! לופי יעקוב ב-30 דקות הקרובות. אם סוכר יעלה מעל 150 — תגיע התראה."
-
-
-Omnipod: תוקף 72ש' + Grace 8ש'. G7: תוקף 10 ימים + Grace 12ש'.
-פוד >48ש' + סוכר>240 + IOB>1U → "חשד לכשל ספיגה! תיקון בעט + החלף פוד."
-חיישן >9 ימים → "חיישן ישן — בדיקת אצבע."
-Override פעיל → הפחת המלצות בהתאם למכפיל.
-היפו לילי חוזר → Override לילה 90% + יעד 120-140 ל-4ש'.
-
-🛡️ ניהול חוגים — JSON נקי בלבד (ללא תגיות קוד):
-הוספה: {"action":"add_routine","name":"[שם]","day":"[ראשון/שני/שלישי/רביעי/חמישי/שישי/שבת]","startTime":"[HH:MM]","endTime":"[HH:MM]","intensity":"[נמוכה/בינונית/גבוהה]"}
-עדכון: {"action":"update_routine","name":"[שם]","intensity":"[גבוהה/בינונית/נמוכה]","day":"","startTime":"","endTime":""}
-מחיקה: {"action":"delete_routine","name":"[שם]"}
-
-פורמט פלט חובה (לארוחות):
-[שם] — סך הכל: [X]ג' פחמימה. ספיגה: [Y]ש'.
-• כתוב בלופ כעת: [שם] [70%]ג'.
-• הזרק כעת: [U]U ([תזמון לפי אינסולין] לפני האוכל).
-• חוב להמשך: [30%]ג'. לופי תתריע להשלים את ה-[V]U כשסוכר יעלה מעל 150.
-• הלופ היבש היה מציע: [Z]U על המנה המלאה (ההמלצה שלי שונה בגלל פיצול חוק ה-3).`;
-
-        // הזרקה דינמית של ערכי פרופיל עדכניים
-        var nowHD = new Date().getHours();
-        var profD = fullHistory && fullHistory.profile;
+        // ערכי פרופיל נוכחיים
+        var nowHD = new Date().getHours(), profD = fullHistory && fullHistory.profile;
         var currentCR  = profD ? parseFloat(profileValueAt(profD.carbratio||profD.carbRatio||profD.ic, nowHD)||15) : (nsData.cr||15);
         var currentISF = profD ? parseFloat(profileValueAt(profD.sens||profD.sensitivity, nowHD)||120) : (nsData.isf||120);
-        sysPrompt += "\n\n📐 ערכי פרופיל נוכחיים (מה-NS, " + new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false}) + "):\n" +
-            "CR = 1U לכל " + currentCR.toFixed(1) + "g פחמימה.\n" +
-            "ISF = " + currentISF + " mg/dL ליחידה.\n" +
-            "נוסחת לופ יבש: (פחמימות / " + currentCR.toFixed(1) + ") + תיקון לפי ISF " + currentISF + ".";
 
-        // בדוק אם זו בקשת חוג — שלח ל-Gemini ללא Streaming (צריך JSON מלא)
-        var isActivityRequest = /הוסף|הכנס|צור|שנה|עדכן|ערוך|מחק|הסר|חוג|אימון|שיעור/i.test(userQuestion) &&
-                                /חוג|אימון|שיעור|פעילות|mma|כדורגל|כדורסל|שחייה|ריצה|צופים|קראטה|כושר|עצימות|אופניים|יוגה|פילאטיס|הליכה/i.test(userQuestion);
-        if (isActivityRequest) {
-            // ── פרסור מקומי ראשוני — לפני Gemini ──
-            var localActObj = _parseActivityLocally(userQuestion);
-            if (localActObj) {
-                _handleActivityObj(localActObj, userQuestion);
-                return;
-            }
-            // fallback → Gemini
-            var actResp = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + geminiKey(), {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({
-                    contents: [{role:"user", parts:[{text: userQuestion}]}],
-                    systemInstruction: {parts:[{text: sysPrompt}]},
-                    generationConfig: {maxOutputTokens: 150, temperature: 0.0}
-                })
+        // System prompt — טיפולי + ייעוץ
+        var sysPrompt = buildGeminiSystemPrompt(currentCR, currentISF, ctx);
+
+        // אם תמונה מחכה — שלח ל-vision
+        if (_pendingImageB64) {
+            var imgMsg = {
+                role: 'user',
+                parts: [
+                    { inlineData: { mimeType: _pendingImageType, data: _pendingImageB64 } },
+                    { text: userQuestion || 'כמה פחמימות? תחיל חוק ה-3.' }
+                ]
+            };
+            closePopup();
+            showPopup('📷 LOOPIE Vision', "<div style='text-align:center;padding:20px;color:#888'>מנתח תמונה... 🧠</div>");
+            _clearImage();
+            var vRes = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + geminiKey(), {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ contents:[imgMsg], systemInstruction:{parts:[{text:sysPrompt}]}, generationConfig:{maxOutputTokens:1024,temperature:0.2} })
             });
-            if (actResp.ok) {
-                var actData = await actResp.json();
-                var actText = ((actData.candidates[0].content.parts[0].text)||'').trim();
-                // ניקוי תגיות קוד
-                actText = actText.replace(/```json/gi,'').replace(/```/g,'').replace(/^\s*\n/gm,'').trim();
-                // מצא JSON בתשובה
-                var jsonMatch = actText.match(/\{[\s\S]*?\}/);
-                if (jsonMatch) {
-                    try {
-                        var actObj = JSON.parse(jsonMatch[0]);
-                        var dayMap2 = {'ראשון':0,'שני':1,'שלישי':2,'רביעי':3,'חמישי':4,'שישי':5,'שבת':6};
-                        var dayNames2 = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-                        var _toEn2 = function(v){ if(!v)return'medium'; v=String(v).toLowerCase(); if(v==='גבוהה'||v==='high')return'high'; if(v==='נמוכה'||v==='low')return'low'; return'medium'; };
-                        var _saveActs = function(){ try { localStorage.setItem('loopie_activities', JSON.stringify(ACTIVITIES)); } catch(e2) {} };
-
-                        if (actObj.action === 'add_routine') {
-                            // פרסור ריבוי ימים עם שעות נפרדות מהטקסט המקורי
-                            // תמיכה ב: "יום שני 09:00-10:00 וביום רביעי 16:00-17:00"
-                            var DAY_NAMES_LIST = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-                            var DAY_MAP_LOCAL  = {'ראשון':0,'שני':1,'שלישי':2,'רביעי':3,'חמישי':4,'שישי':5,'שבת':6};
-                            var timeRx  = /(\d{1,2}[:.:]?\d{0,2})\s*[-–]\s*(\d{1,2}[:.:]?\d{0,2})/g;
-                            var dayRx   = new RegExp('(' + DAY_NAMES_LIST.join('|') + ')', 'g');
-
-                            function normalizeTime(t) {
-                                t = t.replace('.',':');
-                                if (!t.includes(':')) t = t.length <= 2 ? t + ':00' : t.slice(0,-2) + ':' + t.slice(-2);
-                                var p = t.split(':');
-                                return p[0].padStart(2,'0') + ':' + (p[1]||'00').padStart(2,'0');
-                            }
-
-                            // מצא כל הופעות יום+שעות ברצף
-                            var rawQ   = userQuestion;
-                            var slots  = [];  // [{day, from, to}]
-                            var dMatch, tMatch;
-                            var allDays = []; var dm2;
-                            while ((dm2 = dayRx.exec(rawQ)) !== null) allDays.push({name: dm2[1], idx: dm2.index});
-
-                            var allTimes = []; var tm2; timeRx.lastIndex = 0;
-                            while ((tm2 = timeRx.exec(rawQ)) !== null) allTimes.push({from: normalizeTime(tm2[1]), to: normalizeTime(tm2[2]), idx: tm2.index});
-
-                            if (allDays.length > 0 && allTimes.length > 0) {
-                                // שייך כל זוג שעות ליום הכי קרוב לפניו
-                                allDays.forEach(function(d, di) {
-                                    var nextDayIdx = allDays[di+1] ? allDays[di+1].idx : rawQ.length;
-                                    // מצא שעות בין היום הנוכחי לבא
-                                    var timesForDay = allTimes.filter(function(t){ return t.idx > d.idx && t.idx < nextDayIdx; });
-                                    if (timesForDay.length === 0) {
-                                        // אין שעות ספציפיות — קח את הראשונות הכלליות
-                                        timesForDay = allTimes.slice(0, 1);
-                                    }
-                                    timesForDay.forEach(function(t) {
-                                        slots.push({ day: DAY_MAP_LOCAL[d.name], from: t.from, to: t.to });
-                                    });
-                                });
-                            }
-
-                            // fallback — שיטה ישנה אם לא הצלחנו לפרסר
-                            if (slots.length === 0) {
-                                var dayStr   = (actObj.day || '').replace(/[,+ו]/g, ' ');
-                                var dayWords = dayStr.split(/\s+/).filter(Boolean);
-                                dayWords.forEach(function(dw) {
-                                    var dn = DAY_MAP_LOCAL[dw.trim()];
-                                    if (dn !== undefined) slots.push({ day: dn, from: actObj.startTime, to: actObj.endTime });
-                                });
-                                if (slots.length === 0 && DAY_MAP_LOCAL[actObj.day] !== undefined)
-                                    slots = [{ day: DAY_MAP_LOCAL[actObj.day], from: actObj.startTime, to: actObj.endTime }];
-                            }
-
-                            if (slots.length > 0) {
-                                slots.forEach(function(sl) {
-                                    ACTIVITIES.push({ id: Date.now() + sl.day + Math.random(), name: actObj.name, day: sl.day, from: sl.from, to: sl.to, intensity: _toEn2(actObj.intensity) });
-                                });
-                                _saveActs(); try { renderActivities(); } catch(e) {}
-                                var summary = slots.map(function(sl){ return 'יום ' + DAY_NAMES_LIST[sl.day] + ' ' + sl.from + '–' + sl.to; }).join('<br>');
-                                showPopup("✅ חוג נוסף!", "<b>" + actObj.name + "</b><br>" + summary);
-                                return;
-                            }
-
-                        } else if (actObj.action === 'update_routine') {
-                            var DAY_NAMES_UPD  = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-                            var DAY_MAP_UPD    = {'ראשון':0,'שני':1,'שלישי':2,'רביעי':3,'חמישי':4,'שישי':5,'שבת':6};
-
-                            // חלץ שעות מהטקסט אם Gemini לא החזיר
-                            function normT(t) {
-                                if (!t) return null;
-                                t = String(t).replace('.', ':');
-                                if (!t.includes(':')) t = t.length <= 2 ? t + ':00' : t.slice(0,-2) + ':' + t.slice(-2);
-                                var p = t.split(':');
-                                return p[0].padStart(2,'0') + ':' + (p[1]||'00').padStart(2,'0');
-                            }
-                            var timeRx2 = /(\d{1,2}[:.:]?\d{0,2})\s*[-–]\s*(\d{1,2}[:.:]?\d{0,2})/;
-                            var tMatch2 = userQuestion.match(timeRx2);
-                            if (!actObj.startTime && tMatch2) actObj.startTime = normT(tMatch2[1]);
-                            if (!actObj.endTime   && tMatch2) actObj.endTime   = normT(tMatch2[2]);
-
-                            // זיהוי "יום X במקום יום Y" — fromDay=Y, toDay=X
-                            var fromDay = null, toDay = null;
-                            // זיהוי שינוי יום — כל הפורמטים
-                            var DAYS_RX = '(ראשון|שני|שלישי|רביעי|חמישי|שישי|שבת)';
-                            var uq = userQuestion;
-
-                            // "ביום X במקום ביום Y" / "יום X במקום יום Y"
-                            var swapRx = new RegExp('ב?יום\\s+' + DAYS_RX + '[\\s\\S]*?במקום[\\s\\S]*?ב?יום\\s+' + DAYS_RX);
-                            // "במקום ביום Y ... ביום X"
-                            var swapRx2 = new RegExp('במקום[\\s\\S]*?ב?יום\\s+' + DAYS_RX + '[\\s\\S]*?ב?יום\\s+' + DAYS_RX);
-                            // "מיום X ליום Y" / "מיום X לשישי"
-                            var changeRx = new RegExp('מ(?:יום\\s+|ב)?' + DAYS_RX + '[\\s\\S]*?ל(?:יום\\s+|ב)?' + DAYS_RX);
-
-                            var sm = uq.match(swapRx);
-                            var sm2 = sm ? null : uq.match(swapRx2);
-                            var cm = (!sm && !sm2) ? uq.match(changeRx) : null;
-
-                            if (sm) {
-                                // "ביום שישי במקום ביום שבת" → toDay=שישי, fromDay=שבת
-                                toDay   = DAY_MAP_UPD[sm[1]];
-                                fromDay = DAY_MAP_UPD[sm[2]];
-                            } else if (sm2) {
-                                toDay   = DAY_MAP_UPD[sm2[2]];
-                                fromDay = DAY_MAP_UPD[sm2[1]];
-                            } else if (cm) {
-                                fromDay = DAY_MAP_UPD[cm[1]];
-                                toDay   = DAY_MAP_UPD[cm[2]];
-                            } else if (actObj.day !== undefined && actObj.day !== '') {
-                                toDay = DAY_MAP_UPD[actObj.day];
-                            }
-
-                            // חלץ שם חוג אם Gemini לא החזיר
-                            if (!actObj.name || actObj.name === '') {
-                                ACTIVITIES.forEach(function(a) {
-                                    if (userQuestion.toLowerCase().includes(a.name.toLowerCase())) actObj.name = a.name;
-                                });
-                            }
-
-                            var updCnt = 0;
-                            ACTIVITIES.forEach(function(a) {
-                                var nm = a.name.toLowerCase().trim(), qn = (actObj.name||'').toLowerCase().trim();
-                                var nameMatch = !qn || nm === qn || nm.includes(qn) || qn.includes(nm);
-                                if (!nameMatch) return;
-
-                                // אם יש fromDay — עדכן רק את הרשומה של אותו יום
-                                var dayMatch = fromDay !== null ? a.day === fromDay : true;
-                                if (!dayMatch) return;
-
-                                if (actObj.intensity) a.intensity = _toEn2(actObj.intensity);
-                                // עדכן יום — אם fromDay→toDay
-                                if (toDay !== null) a.day = toDay;
-                                if (actObj.startTime) a.from = actObj.startTime;
-                                if (actObj.endTime)   a.to   = actObj.endTime;
-                                updCnt++;
-                            });
-
-                            _saveActs(); try { renderActivities(); } catch(e) {}
-
-                            var lbl = (INTENSITY_LABELS||{})[ _toEn2(actObj.intensity) ] || actObj.intensity || '';
-                            var updDetails = [];
-                            if (fromDay !== null && toDay !== null)
-                                updDetails.push('📅 יום ' + DAY_NAMES_UPD[fromDay] + ' → יום ' + DAY_NAMES_UPD[toDay]);
-                            else if (toDay !== null)
-                                updDetails.push('📅 יום ' + DAY_NAMES_UPD[toDay]);
-                            if (actObj.startTime && actObj.endTime) updDetails.push('🕐 ' + actObj.startTime + '–' + actObj.endTime);
-                            if (lbl) updDetails.push('⚡ ' + lbl);
-
-                            showPopup(updCnt > 0 ? "✅ עודכן!" : "❓",
-                                updCnt > 0
-                                    ? "<b>" + (actObj.name||'החוג') + "</b><br>" + updDetails.join('<br>')
-                                    : "לא מצאתי חוג בשם '" + (actObj.name||'') + "' ביום הזה.<br><small style='color:#888'>נסה: 'עדכן חוג MMA מיום שני ליום שלישי'</small>");
-                            return;
-
-                        } else if (actObj.action === 'delete_routine') {
-                            var beforeD = ACTIVITIES.length;
-                            ACTIVITIES = ACTIVITIES.filter(function(a){ return !a.name.toLowerCase().includes((actObj.name||'').toLowerCase()); });
-                            _saveActs(); try { renderActivities(); } catch(e) {}
-                            showPopup(ACTIVITIES.length < beforeD ? "🗑️ נמחק" : "❓",
-                                ACTIVITIES.length < beforeD ? "<b>" + actObj.name + "</b> — " + (beforeD-ACTIVITIES.length) + " רשומות הוסרו." :
-                                "לא מצאתי חוג בשם '" + actObj.name + "'.");
-                            return;
-                        }
-                    } catch(jsonErr) {}
-                }
-                showPopup("❓", actText || "לא הצלחתי לפרסר. נסה: 'הוסף חוג צופים יום שלישי 16:00-17:30'");
+            if (vRes.ok) {
+                var vData = await vRes.json();
+                var vText = ((vData.candidates||[])[0]||{}).content?.parts?.[0]?.text || 'לא הצלחתי לנתח.';
+                showPopup('📷 LOOPIE Vision', "<div style='font-size:14px;line-height:1.75;text-align:right;direction:rtl'>" + vText.replace(/\n/g,'<br>') + "</div>");
             }
             return;
         }
 
-        // Streaming fetch — מיידי, ללא המתנה
-        var streamHtml = "<div id='gemini-stream' style='font-size:14px;line-height:1.7;text-align:right;white-space:pre-line;direction:rtl'>מנתח נתוני אמת... ⏳</div>" +
-                         "<small style='color:#555'>Gemini | " + ctx.time + " | " + ctx.sgv + "</small>";
+        // Streaming
         closePopup();
-        showPopup("🧠 Loopie מנתח", streamHtml);
+        var streamHtml = "<div id='gemini-stream' style='font-size:14px;line-height:1.7;text-align:right;white-space:pre-line;direction:rtl'>מנתח... ⏳</div>" +
+                         "<small style='color:#555'>Gemini 2.5 | " + new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false}) + "</small>";
+        showPopup('🧠 Loopie', streamHtml);
 
-        // בנה parts — טקסט + תמונה אם יש
-        var msgParts = [{text: prompt}];
-        if (_pendingImageB64) {
-            msgParts.unshift({ inlineData: { mimeType: _pendingImageType, data: _pendingImageB64 } });
-            _clearImage(); // נקה אחרי שליחה
-        }
-
-        var streamUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=" + geminiKey();
-        var streamResp = await fetch(streamUrl, {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
+        var streamRes = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=' + geminiKey(), {
+            method: 'POST', headers: {'Content-Type':'application/json'},
             body: JSON.stringify({
-                contents: [{role:"user", parts: msgParts}],
-                systemInstruction: {parts:[{text: sysPrompt}]},
-                generationConfig: {maxOutputTokens: 4000, temperature: 0.0}
+                contents: [{role:'user', parts:[{text:prompt}]}],
+                systemInstruction: {parts:[{text:sysPrompt}]},
+                generationConfig: {maxOutputTokens:1024, temperature:0.2}
             })
         });
 
-        if (!streamResp.ok) {
-            var errD2 = await streamResp.json();
-            throw new Error("Gemini " + (errD2.error&&errD2.error.message||streamResp.status));
+        if (!streamRes.ok || !streamRes.body) {
+            // fallback non-streaming
+            var fbRes = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + geminiKey(), {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ contents:[{role:'user',parts:[{text:prompt}]}], systemInstruction:{parts:[{text:sysPrompt}]}, generationConfig:{maxOutputTokens:1024,temperature:0.2} })
+            });
+            if (fbRes.ok) {
+                var fbData = await fbRes.json();
+                var fbText = ((fbData.candidates||[])[0]||{}).content?.parts?.[0]?.text || 'שגיאה.';
+                showPopup('🧠 Loopie', "<div style='font-size:14px;line-height:1.75;text-align:right;direction:rtl'>" + fbText.replace(/\n/g,'<br>') + "</div>");
+            }
+            return;
         }
 
-        var reader = streamResp.body.getReader();
+        var reader  = streamRes.body.getReader();
         var decoder = new TextDecoder();
-        var fullText = "";
-        var streamEl = document.getElementById('gemini-stream');
-        if (streamEl) streamEl.textContent = '';
+        var full    = '';
 
         while (true) {
             var chunk = await reader.read();
             if (chunk.done) break;
-            var raw = decoder.decode(chunk.value, {stream: true});
-            var parts = raw.split('"text":');
-            if (parts.length > 1) {
-                for (var pi = 1; pi < parts.length; pi++) {
-                    var cleanText = parts[pi].split('"')[1];
-                    if (!cleanText) continue;
-                    cleanText = cleanText.replace(/\\n/g, '\n').replace(/\\\\/g, '\\').replace(/\\"/g, '"');
-                    fullText += cleanText;
-                    if (streamEl) streamEl.textContent = fullText;
-                }
-            }
+            var txt = decoder.decode(chunk.value, {stream:true});
+            txt.split('\n').forEach(function(line) {
+                if (!line.startsWith('data: ')) return;
+                var jsonStr = line.replace('data: ','').trim();
+                if (!jsonStr || jsonStr === '[DONE]') return;
+                try {
+                    var obj = JSON.parse(jsonStr);
+                    var part = ((obj.candidates||[])[0]||{}).content?.parts?.[0]?.text || '';
+                    full += part;
+                    var el = document.getElementById('gemini-stream');
+                    if (el) el.innerHTML = full.replace(/\n/g,'<br>');
+                } catch(e){}
+            });
         }
-
-        // הסר פתיחות
-        fullText = fullText.replace(/^(שלום[^!\n]*[!\n]?\s*|היי[^!\n]*[!\n]?\s*)/i, '').trim();
-
-        // ניקוי תגיות קוד שג'מיני מוסיף לפעמים
-        var jsonTry = fullText.trim().replace(/```json/gi,'').replace(/```/g,'').trim();
-        if (jsonTry.startsWith('{') && jsonTry.includes('"action"')) {
-            try {
-                var jsonCmd = JSON.parse(jsonTry);
-                var dayMapJ = {'ראשון':0,'שני':1,'שלישי':2,'רביעי':3,'חמישי':4,'שישי':5,'שבת':6};
-                var dayNamesJ = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-                var _saveJ = function(){ try { localStorage.setItem('loopie_activities', JSON.stringify(ACTIVITIES)); } catch(e2) {} };
-                var _toEn = function(v){ if(!v)return'medium'; v=v.toLowerCase(); if(v==='גבוהה'||v==='high')return'high'; if(v==='נמוכה'||v==='low')return'low'; return'medium'; };
-
-                if (jsonCmd.action === 'add_routine') {
-                    var dayNumJ = dayMapJ[jsonCmd.day];
-                    if (dayNumJ !== undefined) {
-                        ACTIVITIES.push({ id: Date.now(), name: jsonCmd.name, day: dayNumJ, from: jsonCmd.startTime, to: jsonCmd.endTime, intensity: _toEn(jsonCmd.intensity) });
-                        _saveJ(); try { renderActivities(); } catch(e) {}
-                        showPopup("✅ חוג נוסף!", "<b>" + jsonCmd.name + "</b><br>יום " + dayNamesJ[dayNumJ] + " | " + jsonCmd.startTime + "–" + jsonCmd.endTime);
-                        return;
-                    }
-                } else if (jsonCmd.action === 'update_routine') {
-                    var updCountJ = 0;
-                    ACTIVITIES.forEach(function(a) {
-                        var nameMatch = a.name.toLowerCase().trim() === jsonCmd.name.toLowerCase().trim() ||
-                                        a.name.toLowerCase().includes(jsonCmd.name.toLowerCase()) ||
-                                        jsonCmd.name.toLowerCase().includes(a.name.toLowerCase());
-                        var dayMatch  = !jsonCmd.day || (dayMapJ[jsonCmd.day] === undefined ? true : a.day === dayMapJ[jsonCmd.day]);
-                        if (nameMatch && dayMatch) {
-                            if (jsonCmd.intensity) a.intensity = _toEn(jsonCmd.intensity);
-                            if (jsonCmd.day && dayMapJ[jsonCmd.day] !== undefined) a.day = dayMapJ[jsonCmd.day];
-                            if (jsonCmd.startTime) a.from = jsonCmd.startTime;
-                            if (jsonCmd.endTime)   a.to   = jsonCmd.endTime;
-                            updCountJ++;
-                        }
-                    });
-                    if (updCountJ > 0) {
-                        _saveJ(); try { renderActivities(); } catch(e) {}
-                        var intLabelJ = (INTENSITY_LABELS||{})[ _toEn(jsonCmd.intensity) ] || '';
-                        showPopup("✅ עודכן!", "כל חוגי <b>" + jsonCmd.name + "</b> עודכנו (" + updCountJ + " רשומות)" + (intLabelJ ? "<br>" + intLabelJ : "") + " ✓");
-                    } else {
-                        showPopup("❓", "לא מצאתי חוג בשם '" + jsonCmd.name + "'.");
-                    }
-                    return;
-                } else if (jsonCmd.action === 'delete_routine') {
-                    var beforeJ = ACTIVITIES.length;
-                    ACTIVITIES = ACTIVITIES.filter(function(a){ return !a.name.toLowerCase().includes(jsonCmd.name.toLowerCase()); });
-                    if (ACTIVITIES.length < beforeJ) {
-                        _saveJ(); try { renderActivities(); } catch(e) {}
-                        showPopup("🗑️ נמחק", "<b>" + jsonCmd.name + "</b> — " + (beforeJ - ACTIVITIES.length) + " רשומות הוסרו.");
-                    } else {
-                        showPopup("❓", "לא מצאתי חוג בשם '" + jsonCmd.name + "'.");
-                    }
-                    return;
-                }
-            } catch(jsonErr) {
-                // לא JSON תקין — המשך להציג כטקסט רגיל
-            }
-        }
-
-        // טקסט רגיל — הצג
-        if (streamEl) streamEl.textContent = fullText;
-
-        // זהה חוב פחמימות ושמור
-        var debtGMatch = fullText.match(/חוב של (\d+) גרם/);
-        var mealNameMatch = fullText.match(/כתוב בלופ:\s*([^\d\n]+)/);
-        if (debtGMatch) {
-            try {
-                localStorage.setItem('active_debt', JSON.stringify({
-                    carbs: parseInt(debtGMatch[1]),
-                    meal: mealNameMatch ? mealNameMatch[1].trim() : 'ארוחה',
-                    status: 'open',
-                    time: Date.now()
-                }));
-            } catch(e) {}
-        }
-
-        // התראת פיצול
-        var debtMatch = fullText.match(/עוד\s*(\d+)\s*(?:דקות?|דק'?)\s*.*?(\d+\.?\d*)\s*[Uu]/);
-        if (debtMatch) {
-            var splitMin = parseInt(debtMatch[1]);
-            var splitU   = parseFloat(debtMatch[2]);
-            setTimeout(function(){
-                sendNotification("⏰ זמן להזריק השלמה!", "הזרק " + splitU + "U — השלמת הארוחה", {tag:'loopie-split',requireInteraction:true});
-            }, splitMin * 60000);
-        }
-
     } catch(e) {
-        closePopup();
-        showPopup("⚠️", (e.message||'').includes('429')?"מכסה נגמרה, נסה שוב בעוד דקה.":"שגיאה: "+(e.message||e));
+        showPopup('⚠️ שגיאה', 'שגיאת Gemini: ' + e.message);
     }
-
 }
+
+function buildGeminiSystemPrompt(cr, isf, ctx) {
+    var timeStr = new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false});
+    return "אתה מנוע ייעוץ טיפולי של LOOPIE לדניאל, ילד בן 12 עם סוכרת סוג 1.\n" +
+        "תפקידך: לענות על שאלות ייעוץ — אוכל, הזרקות, תיקונים, ספורט, override, האם להשלים חוב.\n" +
+        "אסור לך לדווח על נתוני סטטוס יבשים (בזאלי/ISF/CR/IOB/COB) — אלה מוצגים ישירות מה-NS.\n\n" +
+        "📐 ערכי פרופיל כרגע (" + timeStr + "):\n" +
+        "CR = 1U / " + cr.toFixed(1) + "g | ISF = " + isf + " mg/dL/U\n\n" +
+        "חוק ה-3 (70/30): הצהרה 70% עכשיו, חוב 30% — תזכורת אם סוכר > 150.\n" +
+        "Lyumjev/Fiasp: 0-2 דק' לפני. Novorapid/Humalog: 15-20 דק' לפני.\n" +
+        "מאכל שומני (פיצה/המבורגר): 60% עכשיו + 40% בעוד 90 דק'.\n" +
+        "ספורט פעיל: הפחת לפי עצימות. אחרי ספורט: הפחת 20-30%, סכנת היפו.\n" +
+        "Override פעיל: שקלל לפי המכפיל.\n\n" +
+        "ענה בעברית, קצר, מבצעי. ללא משפטי פתיחה.";
+}
+
 function showStatus(msg, type) {
     var el = document.getElementById('login-status');
     if (!el) return;
