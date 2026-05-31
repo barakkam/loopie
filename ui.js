@@ -757,54 +757,40 @@ async function askGeminiAdvisor(userQuestion) {
 
         // Streaming
         closePopup();
-        var streamHtml = "<div id='gemini-stream' style='font-size:14px;line-height:1.7;text-align:right;white-space:pre-line;direction:rtl'>מנתח... ⏳</div>" +
-                         "<small style='color:#555'>Gemini 2.5 | " + new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false}) + "</small>";
-        showPopup('🧠 Loopie', streamHtml);
+        showPopup('🧠 Loopie', "<div style='text-align:center;padding:20px;color:#888'><span class='spinner spinner-md'></span> מנתח...</div>");
 
-        var streamRes = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=' + geminiKey(), {
-            method: 'POST', headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({
-                contents: [{role:'user', parts:[{text:prompt}]}],
-                systemInstruction: {parts:[{text:sysPrompt}]},
-                generationConfig: {maxOutputTokens:1024, temperature:0.2}
-            })
-        });
-
-        if (!streamRes.ok || !streamRes.body) {
-            // fallback non-streaming
-            var fbRes = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + geminiKey(), {
-                method:'POST', headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({ contents:[{role:'user',parts:[{text:prompt}]}], systemInstruction:{parts:[{text:sysPrompt}]}, generationConfig:{maxOutputTokens:1024,temperature:0.2} })
-            });
-            if (fbRes.ok) {
-                var fbData = await fbRes.json();
-                var fbText = ((fbData.candidates||[])[0]||{}).content?.parts?.[0]?.text || 'שגיאה.';
-                showPopup('🧠 Loopie', "<div style='font-size:14px;line-height:1.75;text-align:right;direction:rtl'>" + fbText.replace(/\n/g,'<br>') + "</div>");
+        var apiRes = await fetch(
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + geminiKey(),
+            {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    contents: [{role:'user', parts:[{text:prompt}]}],
+                    systemInstruction: {parts:[{text:sysPrompt}]},
+                    generationConfig: {maxOutputTokens:4000, temperature:0.2}
+                })
             }
-            return;
+        );
+
+        if (!apiRes.ok) {
+            var errData = await apiRes.json().catch(function(){ return {}; });
+            throw new Error('Gemini ' + apiRes.status + ': ' + (errData.error && errData.error.message ? errData.error.message : apiRes.statusText));
         }
 
-        var reader  = streamRes.body.getReader();
-        var decoder = new TextDecoder();
-        var full    = '';
-
-        while (true) {
-            var chunk = await reader.read();
-            if (chunk.done) break;
-            var txt = decoder.decode(chunk.value, {stream:true});
-            txt.split('\n').forEach(function(line) {
-                if (!line.startsWith('data: ')) return;
-                var jsonStr = line.replace('data: ','').trim();
-                if (!jsonStr || jsonStr === '[DONE]') return;
-                try {
-                    var obj = JSON.parse(jsonStr);
-                    var part = ((obj.candidates||[])[0]||{}).content?.parts?.[0]?.text || '';
-                    full += part;
-                    var el = document.getElementById('gemini-stream');
-                    if (el) el.innerHTML = full.replace(/\n/g,'<br>');
-                } catch(e){}
-            });
+        var apiData = await apiRes.json();
+        var fullText = '';
+        try {
+            fullText = apiData.candidates[0].content.parts[0].text || '';
+        } catch(e) {
+            fullText = 'לא התקבלה תשובה מגמיני.';
         }
+
+        showPopup('🧠 Loopie',
+            "<div style='font-size:14px;line-height:1.75;text-align:right;direction:rtl;white-space:pre-line'>" +
+            fullText.replace(/</g,'&lt;').replace(/>/g,'&gt;') +
+            "</div><br><small style='color:#555'>Gemini 2.5 | " +
+            new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false}) +
+            "</small>");
     } catch(e) {
         showPopup('⚠️ שגיאה', 'שגיאת Gemini: ' + e.message);
     }
