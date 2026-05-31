@@ -284,6 +284,67 @@ function fetchFoodHistory(foodName) {
     }
 }
 
+
+function buildNSContext() {
+    var nowH = new Date().getHours();
+    var prof  = fullHistory && fullHistory.profile;
+    var dev   = fullHistory && fullHistory.devStatus;
+
+    var ctx = {
+        sgv:   nsData.currentSgv || 0,
+        trend: nsData.trend      || 'Flat',
+        delta: nsData.delta      || 0,
+        iob:   parseFloat(nsData.iob) || 0,
+        cob:   parseFloat(nsData.cob) || 0,
+        basal: nsData.basal      || 0,
+        cr:    prof ? parseFloat(profileValueAt(prof.carbratio||prof.carbRatio||prof.ic, nowH)||15) : (nsData.cr||15),
+        isf:   prof ? parseFloat(profileValueAt(prof.sens||prof.sensitivity, nowH)||120)            : (nsData.isf||120),
+        target:prof ? parseFloat(profileValueAt(prof.target_low||prof.target, nowH)||100)           : 100,
+        cage:  _lastKnownCage,
+        sage:  _lastKnownSage,
+        time:  new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false}),
+        day:   ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'][new Date().getDay()],
+        insulinName:   getInsulinProfile().name,
+        insulinPreMeal: getInsulinProfile().preMeal,
+        insulinPeak:   getInsulinProfile().peak,
+        insulinOnset:  getInsulinProfile().onset
+    };
+
+    // תחזית Loop
+    try {
+        if (dev) {
+            var po = dig(dev,'loop.predicted');
+            if (po && po.values && po.values.length) {
+                var vals = po.values;
+                ctx.p30 = Math.round(vals[Math.min(6,  vals.length-1)]);
+                ctx.p60 = Math.round(vals[Math.min(12, vals.length-1)]);
+                ctx.pEv = Math.round(vals[vals.length-1]);
+            }
+            ctx.loopRec            = dig(dev,'loop.recommendedBolus');
+            ctx.loopEnacted        = dig(dev,'loop.enacted.rate');
+            ctx.overrideActive     = nsData.overrideActive     || false;
+            ctx.overrideName       = nsData.overrideName       || null;
+            ctx.overrideMultiplier = nsData.overrideMultiplier || null;
+        }
+    } catch(e) {}
+
+    // ארוחות והזרקות 3 שעות אחרונות — מנתונים שכבר טעונים
+    try {
+        var since3h = Date.now() - 3*3600000;
+        var recentTr = (fullHistory.treatments || []).filter(function(t){
+            return new Date(t.created_at).getTime() > since3h;
+        });
+        ctx.meals = recentTr.filter(function(t){return t.carbs>0;}).map(function(t){
+            return (t.notes||t.eventType||'ארוחה')+' '+t.carbs+'g לפני '+Math.round((Date.now()-new Date(t.created_at))/60000)+' דק\'';
+        });
+        ctx.boluses = recentTr.filter(function(t){return parseFloat(t.insulin||0)>0.3;}).map(function(t){
+            return parseFloat(t.insulin).toFixed(1)+'U לפני '+Math.round((Date.now()-new Date(t.created_at))/60000)+' דק\'';
+        });
+    } catch(e) {}
+
+    return ctx;
+}
+
 function buildGeminiPrompt(ctx, q) {
     var lines = [
         "היום: יום " + ctx.day + " | שעה: " + ctx.time,
