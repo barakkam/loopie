@@ -866,10 +866,17 @@ async function askGeminiAdvisor(userQuestion) {
         var prompt = buildGeminiPrompt(ctx, userQuestion);
         if (ctx._scheduleStr) prompt += "\nלו\"ז:" + ctx._scheduleStr;
 
-        // ערכי פרופיל נוכחיים
+        // ערכי פרופיל נוכחיים — מהפרופיל, מה-ctx, ומה-nsData (לפי סדר עדיפות)
         var nowHD = new Date().getHours(), profD = fullHistory && fullHistory.profile;
-        var currentCR  = profD ? parseFloat(profileValueAt(profD.carbratio||profD.carbRatio||profD.ic, nowHD)||15) : (nsData.cr||15);
-        var currentISF = profD ? parseFloat(profileValueAt(profD.sens||profD.sensitivity, nowHD)||120) : (nsData.isf||120);
+        var currentCR  = profD
+            ? parseFloat(profileValueAt(profD.carbratio||profD.carbRatio||profD.ic, nowHD) || ctx.cr || 15)
+            : (ctx.cr || nsData.cr || 15);
+        var currentISF = profD
+            ? parseFloat(profileValueAt(profD.sens||profD.sensitivity, nowHD) || ctx.isf || 120)
+            : (ctx.isf || nsData.isf || 120);
+        // ודא שה-ctx מכיל את הערכים המעודכנים
+        ctx.cr  = currentCR;
+        ctx.isf = currentISF;
 
         // System prompt — טיפולי + ייעוץ
         var sysPrompt = buildGeminiSystemPrompt(currentCR, currentISF, ctx);
@@ -946,10 +953,11 @@ function buildGeminiSystemPrompt(cr, isf, ctx) {
     var timing   = preMeal <= 2
         ? "0-2 דקות לפני האכילה (" + ins + ")"
         : preMeal + " דקות לפני האכילה (" + ins + ")";
+    var iob = (ctx && ctx.iob) ? parseFloat(ctx.iob).toFixed(2) : '0.00';
 
     return "אתה עוזר טיפולי לניהול סוכרת סוג 1.\n" +
-        "תפקיד: נתח מאכל → תן הנחיה אחת ברורה: כמה גרם פחמימה להזין ללופ (האפליקציה באייפון) עכשיו.\n" +
-        "אסור: מילה 'LOOPIE', 'חוק ה-3', יחידות אינסולין (U) בשורת הפעולה. אסור לשאול שאלות.\n\n" +
+        "תפקיד: נתח מאכל → חשב סימולציית משאבה → תן הנחיה ברורה אחת.\n" +
+        "אסור: מילת LOOPIE, יחידות אינסולין בשורת הפעולה, שאלות למשתמש.\n\n" +
 
         "── מסד מאכלים קשיח ──\n" +
         "פיתה=50g/3ש' | לחם פרוס=15g/3ש' | כוס פסטה=40g/3ש' | כוס אורז=45g/3ש'\n" +
@@ -960,18 +968,24 @@ function buildGeminiSystemPrompt(cr, isf, ctx) {
         "חלב סויה רגיל=4g/3ש' | חלב סויה וניל/ממותק=12g/3ש'\n" +
         "מאכל לא ברשימה → הערך הגיוני + ספיגה=3ש'.\n\n" +
 
-        "── כמה גרם להזין ללופ ──\n" +
-        "מאכל שומני/איטי (ספיגה ≥ 4ש'): הזן 50% עכשיו, 50% חוב להמשך.\n" +
-        "מאכל רגיל (ספיגה 3ש'): הזן 70% עכשיו, 30% חוב להמשך.\n" +
-        "מאכל מהיר (ספיגה <2ש'): הזן 100% עכשיו, אין חוב.\n\n" +
+        "── כמה גרם להזין ללופ (פיצול לפי סוג מאכל) ──\n" +
+        "מאכל שומני/איטי (ספיגה ≥ 4ש'): פצל 50% עכשיו + 50% חוב.\n" +
+        "מאכל רגיל (ספיגה 3ש'): פצל 70% עכשיו + 30% חוב.\n" +
+        "מאכל מהיר (ספיגה <2ש'): 100% עכשיו, אין חוב.\n\n" +
+
+        "── סימולציית משאבה (Bolus Simulation) ──\n" +
+        "CR = 1U / " + cr.toFixed(1) + "g | ISF = " + isf + " mg/dL/U | IOB = " + iob + "U\n" +
+        "חשב: בולוס_תיאורטי = (סך_פחמימות ÷ CR) − IOB\n" +
+        "זהו הבולוס שהלופ היה מציע אם היית מזין את כל הפחמימות.\n" +
+        "הצג ערך זה בהסבר, לא בשורת הפעולה.\n\n" +
 
         "── ערכי פרופיל (" + timeStr + ") ──\n" +
         "CR = 1U / " + cr.toFixed(1) + "g | ISF = " + isf + " mg/dL/U\n\n" +
 
-        "── התאמות ──\n" +
+        "── התאמות context ──\n" +
         "override_active=true → הפחת לפי המכפיל.\n" +
-        "activity=during_high → ×0.60 | during_medium → ×0.75 | during_low → ×0.90.\n" +
-        "post_activity → הפחת 25%. is_night=true → הפחת 15%. is_dawn=true → הוסף 10%.\n\n" +
+        "activity=during_high → ×0.60 | during_medium → ×0.75 | post_activity → ×0.75.\n" +
+        "is_night=true → ×0.85 | is_dawn=true → ×1.10.\n\n" +
 
         "── 🦺 פרוטוקול הפסקת בית ספר ──\n" +
         "הפעל כשכותבים: הפסקה / ארוחת עשר / א. עשר / חצר.\n" +
@@ -980,17 +994,20 @@ function buildGeminiSystemPrompt(cr, isf, ctx) {
         "שעה אחרי + SGV > 150 + IOB > 1.2U → 'המתן — אל תזריק.'\n" +
         "שעה אחרי + SGV > 150 + IOB ≤ 1.2U → בולוס תיקון לפי ISF.\n\n" +
 
-        "── פורמט פלט קשיח (4 חלקים, עברית נקייה) ──\n" +
-        "🍏 [שם מאכל + כמות] | סך פחמימות: [X]g | ספיגה: [N]ש'\n" +
+        "── פורמט פלט קשיח — 5 חלקים בדיוק, עברית נקייה ──\n" +
         "\n" +
-        "🎯 פעולה באייפון עכשיו:\n" +
-        "כנס ללופ, הזן [Y]g פחמימה, ואשר את המינון שהמשאבה מציעה.\n" +
-        "([Y] = [50%/70%/100%] מ-[X]g)\n" +
+        "🎯 פעולה מיידית באייפון כעת:\n" +
+        "כנס ללופ, הזן [Y]g פחמימה ([50%/70%/100%] מ-[X]g), ותן למשאבה לחשב את המינון.\n" +
+        "\n" +
+        "🧠 למה להזין פחות?\n" +
+        "אם היית מזין [X]g, הלופ היה מציע ~[בולוס_תיאורטי]U — מנה כבדה מדי על מאכל [שומני/איטי].\n" +
+        "מינון כזה עלול לגרום לצניחה חריפה בשעה הראשונה. לכן מזינים פחות ומטפטפים בהמשך.\n" +
         "\n" +
         "⏳ תזמון: " + timing + "\n" +
         "\n" +
-        "🛡️ [Z]g נותרים כחוב — אם הסוכר יעלה מעל 150 אחרי [שעה/שעתיים/שלוש שעות], הזן אותם ללופ.\n" +
-        "(אין להזריק עכשיו! הלופ יחשב לבד.)";
+        "🛡️ תוכנית המשך: [Z]g נותרים כחוב. אם הסוכר יעלה מעל 150 אחרי [שעה/שעתיים/3ש'], הזן אותם ללופ.\n" +
+        "\n" +
+        "📊 נתוני רקע: [שם מאכל] | סך פחמימות: [X]g | ספיגה: [N]ש'";
 }
 
 function showStatus(msg, type) {
