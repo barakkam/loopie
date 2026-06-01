@@ -588,6 +588,20 @@ async function askOmnibox() {
     // 1. פקודות נתונים מקומיות — TIER 1 (תמיד ראשון)
     // ══════════════════════════════════════════════════════
 
+    // ── בדיקת התראה ──
+    if (ql === 'בדיקת התראה' || ql === 'test notification' || ql === 'בדיקה') {
+        if (typeof sendNotification === 'function') {
+            sendNotification('🚨 בדיקת LOOPIE', 'מערכת ההתראות פעילה! דניאל מוגן.');
+            showPopup('🧪 בדיקת התראה', "<div style='text-align:center;font-size:14px;padding:12px'>" +
+                "<div style='font-size:36px;margin-bottom:8px'>✅</div>" +
+                "ההתראה נשלחה!<br><br>" +
+                "<small style='color:#888'>נעל את המסך כדי לראות את הפופ-אפ.</small></div>");
+        } else {
+            showPopup('⚠️ שגיאה', 'sendNotification לא מוגדר — בדוק שנייטסקאוט נטען.');
+        }
+        return;
+    }
+
     // ── ציוד / פוד / חיישן ──
     if (/^(ציוד|חיישן|פוד|pod|סנסור|גיל פוד|גיל חיישן|החלפ)/.test(ql)) {
         await showEquipmentStatus(); return;
