@@ -500,6 +500,82 @@ function _clearImage() {
 }
 
 
+// ─── Rescue Plan — מקומי, ללא גמיני ─────────────────────────
+function _showRescuePlan() {
+    var sgv  = nsData.currentSgv || 0;
+    var iob  = parseFloat(nsData.iob || 0);
+    var cob  = parseFloat(nsData.cob || 0);
+    var bas  = nsData.basal || 0;
+    var trend= nsData.trend || '';
+
+    // חישוב פחמימות נדרשות
+    var prof   = fullHistory && fullHistory.profile;
+    var nowH   = new Date().getHours();
+    var isf    = prof ? parseFloat(profileValueAt(prof.sens||prof.sensitivity, nowH)||120) : 120;
+    var target = 120;
+    var carbsNeeded = typeof calcRescueCarbs === 'function'
+        ? calcRescueCarbs(sgv, target, iob, isf)
+        : Math.max(0, Math.round((target - sgv) / 4));
+
+    var rescue = buildRescuePlan(carbsNeeded, sgv, iob);
+
+    // מצב דחיפות
+    var urgency = sgv < 60 ? 'danger' : sgv < 80 ? 'warn' : 'low';
+    var urgencyColor = urgency==='danger' ? '#ef4444' : urgency==='warn' ? '#f59e0b' : '#3b82f6';
+    var urgencyLabel = urgency==='danger' ? '🚨 URGENT — פעל מיד!' : urgency==='warn' ? '⚠️ סוכר נמוך' : '🔵 סוכר גבולי';
+
+    var trendRising = ['SingleUp','DoubleUp','FortyFiveUp'].indexOf(trend) >= 0;
+    var trendFalling= ['SingleDown','DoubleDown','FortyFiveDown'].indexOf(trend) >= 0;
+    var trendStr    = trendFalling ? ' ויורד ↘' : trendRising ? ' ועולה ↗' : '';
+
+    // בניית HTML
+    var html = "<div style='font-size:13px;text-align:right;direction:rtl'>" +
+
+        // סטטוס עליון
+        "<div style='background:rgba(" + (urgency==='danger'?'244,63,94':'245,158,11') + ",0.12);border:1px solid " + urgencyColor + ";border-radius:8px;padding:10px 12px;margin-bottom:12px'>" +
+        "<div style='font-size:15px;font-weight:700;color:" + urgencyColor + "'>" + urgencyLabel + "</div>" +
+        "<div style='color:#aaa;margin-top:4px'>סוכר: <b style='color:" + urgencyColor + ";font-size:16px'>" + sgv + "</b> mg/dL" + trendStr + " | IOB: <b>" + iob.toFixed(2) + "U</b>" +
+        (cob > 0 ? " | COB: <b>" + cob + "g</b>" : "") + "</div>" +
+        "</div>" +
+
+        // Loop / משאבה
+        "<div style='background:#0a0a14;border-radius:8px;padding:10px;margin-bottom:10px'>" +
+        "<div style='font-weight:700;color:#3b82f6;margin-bottom:6px'>📱 Loop עושה אוטומטית:</div>" +
+        "<div style='color:#aaa;line-height:1.9'>" +
+        "• <b>בלימת בזאלי</b> — הורד מ-" + bas + " ל-0 U/ש' (אוטומטי)<br>" +
+        (iob > 0.5 ? "• ⚠️ IOB=" + iob.toFixed(2) + "U עדיין פעיל — הסוכר עלול להמשיך לרדת<br>" : "") +
+        "• אם הסוכר לא עולה ב-15 דק' — Loop ייתן Rescue Carbs אוטומטי" +
+        "</div></div>";
+
+    // תוכניות חילוץ
+    if (rescue.plans && rescue.plans.length) {
+        html += "<div style='font-weight:700;margin-bottom:8px'>🍬 " + carbsNeeded + "g פחמימות חילוץ — בחר תוכנית:</div>";
+        rescue.plans.forEach(function(p) {
+            html += "<div style='background:#0a0a14;border:1px solid " + p.color + ";border-radius:8px;padding:9px 12px;margin-bottom:7px'>" +
+                "<div style='color:" + p.color + ";font-weight:700;margin-bottom:4px'>" + p.label + " — " + p.totalCarbs + "g</div>" +
+                p.items.map(function(it) {
+                    return "<div style='color:#ccc'>• " + it.name + (it.fast ? " <small style='color:#10b981'>(מהיר)</small>" : " <small style='color:#888'>(איטי)</small>") + "</div>";
+                }).join('') +
+            "</div>";
+        });
+    }
+
+    // הנחיית Loop
+    if (rescue.loopNote) {
+        html += "<div style='background:rgba(59,130,246,0.08);border:1px solid var(--blue-dim);border-radius:8px;padding:8px 12px;font-size:12px;color:#3b82f6;margin-top:4px'>" +
+            rescue.loopNote + "</div>";
+    }
+
+    // הנחיה לא להזריק
+    html += "<div style='background:rgba(239,68,68,0.08);border:1px solid #ef4444;border-radius:8px;padding:8px 12px;font-size:12px;color:#ef4444;margin-top:8px'>" +
+        "🚫 <b>אל תזריק אינסולין</b> — המשאבה כבר בלמה. רק פחמימות עכשיו!</div>";
+
+    html += "</div>";
+
+    showPopup("🔵 תוכנית חילוץ — סוכר " + sgv, html);
+}
+
+
 // ─── Omnibox ─────────────────────────────────────────────────
 async function askOmnibox() {
     var input = document.getElementById('omnibox');
@@ -515,6 +591,11 @@ async function askOmnibox() {
     // ── ציוד / פוד / חיישן ──
     if (/^(ציוד|חיישן|פוד|pod|סנסור|גיל פוד|גיל חיישן|החלפ)/.test(ql)) {
         await showEquipmentStatus(); return;
+    }
+
+    // ── חילוץ / היפו ──
+    if (/^(חילוץ|היפו|hypo|סוכר נמוך|חילוץ מהיר|תוכנית חילוץ)$/.test(ql)) {
+        _showRescuePlan(); return;
     }
 
     // ── סטטוס כללי ──
@@ -1300,24 +1381,57 @@ function renderLogs(logs) {
     if (!listEl) return;
     if (!logs.length) { listEl.innerHTML = "<div class='text-center text-muted' style='padding:20px'>אין לוגים</div>"; return; }
 
+    var now = Date.now();
     listEl.innerHTML = logs.map(function(l) {
         var date  = new Date(l.date).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false});
-        var color = '#888', icon = '📋', detail = '';
+        var color = '#888', icon = '📋', detail = '', absHtml = '';
+
         if (l.type === 'food') {
-            color  = l.outcome==='good'?'#10b981':l.outcome==='high'?'#ef4444':'#3b82f6';
-            icon   = l.outcome==='good'?'✅':l.outcome==='high'?'🔴':'🔵';
-            detail = (l.carbs||0)+'g | '+(parseFloat(l.insulin||0)).toFixed(1)+'U' + (l.sgv2h?' | 2ש\': '+l.sgv2h:'');
+            // צבע לפי תוצאה
+            var outcome = l.outcome || 'unknown';
+            color = outcome==='good'?'#10b981': outcome==='high'?'#ef4444': outcome==='low'?'#3b82f6':'#888';
+            icon  = outcome==='good'?'✅': outcome==='high'?'🔴': outcome==='low'?'🔵':'⚪';
+
+            // אינסולין
+            var ins = parseFloat(l.insulin||0);
+            var insStr = ins > 0 ? ' | 💉 ' + ins.toFixed(1) + 'U' : '';
+
+            detail = '🍞 ' + (l.carbs||0) + 'g' + insStr + (l.sgv2h ? ' | 2ש\': ' + l.sgv2h : '');
+
+            // חישוב ספיגה חיה
+            var mealTime = new Date(l.date).getTime();
+            var minsAgo  = (now - mealTime) / 60000;
+            var diaMin   = (l.absorptionHours || 3) * 60; // ברירת מחדל 3 שעות
+            var carbs    = parseFloat(l.carbs || 0);
+            if (carbs > 0 && minsAgo < diaMin) {
+                var absorbed = Math.min(carbs, Math.round(carbs * (minsAgo / diaMin)));
+                var remaining = carbs - absorbed;
+                var absColor  = remaining > 0 ? '#f59e0b' : '#10b981';
+                var barPct    = Math.min(100, Math.round((minsAgo / diaMin) * 100));
+                absHtml = "<div style='margin-top:4px;font-size:11px'>" +
+                    "<span style='color:#10b981'>🟢 נספג: " + absorbed + "g</span>" +
+                    (remaining > 0 ? " | <span style='color:" + absColor + "'>⏳ נותר: " + remaining + "g</span>" : " | <span style='color:#10b981'>✅ הושלם</span>") +
+                    "<div style='background:#1a1a28;border-radius:3px;height:4px;margin-top:3px'><div style='background:#10b981;width:" + barPct + "%;height:100%;border-radius:3px'></div></div></div>";
+            } else if (carbs > 0 && minsAgo >= diaMin) {
+                absHtml = "<div style='font-size:11px;color:#10b981;margin-top:3px'>✅ ספיגה הושלמה</div>";
+            }
+
         } else if (l.type === 'rescue') {
             color = '#3b82f6'; icon = '🔵';
-            detail = (l.carbs||0)+'g' + (l.outcome?' | '+l.outcome:'');
+            detail = '🍬 ' + (l.carbs||0) + 'g' + (l.outcome?' | '+l.outcome:'');
         } else if (l.type === 'sport') {
             color = '#f59e0b'; icon = '🏃';
-            detail = (l.intensity||'') + ' | ' + (l.outcome||'');
+            detail = (l.intensity||'') + (l.outcome?' | '+l.outcome:'');
         }
-        return "<div style='background:#0a0a14;border-radius:8px;padding:10px;margin-bottom:6px;border-right:3px solid "+color+";display:flex;justify-content:space-between;align-items:center'>" +
-            "<div><div style='font-size:13px'>"+icon+" <b>"+l.name+"</b></div>" +
-            "<div style='font-size:11px;color:#888;margin-top:2px'>"+detail+"</div></div>" +
-            "<div style='font-size:11px;color:#666'>"+date+"</div></div>";
+
+        return "<div style='background:#0a0a14;border-radius:8px;padding:10px 12px;margin-bottom:6px;border-right:3px solid "+color+"'>" +
+            "<div style='display:flex;justify-content:space-between;align-items:center'>" +
+                "<div style='font-size:13px;font-weight:700'>"+icon+" "+l.name+"</div>" +
+                "<div style='font-size:11px;color:#666'>"+date+"</div>" +
+            "</div>" +
+            "<div style='font-size:12px;color:#888;margin-top:3px'>"+detail+"</div>" +
+            absHtml +
+        "</div>";
     }).join('');
 }
 
@@ -1460,9 +1574,15 @@ var _profAppt   = {};
 var _profData   = {};
 
 function _profLoadData() {
-    try { _profData   = JSON.parse(localStorage.getItem('loopie_profile_v2') || '{}'); }   catch(e){}
-    try { _profAppt   = JSON.parse(localStorage.getItem('loopie_appt_v1')    || '{}'); }   catch(e){}
-    try { _profChecks = JSON.parse(localStorage.getItem('loopie_checks_v4')  || 'null'); } catch(e){}
+    try {
+        var raw = localStorage.getItem('loopie_profile_data') || localStorage.getItem('loopie_profile_v2') || '{}';
+        _profData = JSON.parse(raw);
+    } catch(e) { _profData = {}; }
+    try {
+        var raw2 = localStorage.getItem('loopie_doctor_visits') || localStorage.getItem('loopie_appt_v1') || '{}';
+        _profAppt = JSON.parse(raw2);
+    } catch(e) { _profAppt = {}; }
+    try { _profChecks = JSON.parse(localStorage.getItem('loopie_checks_v4') || 'null'); } catch(e) { _profChecks = null; }
     if (!_profChecks || !_profChecks.length) {
         _profChecks = _PROF_CHECKS_DEFAULT.map(function(c){ return Object.assign({done:false, doneDate:null}, c); });
     } else {
@@ -1478,10 +1598,13 @@ function _profLoadData() {
 
 function _profSaveData() {
     try {
-        localStorage.setItem('loopie_profile_v2', JSON.stringify(_profData));
-        localStorage.setItem('loopie_checks_v4',  JSON.stringify(_profChecks));
-        localStorage.setItem('loopie_appt_v1',    JSON.stringify(_profAppt));
-    } catch(e) {}
+        // שמירה כפולה — מפתחות ישנים לתאימות + מפתחות חדשים
+        localStorage.setItem('loopie_profile_v2',   JSON.stringify(_profData));
+        localStorage.setItem('loopie_profile_data', JSON.stringify(_profData));
+        localStorage.setItem('loopie_checks_v4',    JSON.stringify(_profChecks));
+        localStorage.setItem('loopie_appt_v1',      JSON.stringify(_profAppt));
+        localStorage.setItem('loopie_doctor_visits', JSON.stringify(_profAppt));
+    } catch(e) { console.warn('[Loopie] Profile save error:', e); }
 }
 
 function _profDaysAgo(d)   { return d ? Math.floor((Date.now() - new Date(d)) / 86400000) : null; }
