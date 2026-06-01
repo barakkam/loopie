@@ -1138,13 +1138,30 @@ async function fetchGoogleCalendarEvents(token) {
 
 // ─── Notifications ────────────────────────────────────────────
 var _notifPermission = 'default';
+var _swReg = null;
 
+// ── Service Worker Registration ──────────────────────────────
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then(function(regs){ regs.forEach(function(r){ r.unregister(); }); });
+    navigator.serviceWorker.register('./sw.js')
+        .then(function(reg) {
+            console.log('✅ Service Worker רשום:', reg.scope);
+            _swReg = reg;
+        })
+        .catch(function(err) {
+            console.warn('⚠️ Service Worker נכשל (ממשיך בלעדיו):', err.message);
+        });
 }
 
+// ── בקשת הרשאת התראות ────────────────────────────────────────
 if ('Notification' in window) {
-    Notification.requestPermission().then(function(p){ _notifPermission=p; });
+    if (Notification.permission === 'granted') {
+        _notifPermission = 'granted';
+    } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission().then(function(p) {
+            _notifPermission = p;
+            console.log('[Loopie] הרשאת התראות:', p);
+        });
+    }
 }
 
 function _swNotify(sgv, trend) {
@@ -1159,17 +1176,50 @@ function _swNotify(sgv, trend) {
 }
 
 function sendNotification(title, body, options) {
-    if (_notifPermission!=='granted') return;
+    if (_notifPermission !== 'granted') {
+        // נסה לבקש הרשאה אם עדיין לא ניסינו
+        if ('Notification' in window && Notification.permission !== 'denied') {
+            Notification.requestPermission().then(function(p) {
+                _notifPermission = p;
+                if (p === 'granted') sendNotification(title, body, options);
+            });
+        }
+        return;
+    }
+    var opts = Object.assign({
+        icon:    'https://raw.githubusercontent.com/barakkam/loopie/main/favicon.ico',
+        badge:   'https://raw.githubusercontent.com/barakkam/loopie/main/favicon.ico',
+        vibrate: [200, 100, 200],
+        tag:     'loopie-alert',
+        renotify: true,
+        requireInteraction: false
+    }, options || {});
+
     try {
-        var opts = Object.assign({
-            icon:'https://raw.githubusercontent.com/barakkam/loopie/main/favicon.ico',
-            badge:'https://raw.githubusercontent.com/barakkam/loopie/main/favicon.ico',
-            vibrate:[200,100,200], tag:'loopie-alert', renotify:true, requireInteraction:false
-        }, options||{});
-        var n=new Notification(title, Object.assign({body:body},opts));
-        n.onclick=function(){ window.focus(); n.close(); };
-        setTimeout(function(){ showPopup(title,body); },100);
-    } catch(e) { showPopup(title,body); }
+        // שלח דרך Service Worker (תומך ב-background + iOS 16.4+ PWA)
+        if (_swReg && _swReg.active) {
+            // שלח message ל-SW שישלח notification
+            _swReg.active.postMessage({
+                type: 'SHOW_NOTIFICATION',
+                title: title,
+                body: body,
+                tag: opts.tag || 'loopie-alert',
+                requireInteraction: opts.requireInteraction || false,
+                urgent: (opts.vibrate && opts.vibrate.length > 3)
+            });
+        } else if (_swReg && _swReg.showNotification) {
+            _swReg.showNotification(title, Object.assign({ body: body }, opts));
+        } else {
+            var n = new Notification(title, Object.assign({ body: body }, opts));
+            n.onclick = function() { window.focus(); n.close(); };
+        }
+        // גם popup בתוך האפליקציה
+        if (typeof showPopup === 'function') {
+            setTimeout(function() { showPopup(title, body); }, 100);
+        }
+    } catch(e) {
+        if (typeof showPopup === 'function') showPopup(title, body);
+    }
 }
 
 function sendLocalPush(title, body) { sendNotification(title, body, {tag:'loopie-local', requireInteraction:true}); }
