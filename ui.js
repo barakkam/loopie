@@ -704,29 +704,91 @@ async function askOmnibox() {
         showPopup('🍽️ ארוחות',"<div style='text-align:center;padding:16px'><span class='spinner'></span></div>");
         (async function(){
             try{
-                var since6h=new Date(Date.now()-6*3600000).toISOString();
-                var res=await nsGet('/api/v1/treatments.json?find[created_at][$gte]='+since6h+'&count=30');
-                if(!res.ok)throw new Error('NS error');
-                var treats=await res.json();
-                var meals=treats.filter(function(t){return t.carbs&&parseFloat(t.carbs)>0;}).slice(0,3);
-                if(!meals.length){showPopup('🍽️ ארוחות',"לא נמצאו ארוחות ב-6 שעות האחרונות.");return;}
-                var html3="<div style='font-size:13px;text-align:right'>";
+                // ── 16 שעות אחורה, 20 רשומות — לתפוס את כל הארוחות של היום ──
+                var since16h = new Date(Date.now()-16*3600000).toISOString();
+                var res = await nsGet('/api/v1/treatments.json?find[created_at][$gte]='+since16h+'&count=50');
+                if(!res.ok) throw new Error('NS error ' + res.status);
+                var treats = await res.json();
+
+                // סנן רק treatments עם פחמימות
+                var meals = treats.filter(function(t){
+                    return t.carbs && parseFloat(t.carbs) > 0;
+                }).slice(0, 8); // עד 8 ארוחות
+
+                if(!meals.length){
+                    showPopup('🍽️ ארוחות',"לא נמצאו ארוחות ב-16 שעות האחרונות.");
+                    return;
+                }
+
+                var DIA_MINS = 5 * 60; // 5 שעות DIA
+
+                var html3 = "<div style='font-size:13px;text-align:right'>" +
+                    "<div style='color:#888;font-size:11px;margin-bottom:10px'>" + meals.length + " ארוחות — 16 שעות אחרונות</div>";
+
                 meals.forEach(function(m){
-                    var ma=Math.round((Date.now()-new Date(m.created_at).getTime())/60000);
-                    var ha=(ma/60).toFixed(1);
-                    var ts=new Date(m.created_at).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false});
-                    var c=parseFloat(m.carbs||0), ins=parseFloat(m.insulin||0);
-                    var nm=m.notes||m.foodType||'ארוחה';
-                    var dia=300, abs=Math.min(100,Math.round((ma/dia)*100)), rem=Math.max(0,100-abs);
-                    var iobEst=ins>0?(ins*rem/100).toFixed(2):null;
-                    var col=ma<60?'#f59e0b':ma<180?'#3b82f6':'#10b981';
-                    var bar="<div style='background:#1a1a28;border-radius:4px;height:5px;margin:3px 0'><div style='background:"+col+";width:"+abs+"%;height:100%;border-radius:4px'></div></div>";
-                    html3+="<div style='background:#0a0a14;border-radius:8px;padding:10px;margin-bottom:8px;border-right:3px solid "+col+"'>" +
-                        "<div style='display:flex;justify-content:space-between'><b>"+nm+"</b><span style='color:#888;font-size:11px'>"+ts+" ("+(ma<60?ma+" דק'":ha+" ש'")+") </span></div>" +
-                        "🍞 <b>"+c+"g</b>"+(ins>0?" | 💉 <b>"+ins.toFixed(1)+"U</b>":"")+bar+
-                        "ספיגה: <b>"+abs+"%</b>"+(iobEst&&parseFloat(iobEst)>0.05?" | ⏳ IOB: <b style='color:#3b82f6'>"+iobEst+"U</b>":"")+"</div>";
+                    var mealTime = new Date(m.created_at).getTime();
+                    var minsAgo  = Math.round((Date.now() - mealTime) / 60000);
+                    var hoursAgo = (minsAgo / 60).toFixed(1);
+                    var ts       = new Date(m.created_at).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false});
+                    var dateStr  = new Date(m.created_at).toLocaleDateString('he-IL',{day:'2-digit',month:'2-digit'});
+
+                    var c   = parseFloat(m.carbs   || 0);
+                    var ins = parseFloat(m.insulin  || m.enteredinsulin || 0);
+
+                    // שם מאכל — notes קודם, אחר כך foodType
+                    var nm = (m.notes && m.notes.trim()) ? m.notes.trim() :
+                             (m.foodType && m.foodType.trim()) ? m.foodType.trim() : 'ארוחה';
+
+                    // ספיגת פחמימות — לפי DIA 5 שעות
+                    var absRatio   = Math.min(1, minsAgo / DIA_MINS);
+                    var carbsAbs   = Math.round(c * absRatio * 10) / 10;
+                    var carbsLeft  = Math.round((c - carbsAbs) * 10) / 10;
+                    var absPercent = Math.round(absRatio * 100);
+                    var barColor   = minsAgo < 60 ? '#f59e0b' : minsAgo < 180 ? '#3b82f6' : '#10b981';
+                    var barFull    = carbsLeft <= 0;
+
+                    // IOB משוערת
+                    var iobRatio = Math.max(0, 1 - minsAgo / DIA_MINS);
+                    var iobEst   = ins > 0 ? Math.round(ins * iobRatio * 100) / 100 : 0;
+
+                    // כרטיסייה
+                    html3 += "<div style='background:#0a0a14;border-radius:10px;padding:11px 13px;margin-bottom:8px;border-right:3px solid "+barColor+"'>" +
+
+                        // שורה 1 — שם + שעה
+                        "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:5px'>" +
+                            "<span style='font-size:14px;font-weight:700'>🍽️ "+nm+"</span>" +
+                            "<span style='color:#888;font-size:11px'>"+dateStr+" "+ts+"<br><span style='color:#666'>"+(minsAgo<60?minsAgo+" דק'":hoursAgo+" ש'")+" לפני</span></span>" +
+                        "</div>" +
+
+                        // שורה 2 — פחמימות + אינסולין
+                        "<div style='font-size:12px;margin-bottom:5px;display:flex;gap:14px'>" +
+                            "<span>🍞 <b>"+c+"g</b> פחמימות</span>" +
+                            (ins > 0 ? "<span>💉 <b>"+ins.toFixed(1)+"U</b> הוזרק</span>" : "<span style='color:#888'>💉 לא הוזרק</span>") +
+                        "</div>" +
+
+                        // שורה 3 — ספיגה חיה
+                        "<div style='font-size:12px;margin-bottom:5px'>" +
+                            (barFull
+                                ? "<span style='color:#10b981'>✅ ספיגה הושלמה — "+c+"g נספגו</span>"
+                                : "<span style='color:#10b981'>🟢 נספג: <b>"+carbsAbs+"g</b></span>" +
+                                  " | <span style='color:#f59e0b'>⏳ נותר: <b>"+carbsLeft+"g</b></span>" +
+                                  " <span style='color:#888'>("+absPercent+"%)</span>") +
+                        "</div>" +
+
+                        // שורה 4 — IOB משוערת
+                        (ins > 0 && iobEst > 0.05
+                            ? "<div style='font-size:12px;color:#3b82f6'>⏳ IOB משוערת: <b>"+iobEst+"U</b> עדיין פעיל</div>"
+                            : (ins > 0 ? "<div style='font-size:11px;color:#10b981'>✅ אינסולין נספג לחלוטין</div>" : "")) +
+
+                        // סרגל ספיגה
+                        "<div style='background:#1a1a28;border-radius:3px;height:4px;margin-top:6px'>" +
+                            "<div style='background:"+barColor+";width:"+Math.min(100,absPercent)+"%;height:100%;border-radius:3px;transition:width 0.3s'></div>" +
+                        "</div>" +
+
+                    "</div>";
                 });
-                showPopup('🍽️ '+meals.length+' ארוחות אחרונות',html3+"</div>");
+
+                showPopup('🍽️ '+meals.length+' ארוחות אחרונות', html3+"</div>");
             }catch(e){showPopup('🍽️ שגיאה',e.message);}
         })(); return;
     }
@@ -878,46 +940,57 @@ async function askGeminiAdvisor(userQuestion) {
 }
 
 function buildGeminiSystemPrompt(cr, isf, ctx) {
-    var timeStr = new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false});
-    var ins = (ctx && ctx.insulinName) || 'Lyumjev';
-    var preMeal = (ctx && ctx.insulinPreMeal != null) ? ctx.insulinPreMeal : 0;
-    var timing = preMeal <= 2
-        ? "הזרק 0-2 דקות לפני האכילה (" + ins + " — אינסולין מהיר מאוד)"
-        : "Pre-Bolus: " + preMeal + " דקות לפני האכילה (" + ins + ")";
+    var timeStr  = new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false});
+    var ins      = (ctx && ctx.insulinName)    || 'Lyumjev';
+    var preMeal  = (ctx && ctx.insulinPreMeal != null) ? ctx.insulinPreMeal : 0;
+    var timing   = preMeal <= 2
+        ? "0-2 דקות לפני האכילה (" + ins + ")"
+        : preMeal + " דקות לפני האכילה (" + ins + ")";
 
-    return "אתה מנוע חישוב טיפולי של LOOPIE לניהול סוכרת סוג 1.\n" +
-        "תפקיד: קבל שם מאכל → חשב פחמימות → החל חוק ה-3 → תן המלצה מבצעית.\n" +
-        "אסור לשאול שאלות. תמיד תחשב ותמליץ מיד.\n\n" +
+    return "אתה עוזר טיפולי לניהול סוכרת סוג 1.\n" +
+        "תפקיד: נתח מאכל → תן הנחיה אחת ברורה: כמה גרם פחמימה להזין ללופ (האפליקציה באייפון) עכשיו.\n" +
+        "אסור: מילה 'LOOPIE', 'חוק ה-3', יחידות אינסולין (U) בשורת הפעולה. אסור לשאול שאלות.\n\n" +
 
-        "── מסד מאכלים קשיח (השתמש תמיד בערכים אלו) ──\n" +
-        "פיתה=50g/3ש' | לחם פרוס=15g/3ש' | כוס פסטה=40g/4ש' | כוס אורז=45g/3ש'\n" +
-        "בננה=25g/1.5ש' | תפוח=15g/1.5ש' | פיצה פרוסה=30g/4ש' | המבורגר+לחמנייה=30g/4ש'\n" +
-        "שניצל מטוגן=10g/4ש' | קרואסון=25g/3ש' | בייגלה=55g/3ש' | וופל=20g/2ש'\n" +
-        "עוגיה=10g/2ש' | כוס מיץ=25g/1ש' | שוקו=30g/2ש' | פתיבר=7.5g/1ש'\n" +
-        "ג'חנון 100g=50g/5ש' | מלאווח=40g/4ש' | בורקס=25g/3ש' | חביתה=2g/1ש'\n" +
-        "מאכל לא ברשימה → הערך הגיוני + ספיגה=3ש' כברירת מחדל.\n\n" +
+        "── מסד מאכלים קשיח ──\n" +
+        "פיתה=50g/3ש' | לחם פרוס=15g/3ש' | כוס פסטה=40g/3ש' | כוס אורז=45g/3ש'\n" +
+        "בננה=25g/3ש' | תפוח=15g/3ש' | כוס מיץ=25g/3ש' | פתיבר=7.5g/3ש'\n" +
+        "פיצה פרוסה=30g/4ש' | המבורגר+לחמנייה=30g/4ש' | שניצל מטוגן=10g/4ש'\n" +
+        "ג'חנון 100g=50g/5ש' | מלאווח=40g/4ש' | צ'יפס=30g/4ש' | בורקס=25g/3ש'\n" +
+        "קרואסון=25g/3ש' | בייגלה=55g/3ש' | שוקו=30g/3ש' | עוגיה=10g/3ש'\n" +
+        "חלב סויה רגיל=4g/3ש' | חלב סויה וניל/ממותק=12g/3ש'\n" +
+        "מאכל לא ברשימה → הערך הגיוני + ספיגה=3ש'.\n\n" +
 
-        "── ערכי פרופיל עכשיו (" + timeStr + ") ──\n" +
+        "── כמה גרם להזין ללופ ──\n" +
+        "מאכל שומני/איטי (ספיגה ≥ 4ש'): הזן 50% עכשיו, 50% חוב להמשך.\n" +
+        "מאכל רגיל (ספיגה 3ש'): הזן 70% עכשיו, 30% חוב להמשך.\n" +
+        "מאכל מהיר (ספיגה <2ש'): הזן 100% עכשיו, אין חוב.\n\n" +
+
+        "── ערכי פרופיל (" + timeStr + ") ──\n" +
         "CR = 1U / " + cr.toFixed(1) + "g | ISF = " + isf + " mg/dL/U\n\n" +
 
-        "── חוק ה-3 (חובה על כל מאכל) ──\n" +
-        "70% מהפחמימות → הצהרה מיידית באייפון עכשיו.\n" +
-        "30% מהפחמימות → חוב; תזכורת אם סוכר > 150 בעוד ~2ש'.\n" +
-        "מאכל שומני (ספיגה>3.5ש'): 60% עכשיו + 40% בעוד 90 דק'.\n\n" +
+        "── התאמות ──\n" +
+        "override_active=true → הפחת לפי המכפיל.\n" +
+        "activity=during_high → ×0.60 | during_medium → ×0.75 | during_low → ×0.90.\n" +
+        "post_activity → הפחת 25%. is_night=true → הפחת 15%. is_dawn=true → הוסף 10%.\n\n" +
 
-        "── תזמון הזרקה ──\n" +
-        timing + "\n\n" +
+        "── 🦺 פרוטוקול הפסקת בית ספר ──\n" +
+        "הפעל כשכותבים: הפסקה / ארוחת עשר / א. עשר / חצר.\n" +
+        "SGV < 130 או SGV 130-140 + ירידה → 'הזן 4g (חצי פתיבר) ללופ — ללא בולוס.'\n" +
+        "SGV ≥ 150 יציב/עולה → 'אין צורך בפחמימות.'\n" +
+        "שעה אחרי + SGV > 150 + IOB > 1.2U → 'המתן — אל תזריק.'\n" +
+        "שעה אחרי + SGV > 150 + IOB ≤ 1.2U → בולוס תיקון לפי ISF.\n\n" +
 
-        "── גורמים מיוחדים ──\n" +
-        "Override פעיל → הכפל במכפיל. ספורט פעיל → הפחת לפי עצימות.\n" +
-        "אחרי ספורט → ×0.70-0.80. לילה (22-06) → ×0.85. dawn (05-08) → ×1.10.\n\n" +
-
-        "── פורמט פלט חובה (5 שורות בדיוק, ללא שאלות, ללא משפטי פתיחה) ──\n" +
-        "🍏 [מאכל]: [X]g | ⏱️ ספיגה: [N]ש'\n" +
-        "🎯 LOOPIE: [N]U עכשיו[אם שומני: + [M]U בעוד 90 דק']\n" +
-        "📊 חוק ה-3: הזן [Y]g (70%) באייפון עכשיו\n" +
-        "⏳ " + timing + "\n" +
-        "🛡️ חוב: [Z]g (30%) — תזכורת אם סוכר > 150";
+        "── פורמט פלט קשיח (4 חלקים, עברית נקייה) ──\n" +
+        "🍏 [שם מאכל + כמות] | סך פחמימות: [X]g | ספיגה: [N]ש'\n" +
+        "\n" +
+        "🎯 פעולה באייפון עכשיו:\n" +
+        "כנס ללופ, הזן [Y]g פחמימה, ואשר את המינון שהמשאבה מציעה.\n" +
+        "([Y] = [50%/70%/100%] מ-[X]g)\n" +
+        "\n" +
+        "⏳ תזמון: " + timing + "\n" +
+        "\n" +
+        "🛡️ [Z]g נותרים כחוב — אם הסוכר יעלה מעל 150 אחרי [שעה/שעתיים/שלוש שעות], הזן אותם ללופ.\n" +
+        "(אין להזריק עכשיו! הלופ יחשב לבד.)";
 }
 
 function showStatus(msg, type) {
