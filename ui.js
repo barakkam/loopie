@@ -67,6 +67,88 @@ var FOOD_DB = {
     "גלוקוז":       { carbs: 15,  durationH: 0.5, notes: "טבלית גלוקוז — מהיר מאוד" },
     "חצי גלוקוז":   { carbs: 7.5, durationH: 0.5, notes: "חצי טבלית" }
 };
+// ─── חישוב מקומי מהיר (ללא גמיני) ──────────────────────────
+function _calcFoodLocally(userInput) {
+    var q    = userInput.trim().toLowerCase();
+    var gs   = window.loopieGlobalState || {};
+    var cr   = gs.cr   || 15;
+    var iob  = parseFloat(gs.iob  || 0);
+    var ins  = gs.insulinName || 'Lyumjev';
+    var pre  = gs.insulinPreMeal != null ? gs.insulinPreMeal : 0;
+
+    // חלץ כמות מספרית מהקלט (למשל "20 ציפס", "פיצה 2 חתיכות")
+    var qtyMatch = q.match(/(\d+(?:\.\d+)?)\s*(יח'|יחידות?|חתיכות?|פרוסות?|כדורים?|כוסות?|כפות?|קרקרים?|עוגיות?|תמרים?)?/);
+    var qty = qtyMatch ? parseFloat(qtyMatch[1]) : 1;
+
+    // מצא מאכל ברשימה
+    var matched = null, matchedKey = '';
+    var keys = Object.keys(FOOD_DB);
+    // חפש התאמה מדויקת קודם
+    for (var i = 0; i < keys.length; i++) {
+        if (q.includes(keys[i].toLowerCase())) {
+            if (!matched || keys[i].length > matchedKey.length) {
+                matched = FOOD_DB[keys[i]];
+                matchedKey = keys[i];
+            }
+        }
+    }
+    if (!matched) return null; // לא נמצא — שלח לגמיני
+
+    // חישוב פחמימות
+    var baseCarbs = matched.carbs * qty;
+    var hours     = matched.durationH || 3;
+    var isFatty   = hours >= 4;
+    var splitPct  = isFatty ? 0.5 : 0.7;
+    var nowCarbs  = Math.round(baseCarbs * splitPct);
+    var debtCarbs = Math.round(baseCarbs * (1 - splitPct));
+
+    // סימולציה
+    var dryBolus    = Math.round((nowCarbs / cr) * 100) / 100;
+    var loopBolus   = Math.max(0, Math.round((dryBolus - iob) * 100) / 100);
+    var fullDry     = Math.round((baseCarbs / cr) * 100) / 100;
+    var timing      = pre <= 2 ? "0-2 דק' לפני האכילה (" + ins + ")" : pre + " דק' לפני האכילה (" + ins + ")";
+
+    var html =
+        "<div style='font-size:13px;text-align:right;direction:rtl;line-height:1.9'>" +
+
+        "<div style='font-weight:700;font-size:15px;margin-bottom:10px'>" +
+        "🍏 " + matchedKey + (qty !== 1 ? " ×" + qty : "") +
+        " — " + baseCarbs + "g | ספיגה: " + hours + "ש'" +
+        (matched.notes ? "<br><small style='color:#888;font-weight:400'>" + matched.notes + "</small>" : "") +
+        "</div>" +
+
+        "<div style='background:rgba(59,130,246,0.1);border:1px solid #3b82f6;border-radius:8px;padding:10px;margin-bottom:10px'>" +
+        "🎯 <b>פעולה באייפון עכשיו:</b><br>" +
+        "כנס ללופ, הזן <b style='font-size:16px;color:#3b82f6'>" + nowCarbs + "g</b> פחמימה " +
+        "(" + Math.round(splitPct*100) + "% מ-" + baseCarbs + "g)" +
+        "</div>" +
+
+        "<div style='background:#0a0a14;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px'>" +
+        "📊 <b>סימולציה:</b><br>" +
+        "⚙️ הערכת לופי: <b>" + dryBolus + "U</b> (יבש ל-" + nowCarbs + "g)<br>" +
+        "🤖 צפי משאבה: <b>" + loopBolus + "U</b> (אחרי ניכוי IOB=" + iob.toFixed(2) + "U)<br>" +
+        (isFatty ? "<small style='color:#f59e0b'>יתרה עוברת ל-SMB/בזאלי זמני לאורך הספיגה</small>" : "") +
+        "</div>" +
+
+        (dryBolus !== loopBolus || isFatty ?
+        "<div style='font-size:12px;color:#aaa;margin-bottom:10px'>" +
+        "🧠 אם היית מזין " + baseCarbs + "g, הלופ היה מציע ~" + Math.max(0, fullDry - iob).toFixed(2) + "U מיידית" +
+        (isFatty ? " — מנה כבדה על מאכל שומני, עלול לגרום להיפו." : ".") +
+        "</div>" : "") +
+
+        "<div style='font-size:12px;margin-bottom:8px'>⏳ <b>תזמון:</b> " + timing + "</div>" +
+
+        "<div style='background:rgba(16,185,129,0.08);border:1px solid #10b981;border-radius:8px;padding:8px;font-size:12px'>" +
+        "🛡️ <b>" + debtCarbs + "g חוב ברקע</b> — התראת פוש תישלח מתי ולכמה גרמים להזין ללופ." +
+        "</div>" +
+
+        "<div style='font-size:10px;color:#555;margin-top:8px;text-align:center'>" +
+        "⚡ חישוב מקומי מיידי | CR=" + cr + " | IOB=" + iob.toFixed(2) + "U" +
+        "</div></div>";
+
+    return html;
+}
+
 
 // === פחמימות חילוץ (rescue carbs) ===
 var RESCUE_DB = {
@@ -873,14 +955,48 @@ async function askGeminiAdvisor(userQuestion) {
         return;
     }
 
+    // ── ניסיון חישוב מקומי מהיר קודם ──────────────────────────
+    try {
+        var localResult = _calcFoodLocally(userQuestion);
+        if (localResult) {
+            showPopup('⚡ ' + userQuestion.trim(), localResult);
+            return;
+        }
+    } catch(le) {}
+
     try {
         var ctx = buildNSContext();
 
-        // העשר context עם היסטוריית מאכל ספציפי
+        // ── היסטוריית מאכל מ-NS ─────────────────────────────────
         var detectedFood = (typeof detectFoodName === 'function') ? detectFoodName(userQuestion) : null;
         if (detectedFood) {
-            ctx.foodHistory = fetchFoodHistory(detectedFood);
-            ctx.foodName    = detectedFood;
+            ctx.foodName = detectedFood;
+            var rawHistory = fetchFoodHistory(detectedFood);
+
+            if (rawHistory && rawHistory.length) {
+                // ניתוח מתמטי מהיר
+                var avgCarbs   = Math.round(rawHistory.reduce(function(s,h){return s+(h.carbs||0);},0) / rawHistory.length);
+                var avgInsulin = (rawHistory.reduce(function(s,h){return s+(h.insulin||0);},0) / rawHistory.length).toFixed(2);
+                var highCount  = rawHistory.filter(function(h){return h.outcome==='high';}).length;
+                var lowCount   = rawHistory.filter(function(h){return h.outcome==='low';}).length;
+                var okCount    = rawHistory.filter(function(h){return h.outcome==='ok';}).length;
+                var avgPeak    = rawHistory.filter(function(h){return h.sgvAfter;})
+                    .reduce(function(s,h){return s+h.sgvAfter;},0) /
+                    (rawHistory.filter(function(h){return h.sgvAfter;}).length || 1);
+                var hadLatePeak = rawHistory.some(function(h){return h.sgvAfter && h.sgvAfter > 200;});
+
+                // בנה תקציר טקסטואלי לגמיני
+                ctx.foodHistorySummary =
+                    "היסטוריה (" + rawHistory.length + " ארוחות אחרונות של " + detectedFood + "):\n" +
+                    "• ממוצע פחמימות שהוזן: " + avgCarbs + "g\n" +
+                    "• ממוצע אינסולין: " + avgInsulin + "U\n" +
+                    "• תוצאות: " + okCount + " תקין / " + highCount + " גבוה / " + lowCount + " נמוך\n" +
+                    "• ממוצע סוכר 2ש' אחרי: " + Math.round(avgPeak) + " mg/dL\n" +
+                    (hadLatePeak ? "⚠️ בארוחות קודמות נצפה פיק מאוחר מעל 200 — שקול להגדיל מנה מיידית ל-75% או להקדים התראת חוב ל-60 דק'\n" : "");
+
+                ctx.foodHistory = rawHistory;
+                ctx.hadLatePeak = hadLatePeak;
+            }
         }
 
         // הוסף לוז חוגים לcontext
@@ -900,7 +1016,9 @@ async function askGeminiAdvisor(userQuestion) {
 
         // בנה prompt
         var prompt = buildGeminiPrompt(ctx, userQuestion);
-        if (ctx._scheduleStr) prompt += "\nלו\"ז:" + ctx._scheduleStr;
+        if (ctx._scheduleStr)       prompt += "\nלוז': " + ctx._scheduleStr;
+        if (ctx.foodHistorySummary) prompt += "\n\n── היסטוריית מאכל (זיכרון NS) ──\n" + ctx.foodHistorySummary;
+        if (ctx.hadLatePeak)        prompt += "\n⚠️ CRITICAL: בארוחות קודמות נצפה פיק מאוחר >200 — שנה את הפיצול ל-75%/25% והקדם התראת חוב ל-60 דק'!";
 
         // ערכי פרופיל נוכחיים — מהפרופיל, מה-ctx, ומה-nsData (לפי סדר עדיפות)
         var nowHD = new Date().getHours(), profD = fullHistory && fullHistory.profile;
@@ -945,22 +1063,48 @@ async function askGeminiAdvisor(userQuestion) {
         closePopup();
         showPopup('🧠 Loopie', "<div style='text-align:center;padding:20px;color:#888'><span class='spinner spinner-md'></span> מנתח...</div>");
 
-        var apiRes = await fetch(
-            'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + geminiKey(),
-            {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    contents: [{role:'user', parts:[{text:prompt}]}],
-                    systemInstruction: {parts:[{text:sysPrompt}]},
-                    generationConfig: {maxOutputTokens:8192, temperature:0.2}
-                })
+        // ── פנייה ל-Gemini עם timeout + retry ──────────────────
+        async function callGemini(promptText, systemText, timeoutMs) {
+            var controller = new AbortController();
+            var timer = setTimeout(function(){ controller.abort(); }, timeoutMs);
+            try {
+                var res = await fetch(
+                    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + geminiKey(),
+                    {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        signal: controller.signal,
+                        body: JSON.stringify({
+                            contents: [{role:'user', parts:[{text:promptText}]}],
+                            systemInstruction: {parts:[{text:systemText}]},
+                            generationConfig: {maxOutputTokens:8192, temperature:0.2}
+                        })
+                    }
+                );
+                clearTimeout(timer);
+                return res;
+            } catch(e) {
+                clearTimeout(timer);
+                throw e;
             }
-        );
+        }
 
-        if (!apiRes.ok) {
-            var errData = await apiRes.json().catch(function(){ return {}; });
-            throw new Error('Gemini ' + apiRes.status + ': ' + (errData.error && errData.error.message ? errData.error.message : apiRes.statusText));
+        var apiRes = null;
+        var attempts = [20000, 30000]; // ניסיון 1: 20 שניות, ניסיון 2: 30 שניות
+        for (var ai = 0; ai < attempts.length; ai++) {
+            try {
+                var el2 = document.getElementById('gemini-stream');
+                if (el2 && ai > 0) el2.innerHTML = '⏳ מנסה שוב (' + (ai+1) + '/' + attempts.length + ')...';
+                apiRes = await callGemini(prompt, sysPrompt, attempts[ai]);
+                break;
+            } catch(retryErr) {
+                if (ai === attempts.length - 1) throw new Error('Gemini לא ענה — נסה שוב בעוד רגע');
+            }
+        }
+
+        if (!apiRes || !apiRes.ok) {
+            var errData = await (apiRes ? apiRes.json().catch(function(){ return {}; }) : Promise.resolve({}));
+            throw new Error('Gemini ' + (apiRes ? apiRes.status : '?') + ': ' + ((errData.error && errData.error.message) ? errData.error.message : 'שגיאת תקשורת'));
         }
 
         var apiData = await apiRes.json();
