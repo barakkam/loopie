@@ -1265,30 +1265,87 @@ function alertPodFailure() {
 
 // ─── Proactive Alerts ─────────────────────────────────────────
 function checkProactiveAlerts() {
-    var sgv         = nsData.currentSgv  || 0;
-    var iob         = parseFloat(nsData.iob||0);
-    var recommended = parseFloat(nsData.loopRec||0);
+    var sgv   = nsData.currentSgv  || 0;
+    var iob   = parseFloat(nsData.iob  || 0);
+    var delta = nsData.delta || 0;
+    var trend = nsData.trend || '';
+    var recommended = parseFloat(nsData.loopRec || 0);
+    var hr    = new Date().getHours();
+    var now   = Date.now();
+    var isNight = hr >= 22 || hr < 6;
 
-    // זנב ארוחה שומנית
-    if (sgv>165 && iob<1.5 && recommended>0.05) {
-        var now2     = Date.now();
-        var lastAlert = parseInt(localStorage.getItem('loopie_last_debt_alert')||'0');
-        if (now2-lastAlert < 30*60000) return;
-        localStorage.setItem('loopie_last_debt_alert', String(now2));
-        sendSystemPushNotification('⚠️ התראת חוב ארוחה — Loopie',
-            'סוכר '+sgv+' עקשן. המשאבה ממליצה '+recommended+'U. כנס לאייפון לאשר!');
-        showPopup('⚠️ זנב ארוחה שומנית',
-            "<div style='font-size:14px;text-align:right'>סוכר <b>"+sgv+"</b> עקשן — IOB "+iob.toFixed(2)+"U.<br><br>"+
-            "המשאבה ממליצה: <b>"+recommended+"U</b><br>כנס לאייפון ואשר את ההזרקה!</div>");
+    function _throttle(key, minMs) {
+        var last = parseInt(localStorage.getItem(key)||'0');
+        if (now - last < minMs) return false;
+        localStorage.setItem(key, String(now));
+        return true;
     }
 
-    // היפו לילי 02:00-05:00
-    var hr = new Date().getHours();
-    if (sgv<80 && hr>=2 && hr<=5) {
-        var lastH = parseInt(localStorage.getItem('loopie_last_hypo_alert')||'0');
-        if (Date.now()-lastH > 20*60000) {
-            localStorage.setItem('loopie_last_hypo_alert', String(Date.now()));
-            sendSystemPushNotification('🚨 היפו לילי — Loopie','סוכר '+sgv+' בשעה '+hr+':00. טפל מיד!');
+    // ── 1. היפו חירום — סוכר < 70 ──────────────────────────────
+    if (sgv > 0 && sgv < 70) {
+        if (_throttle('loopie_alert_hypo_critical', 10*60000)) {
+            sendNotification('🚨 היפו חירום!',
+                'סוכר ' + sgv + ' mg/dL' + (delta < 0 ? ' ויורד!' : '') + ' — קח גלוקוז מיד!',
+                {tag:'loopie-hypo-critical', requireInteraction:true, vibrate:[500,100,500,100,500]});
+        }
+        return;
+    }
+
+    // ── 2. היפו מסוכן — סוכר 70-80 עם IOB גבוה ──────────────────
+    if (sgv >= 70 && sgv < 80 && iob > 0.8) {
+        if (_throttle('loopie_alert_hypo_iob', 15*60000)) {
+            sendNotification('⚠️ סוכר נמוך עם IOB גבוה',
+                'סוכר ' + sgv + ' | IOB ' + iob.toFixed(2) + 'U — סכנת היפו! שקול חצי פתיבר.',
+                {tag:'loopie-hypo-iob', requireInteraction:true, vibrate:[300,100,300]});
+        }
+    }
+
+    // ── 3. היפו לילי (כל הלילה, לא רק 02-05) ────────────────────
+    if (isNight && sgv < 80) {
+        if (_throttle('loopie_alert_hypo_night', 20*60000)) {
+            sendSystemPushNotification('🌙 היפו לילי — Loopie',
+                'סוכר ' + sgv + ' בשעה ' + hr + ':00. טפל מיד!');
+        }
+    }
+
+    // ── 4. סוכר גבוה מאוד ≥ 250 ללא אינסולין פעיל ───────────────
+    if (sgv >= 250 && iob < 0.5) {
+        if (_throttle('loopie_alert_high_noins', 30*60000)) {
+            sendNotification('📈 סוכר גבוה מאוד!',
+                'סוכר ' + sgv + ' ו-IOB=' + iob.toFixed(2) + 'U — ייתכן שהמשאבה לא פועלת. בדוק!',
+                {tag:'loopie-high-noins', requireInteraction:true, vibrate:[400,100,400]});
+        }
+    }
+
+    // ── 5. עלייה מהירה ≥ 300 עם IOB גבוה — חשד לכשל פוד ─────────
+    if (sgv >= 300 && iob > 2 && delta >= 3) {
+        if (_throttle('loopie_alert_pod_fail', 30*60000)) {
+            sendNotification('🚨 חשד לכשל פוד!',
+                'סוכר ' + sgv + ' עולה למרות IOB=' + iob.toFixed(2) + 'U — בדוק פוד!',
+                {tag:'loopie-pod-fail', requireInteraction:true, vibrate:[500,200,500,200,500]});
+        }
+    }
+
+    // ── 6. זנב ארוחה שומנית — המשאבה ממליצה ────────────────────
+    if (sgv > 165 && iob < 1.5 && recommended > 0.05) {
+        if (_throttle('loopie_last_debt_alert', 30*60000)) {
+            sendSystemPushNotification('⚠️ התראת חוב ארוחה — Loopie',
+                'סוכר ' + sgv + ' עקשן. המשאבה ממליצה ' + recommended + 'U. כנס לאייפון!');
+            try {
+                showPopup('⚠️ זנב ארוחה שומנית',
+                    "<div style='font-size:14px;text-align:right'>סוכר <b>" + sgv + "</b> עקשן — IOB " + iob.toFixed(2) + "U.<br><br>" +
+                    "המשאבה ממליצה: <b>" + recommended + "U</b><br>כנס לאייפון ואשר!</div>");
+            } catch(e) {}
+        }
+    }
+
+    // ── 7. ירידה מהירה — תנועה מסוכנת ───────────────────────────
+    var risingDown = ['SingleDown','DoubleDown'].indexOf(trend) >= 0;
+    if (sgv < 120 && risingDown && iob > 1.0) {
+        if (_throttle('loopie_alert_drop', 15*60000)) {
+            sendNotification('📉 ירידה מהירה!',
+                'סוכר ' + sgv + ' יורד מהר עם IOB=' + iob.toFixed(2) + 'U — שקול ' + (isNight ? 'חצי פתיבר' : 'פחמימות מהירות') + '.',
+                {tag:'loopie-drop', requireInteraction:false, vibrate:[200,100,200]});
         }
     }
 }
