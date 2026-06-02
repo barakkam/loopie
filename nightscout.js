@@ -663,6 +663,28 @@ async function fetchData() {
         try { _swNotify(nsData.currentSgv||0, nsData.trend||''); } catch(e) {}
         try { checkProactiveAlerts(); } catch(e) {}
 
+        // ── סנכרון window.loopieGlobalState ──────────────────────
+        try {
+            var nowH3 = new Date().getHours();
+            var profG  = fullHistory && fullHistory.profile;
+            var crG    = profG ? parseFloat(profileValueAt(profG.carbratio||profG.carbRatio||profG.ic, nowH3)||15) : 15;
+            var isfG   = profG ? parseFloat(profileValueAt(profG.sens||profG.sensitivity, nowH3)||120) : 120;
+            window.loopieGlobalState = {
+                sgv:       nsData.currentSgv  || 0,
+                trend:     nsData.trend        || 'Flat',
+                delta:     nsData.delta        || 0,
+                iob:       parseFloat(nsData.iob  || 0),
+                cob:       parseFloat(nsData.cob  || 0),
+                basal:     nsData.basal        || 0,
+                cr:        crG,
+                isf:       isfG,
+                override:  nsData.overrideActive   || false,
+                overrideName: nsData.overrideName  || null,
+                pumpBolus: nsData.recommendedBolus || 0,
+                lastSync:  Date.now()
+            };
+        } catch(e) { console.warn('[Loopie] GlobalState sync error:', e); }
+
         // בדיקת חוב פחמימות (חוק ה-3)
         try {
             var debtRaw = localStorage.getItem('active_debt');
