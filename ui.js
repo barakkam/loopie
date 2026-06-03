@@ -97,8 +97,18 @@ function _calcFoodLocally(userInput) {
     // חישוב פחמימות
     var baseCarbs = matched.carbs * qty;
     var hours     = matched.durationH || 3;
-    var isFatty   = hours >= 4;
-    var splitPct  = isFatty ? 0.5 : 0.7;
+    var isFatty      = hours >= 4;
+    var isExtremeFat = !!(matched && matched.isExtremeFat);
+    var nowHour      = new Date().getHours();
+    var isNight      = nowHour >= 22 || nowHour < 6;
+    var isMorning    = nowHour >= 6  && nowHour < 9;
+
+    // לילה (22:00-06:00) → שלח תמיד לגמיני, ספיגה שונה
+    if (isNight) return null;
+
+    // פרוטוקול בוקר (06:00-09:00): 100% מראש אלא אם שומני קיצוני
+    var morningOverride = isMorning && !isExtremeFat;
+    var splitPct  = morningOverride ? 1.0 : (isFatty ? 0.5 : 0.7);
     var nowCarbs  = Math.round(baseCarbs * splitPct);
     var debtCarbs = Math.round(baseCarbs * (1 - splitPct));
 
@@ -1165,15 +1175,28 @@ function buildGeminiSystemPrompt(cr, isf, ctx) {
         "רגיל (3ש'): 70% עכשיו + 30% חוב.\n" +
         "מהיר (<2ש'): 100% עכשיו, אין חוב.\n\n" +
 
-        "── סימולציה כפולה (חשב לפי CR ו-IOB מה-context) ──\n" +
-        "הערכת לופי (יבש): פחמימות_מוצעות ÷ CR = מינון_יבש.\n" +
-        "צפי לופ (מקוזז): מינון_יבש − IOB = צפי_לופ (לא יכול להיות שלילי).\n" +
-        "מאכל שומני: הלופ יחתוך את הבולוס המיידי ויעביר את היתרה ל-SMB/בזאלי זמני לאורך הספיגה.\n\n" +
+        "── סימולציה מלאה (חשב לפי כל הגורמים) ──\n" +
+        "שלב 1 — חישוב יבש: פחמימות_מוצעות ÷ CR = בסיס.\n" +
+        "שלב 2 — ניכוי IOB: בסיס − IOB = צפי_לופ (לא שלילי).\n" +
+        "שלב 3 — התאמות: החל כל גורם רלוונטי מה-context:\n" +
+        "  • לילה (is_night) → ×0.85 על הכמות המיידית\n" +
+        "  • dawn (is_dawn) → ×1.10\n" +
+        "  • ספורט פעיל → ×0.60–0.90 לפי עצימות\n" +
+        "  • override → ×המכפיל\n" +
+        "  • פחמימות ב-COB קיים → שקלל ספיגה חופפת\n" +
+        "  • SGV גבוה (>200) → ניתן להוסיף תיקון ISF\n" +
+        "  • SGV נמוך (<100) → הפחת עוד, אזהרת היפו\n" +
+        "שלב 4 — הכמות הסופית להזין ללופ = תוצאת שלב 3 × CR (בגרמים).\n" +
+        "מאכל שומני: הלופ יחתוך ויטפטף SMB לאורך הספיגה.\n\n" +
 
         "── התאמות context ──\n" +
         "override_active=true → הפחת לפי המכפיל.\n" +
         "activity=during_high → ×0.60 | during_medium → ×0.75 | post_activity → ×0.75.\n" +
-        "is_night=true → ×0.85 | is_dawn=true → ×1.10.\n\n" +
+        "is_night=true (22:00-06:00) → פרוטוקול לילה שמרני:\n" +
+"  • ספיגה איטית יותר בשינה — הפחת כמות מיידית ב-15% (×0.85).\n" +
+"  • מאכל שומני בלילה (פיצה/ג'חנון): פצל 40%+60% (פחות מיידית, יותר חוב).\n" +
+"  • אזהרה קשיחה: סכנת היפו לילי — העדף מינון שמרני על פני מינון אגרסיבי.\n" +
+"is_dawn=true (05:00-08:00) → ×1.10 (תנגודת Dawn Phenomenon).\n\n" +
 
         "── 🦺 פרוטוקול הפסקת בית ספר ──\n" +
         "הפעל כשכותבים: הפסקה/ארוחת עשר/א. עשר/חצר.\n" +
