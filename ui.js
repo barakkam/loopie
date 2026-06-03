@@ -1607,56 +1607,84 @@ async function generateReport(days) {
 // ─── Logs ─────────────────────────────────────────────────────
 var _allLogs = [];
 
+
+function saveLocalLog(logEntry) {
+    try {
+        var logs = JSON.parse(localStorage.getItem('loopie_local_logs') || '[]');
+        logs.unshift(Object.assign({ date: new Date().toISOString() }, logEntry));
+        logs = logs.slice(0, 500);
+        localStorage.setItem('loopie_local_logs', JSON.stringify(logs));
+    } catch(e) {}
+}
+
 async function loadLogs(filter) {
     var listEl  = document.getElementById('logs-list');
     var statsEl = document.getElementById('logs-stats');
     if (!listEl) return;
     listEl.innerHTML = "<div class='loading-center'><span class='spinner'></span></div>";
-
+    var logs = [];
     try {
-        var mem  = await loadMemory();
-        var logs = [];
-
-        Object.keys(mem).forEach(function(k) {
-            var v = mem[k].value;
-            if (!v) return;
-            if (k.startsWith('food_') && v.outcomes) {
-                v.outcomes.forEach(function(o){
-                    logs.push({ type:'food', name:k.replace('food_','').replace(/_/g,' '),
-                        date:o.date, carbs:o.carbs, insulin:o.insulin,
-                        sgv2h:o.sgv2h, outcome:o.outcome });
+        var since14 = new Date(Date.now() - 14*86400000).toISOString();
+        var res = await nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + since14 + '&count=500');
+        if (res.ok) {
+            var treats = await res.json();
+            var carbTreats  = treats.filter(function(t){ return parseFloat(t.carbs||0) > 0; });
+            var bolusTreats = treats.filter(function(t){ return parseFloat(t.insulin||t.enteredinsulin||0) > 0; });
+            function findBolus(mealTime) {
+                var mTs = new Date(mealTime).getTime(), best = null, bestDiff = Infinity;
+                bolusTreats.forEach(function(b) {
+                    var diff = Math.abs(new Date(b.created_at).getTime() - mTs);
+                    if (diff <= 3*60000 && diff < bestDiff) { best = b; bestDiff = diff; }
                 });
+                return best;
             }
-            if (k.startsWith('rescue_') && !k.includes('_result')) {
-                var res2 = mem[k+'_result'] ? mem[k+'_result'].value : null;
-                logs.push({ type:'rescue', name:'חילוץ', date:v.date,
-                    carbs:v.carbs, sgvBefore:v.sgvAtRescue,
-                    outcome: res2 ? res2.outcome : 'pending' });
+            function foodEmoji(name) {
+                var n = (name||'').toLowerCase();
+                if (n.includes('פיצ'))   return '🍕';
+                if (n.includes('פיתה')) return '🫓';
+                if (n.includes('לחם'))  return '🍞';
+                if (n.includes('שוקו')) return '🍫';
+                if (n.includes('בננה')) return '🍌';
+                if (n.includes('ציפס')) return '🍟';
+                if (n.includes('ביצ'))  return '🥚';
+                return '🍽️';
             }
-            if (k.startsWith('sport_') && v.sessions) {
-                v.sessions.forEach(function(s){
-                    logs.push({ type:'sport', name:k.replace('sport_','').replace(/_/g,' '),
-                        date:s.date, intensity:s.intensity, outcome:s.outcome });
-                });
-            }
+            carbTreats.forEach(function(t) {
+                var carbs = parseFloat(t.carbs||0);
+                var name  = (t.notes && t.notes.trim()) || (t.foodType && t.foodType.trim()) || '';
+                var bolus = findBolus(t.created_at);
+                var insulin = bolus ? parseFloat(bolus.insulin||bolus.enteredinsulin||0)
+                                    : parseFloat(t.insulin||t.enteredinsulin||0);
+                logs.push({ type:'food', name: name||'ארוחה',
+                    emoji: foodEmoji(name), date: t.created_at, carbs: carbs, insulin: insulin,
+                    absorptionHours: 3, outcome: 'unknown' });
+            });
+            bolusTreats.forEach(function(b) {
+                var ins = parseFloat(b.insulin||b.enteredinsulin||0);
+                if (ins <= 0) return;
+                var bTs = new Date(b.created_at).getTime();
+                var linked = carbTreats.some(function(c){
+                    return Math.abs(new Date(c.created_at).getTime()-bTs) <= 3*60000; });
+                if (!linked) logs.push({ type:'correction', name:'תיקון סוכר',
+                    emoji:'💉', date: b.created_at, carbs:0, insulin:ins,
+                    absorptionHours:0, outcome:'correction' });
+            });
+        }
+    } catch(e) { console.warn('[Loopie] NS logs:', e.message); }
+    try {
+        JSON.parse(localStorage.getItem('loopie_local_logs')||'[]').forEach(function(l){
+            var lT = new Date(l.date).getTime();
+            if (!logs.some(function(ex){ return Math.abs(new Date(ex.date).getTime()-lT)<120000; })) logs.push(l);
         });
-
-        logs.sort(function(a,b){ return new Date(b.date) - new Date(a.date); });
-        _allLogs = logs;
-
-        var filtered = filter === 'all' ? logs : logs.filter(function(l){ return l.type === filter; });
-
-        var foods   = logs.filter(function(l){return l.type==='food';});
-        var good    = foods.filter(function(l){return l.outcome==='good';}).length;
-        var highL   = foods.filter(function(l){return l.outcome==='high';}).length;
-        var lowL    = foods.filter(function(l){return l.outcome==='low';}).length;
-        var rescues = logs.filter(function(l){return l.type==='rescue';}).length;
-        if (statsEl) statsEl.innerHTML = foods.length + " הזרקות | ✅ " + good + " | 🔴 " + highL + " | 🔵 " + lowL + " | חילוצים: " + rescues;
-
-        renderLogs(filtered);
-    } catch(e) {
-        if (listEl) listEl.innerHTML = "<div style='color:#888;text-align:center;padding:16px'>שגיאה: " + e.message + "</div>";
-    }
+    } catch(e) {}
+    logs.sort(function(a,b){ return new Date(b.date)-new Date(a.date); });
+    _allLogs = logs;
+    var filtered = filter==='all' ? logs : logs.filter(function(l){ return l.type===filter; });
+    var foods   = logs.filter(function(l){return l.type==='food';}),
+        withIns = foods.filter(function(l){return parseFloat(l.insulin||0)>0;}).length,
+        rescues = logs.filter(function(l){return l.type==='rescue';}).length;
+    if (statsEl) statsEl.innerHTML = foods.length + ' ארוחות | 💉 ' + withIns + ' עם הזרקה | 🔵 ' + rescues + ' חילוצים';
+    renderLogs(filtered);
 }
 
 function renderLogs(logs) {
