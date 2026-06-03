@@ -2246,7 +2246,7 @@ function renderProfile() {
         '</div>' +
         '<div class="prof-grid-2">' +
             '<div class="prof-field"><label>שעת הביקור</label><input id="appt-time" type="time" value="' + (_profAppt.time||'') + '"></div>' +
-            '<div class="prof-field"><label>רופא / מרפאה</label><input id="appt-doctor" value="' + (_profAppt.doctor||'') + '" placeholder=\'ד"ר כהן\'></div>' +
+            '<div class="prof-field"><label>רופא / מרפאה</label><input id="appt-doctor" value="' + (_profAppt.doctor||'').replace(/"/g,"&quot;") + '" placeholder="רופא / מרפאה"></div>' +
         '</div>' +
         '<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-bottom:6px">' +
             '🔔 תזכורת <input id="appt-remind" type="number" min="1" max="30" value="' + (_profAppt.remindBefore||3) + '" style="width:44px;font-size:12px;padding:3px 5px;border-radius:6px;border:1px solid var(--border);background:#0a0a14;color:#fff"> ימים לפני הביקור' +
