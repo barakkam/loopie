@@ -70,6 +70,11 @@ var FOOD_DB = {
 // ─── חישוב מקומי מהיר (ללא גמיני) ──────────────────────────
 function _calcFoodLocally(userInput) {
     var q    = userInput.trim().toLowerCase();
+
+    // עקיפת חירום חומרה — שאלות פוד/משאבה/חיישן הולכות לגמיני
+    var HW_KEYWORDS = /פוד|משאבה|קנולה|חיישן|דקסקום|dexcom|high|להחליף|להמתין|תקין|כשל|סתום|תקוע|לא עובד/i;
+    if (HW_KEYWORDS.test(userInput)) return null;
+
     var gs   = window.loopieGlobalState || {};
     var cr   = gs.cr   || 15;
     var iob  = parseFloat(gs.iob  || 0);
@@ -704,7 +709,7 @@ async function askOmnibox() {
     }
 
     // ── ציוד / פוד / חיישן ──
-    if (/^(ציוד|חיישן|פוד|pod|סנסור|גיל פוד|גיל חיישן|החלפ)/.test(ql)) {
+    if (/^(ציוד|פוד|חיישן|pod|סנסור|גיל פוד|גיל חיישן)$/.test(ql) || /^החלפ/.test(ql)) {
         await showEquipmentStatus(); return;
     }
 
@@ -1044,6 +1049,21 @@ async function askGeminiAdvisor(userQuestion) {
         ctx.isf = currentISF;
 
         // System prompt — טיפולי + ייעוץ
+        // ── סימולציה מוכנה לגמיני ──────────────────────────────
+        var _iobNow  = parseFloat(ctx.iob || 0);
+        var _crNow   = currentCR;
+        var _hourNow = new Date().getHours();
+        var _isNight = _hourNow >= 22 || _hourNow < 5;
+        var _isDawn  = _hourNow >= 5  && _hourNow < 9;
+        var _nightMult = _isNight ? 0.85 : (_isDawn ? 1.12 : 1.0);
+        var _iobNote = _iobNow > 2.0
+            ? "IOB=" + _iobNow.toFixed(2) + "U גבוה מאוד — המשאבה לא תציע בולוס נוסף. אל תציג מספר קטן! כתוב: המשאבה מנוהלת דרך SMB/בזאלי זמני."
+            : _iobNow > 1.0
+            ? "IOB=" + _iobNow.toFixed(2) + "U משמעותי — ניכוי גדול. אם התוצאה < 0.1U, כתוב: המשאבה לא תציע בולוס, הלופ מנהל ב-SMB."
+            : "IOB=" + _iobNow.toFixed(2) + "U — ניכוי רגיל מהבולוס.";
+        ctx._iobNote    = _iobNote;
+        ctx._nightMult  = _nightMult;
+
         var sysPrompt = buildGeminiSystemPrompt(currentCR, currentISF, ctx);
 
         // אם תמונה מחכה — שלח ל-vision
@@ -1158,7 +1178,9 @@ function buildGeminiSystemPrompt(cr, isf, ctx) {
         "── נתונים דינמיים מה-NS ──\n" +
         "CR = 1U / " + cr.toFixed(1) + "g | ISF = " + isf + " mg/dL/U\n" +
         "IOB = " + iob + "U | COB = " + cob + "g | סוכר = " + sgv + " " + trend + " | בזאלי = " + basal + "U/ש'\n" +
-        (p30 ? "תחזית לופ: 30דק'=" + p30 + " | eventual=" + pEv + "\n" : "") + "\n" +
+        (p30 ? "תחזית לופ: 30דק'=" + p30 + " | eventual=" + pEv + "\n" : "") +
+        "הוראת IOB: " + ((ctx && ctx._iobNote) ? ctx._iobNote : "חשב ניכוי רגיל.") + "\n" +
+        "מכפיל שעה: " + ((ctx && ctx._nightMult) ? "x" + ctx._nightMult : "x1.0") + "\n\n" +
 
         "── מסד מאכלים קשיח (100g ליחידה כברירת מחדל) ──\n" +
         "פיתה=50g/3ש' | לחם פרוס=15g/3ש' | כוס פסטה=40g/3ש' | כוס אורז=45g/3ש'\n" +
@@ -1215,8 +1237,9 @@ function buildGeminiSystemPrompt(cr, isf, ctx) {
         "\n" +
         "📊 סימולציית מנות אינסולין חזויה:\n" +
         "⚙️ הערכת לופי למנה: כ-[Y÷CR]U (חישוב יבש טהור ל-[Y]g).\n" +
-        "🤖 צפי המשאבה: כ-[Y÷CR−IOB]U בולוס מיידי בלבד.\n" +
-        "(IOB=" + iob + "U מנוכה, יתרה עוברת ל-SMB/בזאלי זמני.)\n" +
+        "🤖 צפי המשאבה: חשב [Y]÷CR − IOB=" + iob + "U.\n" +
+        "אם התוצאה קטנה מ-0.1U: אל תציג מספר! כתוב: 'המשאבה לא תציע בולוס כעת — IOB מכסה את הכל. הלופ מנהל דרך SMB/בזאלי זמני.'\n" +
+        "אם התוצאה גדולה מ-0.1U: הצג את הערך הסופי אחרי כל ההתאמות (לילה/ספורט/override).\n" +
         "\n" +
         "🧠 למה פחות עכשיו?\n" +
         "הסבר בשני חלקים:\n" +
