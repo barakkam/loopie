@@ -448,16 +448,29 @@ async function connect() {
         setTimeout(drawMiniChart, 2000);
         setInterval(drawMiniChart, 60000);
 
-        // טעינת פעילויות מ-Firebase
-        loadMemory().then(function(mem) {
-            if (mem['activities'] && mem['activities'].value && Array.isArray(mem['activities'].value)) {
-                if (mem['activities'].value.length > ACTIVITIES.length) {
-                    ACTIVITIES = mem['activities'].value;
-                    localStorage.setItem('loopie_activities', JSON.stringify(ACTIVITIES));
-                    renderActivities();
+        // טעינת פעילויות מהענן (Firestore) — עדיפות על localStorage
+        loadActivitiesFromCloud().then(function(loaded) {
+            if (loaded) {
+                try { renderActivities(); } catch(e) {}
+                try { checkActiveActivity(); } catch(e) {}
+            } else {
+                // fallback — טען מ-localStorage
+                var localRaw = localStorage.getItem('loopie_activities');
+                if (localRaw) {
+                    try {
+                        var local = JSON.parse(localRaw);
+                        if (Array.isArray(local) && local.length > ACTIVITIES.length) {
+                            ACTIVITIES = local;
+                            try { renderActivities(); } catch(e) {}
+                        }
+                    } catch(e) {}
                 }
             }
-        }).catch(function(){});
+        }).catch(function() {
+            // network error — use localStorage
+            var localRaw = localStorage.getItem('loopie_activities');
+            if (localRaw) try { ACTIVITIES = JSON.parse(localRaw) || ACTIVITIES; renderActivities(); } catch(e) {}
+        });
 
         var savedEmail = localStorage.getItem('loopie_email');
         if (savedEmail) { var el=document.getElementById('user-email'); if(el) el.value=savedEmail; }
@@ -586,6 +599,46 @@ async function fetchData() {
                 }
                 nsData.cob = cobRaw !== null ? parseFloat(parseFloat(cobRaw).toFixed(1)) : 0;
 
+                // ── תחזית סוכר מ-Loop predicted ──────────────────
+                var predicted = dig(dev, 'loop.predicted.values') || dig(dev, 'openaps.suggested.predBGs.IOB');
+                if (Array.isArray(predicted) && predicted.length) {
+                    nsData.predicted = predicted;
+                    nsData.predicted30  = predicted[Math.min(6, predicted.length-1)];  // ~30 דק' (5 דק' לנקודה)
+                    nsData.predictedEnd = predicted[predicted.length - 1];             // eventual
+                }
+
+                // ── מעקב COB-peak לזיהוי כשל ספיגה ──────────────
+                try {
+                    var trackKey = 'loopie_cob_track';
+                    var track = JSON.parse(localStorage.getItem(trackKey) || '{}');
+                    var curCob = nsData.cob;
+                    // עדכן peak אם COB עלה
+                    if (curCob > 0) {
+                        if (!track.peak || curCob > track.peak) {
+                            track.peak = curCob;
+                            track.peakTime = Date.now();
+                        }
+                        // רשום את הזריקה הראשונית אם זו ארוחה חדשה
+                        if (!track.start || (Date.now() - (track.lastSeen||0)) > 30*60000) {
+                            track.start = curCob;
+                            track.startTime = Date.now();
+                            track.peak = curCob;
+                        }
+                        track.lastSeen = Date.now();
+                        localStorage.setItem(trackKey, JSON.stringify(track));
+                    } else if (track.peak && (Date.now() - (track.lastSeen||0)) > 5*60000) {
+                        // COB ירד ל-0 — בדוק אם ה-peak היה גבוה מהזריקה
+                        if (track.peak > track.start * 1.4 && track.start > 0) {
+                            nsData.cobAnomaly = {
+                                declared: track.start,
+                                peak: track.peak,
+                                ratio: (track.peak / track.start).toFixed(2)
+                            };
+                        }
+                        localStorage.removeItem(trackKey);
+                    }
+                } catch(e) {}
+
                 // בזאלי — enacted תחילה, אחר-כך fallback
                 var enacted = dig(dev,'loop.enacted');
                 if (enacted && enacted.rate !== undefined && enacted.rate !== null) {
@@ -662,6 +715,8 @@ async function fetchData() {
         try { autoDetectNewDevices(); } catch(e) {}
         try { _swNotify(nsData.currentSgv||0, nsData.trend||''); } catch(e) {}
         try { checkProactiveAlerts(); } catch(e) {}
+        try { analyzeAndLearnMeals();    } catch(e) {}
+        try { checkTrackedMeals();       } catch(e) {}
 
         // ── סנכרון window.loopieGlobalState ──────────────────────
         try {
@@ -681,6 +736,9 @@ async function fetchData() {
                 override:  nsData.overrideActive   || false,
                 overrideName: nsData.overrideName  || null,
                 pumpBolus: nsData.recommendedBolus || 0,
+                predicted30:  nsData.predicted30  || null,
+                predictedEnd: nsData.predictedEnd || null,
+                cobAnomaly:   nsData.cobAnomaly   || null,
                 lastSync:  Date.now()
             };
         } catch(e) { console.warn('[Loopie] GlobalState sync error:', e); }
@@ -809,11 +867,68 @@ async function analyzeNewTreatment(t) {
 
 
 // ─── פעילויות / ספורט ────────────────────────────────────────
+// ── saveActivities — כתיבה ל-Firestore + localStorage ────────
 function saveActivities() {
+    // תמיד שמור מקומית קודם
+    try { localStorage.setItem('loopie_activities', JSON.stringify(ACTIVITIES)); } catch(e) {}
+
+    // שמור ב-Firestore תחת saved_activities/daniel
+    if (!_fbBlocked) {
+        try {
+            var url = 'https://firestore.googleapis.com/v1/projects/' + FIREBASE_CONFIG.projectId +
+                      '/databases/(default)/documents/saved_activities/daniel' +
+                      '?key=' + FIREBASE_CONFIG.apiKey;
+            _fbFetch(url, {
+                method:  'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({
+                    fields: {
+                        activities: { stringValue: JSON.stringify(ACTIVITIES) },
+                        updatedAt:  { stringValue: new Date().toISOString() },
+                        device:     { stringValue: navigator.userAgent.substring(0,50) }
+                    }
+                })
+            }, 8000).then(function(res) {
+                if (res.status === 403 || res.status === 401) {
+                    _fbBlocked = true;
+                    console.warn('[Loopie] Firebase חסום — פעילויות נשמרות מקומית בלבד');
+                }
+            }).catch(function(e) {
+                console.warn('[Loopie] שמירת פעילויות ברשת נכשלה:', e.message);
+            });
+        } catch(e) {}
+    }
+}
+
+// ── loadActivitiesFromCloud — טעינה מ-Firestore ───────────────
+async function loadActivitiesFromCloud() {
+    if (_fbBlocked) return false;
     try {
-        localStorage.setItem('loopie_activities', JSON.stringify(ACTIVITIES));
-        saveMemory('activities', ACTIVITIES).catch(function(){});
-    } catch(e) {}
+        var url = 'https://firestore.googleapis.com/v1/projects/' + FIREBASE_CONFIG.projectId +
+                  '/databases/(default)/documents/saved_activities/daniel' +
+                  '?key=' + FIREBASE_CONFIG.apiKey;
+        var res = await _fbFetch(url, {}, 8000);
+        if (res.status === 403 || res.status === 401) { _fbBlocked = true; return false; }
+        if (!res.ok) return false;
+        var data = await res.json();
+        if (!data.fields || !data.fields.activities) return false;
+        var cloudActivities = JSON.parse(data.fields.activities.stringValue);
+        if (!Array.isArray(cloudActivities)) return false;
+
+        // השווה עם מקומי — קח את המעודכן יותר
+        var localRaw = localStorage.getItem('loopie_activities');
+        var local = localRaw ? JSON.parse(localRaw) : [];
+        if (cloudActivities.length >= local.length) {
+            ACTIVITIES = cloudActivities;
+            localStorage.setItem('loopie_activities', JSON.stringify(ACTIVITIES));
+            console.log('[Loopie] ✅ פעילויות נטענו מהענן:', ACTIVITIES.length, 'חוגים');
+            return true;
+        }
+        return false;
+    } catch(e) {
+        console.warn('[Loopie] טעינת פעילויות מהענן נכשלה:', e.message);
+        return false;
+    }
 }
 
 function addActivity() {
@@ -1339,6 +1454,17 @@ function checkProactiveAlerts() {
         }
     }
 
+    // ── 8. אנומליית ספיגה — Loop הוסיף פחמימות ─────────────────
+    if (nsData.cobAnomaly) {
+        var an = nsData.cobAnomaly;
+        if (_throttle('loopie_alert_cob_anomaly', 60*60000)) {
+            sendNotification('🔍 אנומליית ספיגה',
+                'הזנת ' + an.declared + 'g אך Loop ספג כמו ' + an.peak + 'g (×' + an.ratio + '). ייתכן כשל ספיגה או הערכת חסר.',
+                {tag:'loopie-cob-anomaly', requireInteraction:false});
+        }
+        nsData.cobAnomaly = null; // התראה חד-פעמית
+    }
+
     // ── 7. ירידה מהירה — תנועה מסוכנת ───────────────────────────
     var risingDown = ['SingleDown','DoubleDown'].indexOf(trend) >= 0;
     if (sgv < 120 && risingDown && iob > 1.0) {
@@ -1349,6 +1475,260 @@ function checkProactiveAlerts() {
         }
     }
 }
+
+// ─── trackMealOutcome — מעקב אקטיבי אחר תגובת סוכר ─────────
+var _trackedMeals = {}; // { id: { foodName, carbs, sgv0, t0 } }
+
+function trackMealOutcome(foodName, carbs, sgv0) {
+    var id   = Date.now();
+    var t0   = Date.now();
+    foodName = (foodName||'').toLowerCase().trim();
+    if (!foodName || !sgv0) return;
+
+    _trackedMeals[id] = { foodName:foodName, carbs:carbs, sgv0:sgv0, t0:t0, checked120:false, checked180:false };
+    console.log('[Loopie] 📍 עוקב אחר ארוחה:', foodName, 'SGV0=' + sgv0);
+}
+
+// קרוא לזה בכל fetchData
+function checkTrackedMeals() {
+    var now    = Date.now();
+    var curSgv = nsData.currentSgv || 0;
+    if (!curSgv) return;
+
+    Object.keys(_trackedMeals).forEach(function(id) {
+        var m = _trackedMeals[id];
+        var minsAgo = (now - m.t0) / 60000;
+
+        // בדיקה ב-120 דקות
+        if (!m.checked120 && minsAgo >= 115 && minsAgo <= 135) {
+            m.checked120 = true;
+            m.sgv120 = curSgv;
+            m.delta120 = curSgv - m.sgv0;
+            console.log('[Loopie] 2sh achar ' + m.foodName + ': delta=' + m.delta120);
+        }
+
+        // בדיקה ב-180 דקות — חישוב סופי
+        if (!m.checked180 && minsAgo >= 175 && minsAgo <= 195) {
+            m.checked180 = true;
+            m.sgv180 = curSgv;
+            m.deltaMax = Math.max(
+                m.delta120 || (curSgv - m.sgv0),
+                curSgv - m.sgv0
+            );
+            m.outcome = m.deltaMax > 80  ? 'high_peak' :
+                        m.deltaMax > 50  ? 'elevated'  :
+                        curSgv < 70      ? 'hypo'       : 'ok';
+
+            console.log('[Loopie] ✅ תוצאה ' + m.foodName + ': δmax=' + m.deltaMax + ' → ' + m.outcome);
+            _saveMealOutcome(m);
+            delete _trackedMeals[id];
+        }
+
+        // נקה אחרי 4 שעות
+        if (minsAgo > 240) delete _trackedMeals[id];
+    });
+}
+
+function _saveMealOutcome(m) {
+    // עדכן localStorage
+    try {
+        var db = JSON.parse(localStorage.getItem('loopie_learned_foods')||'{}');
+        var entry = db[m.foodName] || { name:m.foodName, sessions:[] };
+
+        entry.sessions.push({
+            date:      new Date(m.t0).toISOString(),
+            carbs:     m.carbs,
+            sgv0:      m.sgv0,
+            sgv120:    m.sgv120 || null,
+            sgv180:    m.sgv180 || null,
+            deltaMax:  m.deltaMax,
+            outcome:   m.outcome
+        });
+        entry.sessions   = entry.sessions.slice(-10);
+        entry.avgCarbs   = Math.round(entry.sessions.reduce(function(s,r){return s+(r.carbs||0);},0)/entry.sessions.length);
+        entry.avgDelta   = Math.round(entry.sessions.reduce(function(s,r){return s+(r.deltaMax||0);},0)/entry.sessions.length);
+        entry.highCount  = entry.sessions.filter(function(r){return r.outcome==='high_peak';}).length;
+        entry.okCount    = entry.sessions.filter(function(r){return r.outcome==='ok';}).length;
+        entry.lastUpdate = new Date().toISOString();
+
+        // פקטור תנגודת — אם פיק גבוה ב-2+ ארוחות
+        if (entry.highCount >= 2) {
+            entry.resistanceFactor = 1.25; // הגדל המלצה ב-25%
+            entry.suggestedAdjust  = 'increase';
+        } else if (entry.okCount === entry.sessions.length && entry.sessions.length >= 3) {
+            entry.resistanceFactor = 1.0;
+            entry.suggestedAdjust  = 'ok';
+        }
+
+        db[m.foodName] = entry;
+        localStorage.setItem('loopie_learned_foods', JSON.stringify(db));
+
+        // שמור ב-Firebase ברקע
+        if (!_fbBlocked && typeof FIREBASE_CONFIG !== 'undefined') {
+            var url = 'https://firestore.googleapis.com/v1/projects/' + FIREBASE_CONFIG.projectId +
+                      '/databases/(default)/documents/learned_food_db/daniel?key=' + FIREBASE_CONFIG.apiKey;
+            _fbFetch(url, {
+                method:  'PATCH',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ fields: {
+                    db:        { stringValue: JSON.stringify(db) },
+                    updatedAt: { stringValue: new Date().toISOString() }
+                }})
+            }, 8000).catch(function(e){ console.warn('[Loopie] Firebase meal save error:', e.message); });
+        }
+
+        // התראה אם פיק גבוה חדש
+        if (m.outcome === 'high_peak') {
+            sendNotification(
+                '📈 נלמד: פיק גבוה על ' + m.foodName,
+                'δmax=' + m.deltaMax + ' mg/dL. בפעם הבאה ההמלצה תהיה מוגדלת אוטומטית.',
+                {tag:'loopie-meal-learn', requireInteraction:false}
+            );
+        }
+    } catch(e) { console.warn('[Loopie] _saveMealOutcome error:', e.message); }
+}
+
+
+// ─── analyzeAndLearnMeals — למידת מאכלים אוטומטית ─────────────
+var _lastMealAnalysis = 0;
+
+async function analyzeAndLearnMeals() {
+    // רץ לכל היותר פעם בשעה
+    if (Date.now() - _lastMealAnalysis < 60 * 60000) return;
+    _lastMealAnalysis = Date.now();
+
+    if (!nsUrl() || !nsSecret()) return;
+    if (typeof _fbBlocked !== 'undefined' && _fbBlocked) return;
+
+    try {
+        // שלוף treatments מ-3 ימים אחרונים
+        var since3d  = new Date(Date.now() - 3*86400000).toISOString();
+        var tRes     = await nsGet('/api/v1/treatments.json?find[created_at][$gte]=' + since3d + '&count=100');
+        if (!tRes.ok) return;
+        var treats   = await tRes.json();
+
+        // שלוף entries (סוכר) מ-3 ימים
+        var eRes     = await nsGet('/api/v1/entries.json?find[dateString][$gte]=' + since3d + '&count=2000');
+        if (!eRes.ok) return;
+        var entries  = await eRes.json();
+
+        // מצא treatments עם פחמימות ו-notes (שם מאכל)
+        var meals = treats.filter(function(t) {
+            return t.carbs && parseFloat(t.carbs) > 0 && t.notes && t.notes.trim().length > 1;
+        });
+
+        if (!meals.length) return;
+
+        function sgvNear(mealTs, offsetMs, windowMs) {
+            windowMs = windowMs || 15*60000;
+            var target = mealTs + offsetMs;
+            var best = null, bestDiff = Infinity;
+            entries.forEach(function(e) {
+                var t = new Date(e.dateString||e.date).getTime();
+                var diff = Math.abs(t - target);
+                if (diff < windowMs && diff < bestDiff) { best = e.sgv; bestDiff = diff; }
+            });
+            return best;
+        }
+
+        // טעינת מסד הנלמד מ-Firestore
+        var learnedDB = {};
+        try {
+            var dbUrl = 'https://firestore.googleapis.com/v1/projects/' + FIREBASE_CONFIG.projectId +
+                        '/databases/(default)/documents/learned_food_db/daniel?key=' + FIREBASE_CONFIG.apiKey;
+            var dbRes = await _fbFetch(dbUrl, {}, 8000);
+            if (dbRes.ok) {
+                var dbData = await dbRes.json();
+                if (dbData.fields && dbData.fields.db) {
+                    learnedDB = JSON.parse(dbData.fields.db.stringValue || '{}');
+                }
+            } else if (dbRes.status === 403 || dbRes.status === 401) {
+                _fbBlocked = true; return;
+            }
+        } catch(e) {}
+
+        var updated = false;
+
+        meals.forEach(function(t) {
+            var mealTs  = new Date(t.created_at).getTime();
+            var minsAgo = (Date.now() - mealTs) / 60000;
+            if (minsAgo < 180) return; // צריך לפחות 3 שעות
+
+            var foodName = t.notes.trim().toLowerCase();
+            var carbs    = parseFloat(t.carbs);
+            var sgvBefore= sgvNear(mealTs, 0, 10*60000);
+            var sgv2h    = sgvNear(mealTs, 2*3600000, 20*60000);
+            var sgv3h    = sgvNear(mealTs, 3*3600000, 20*60000);
+
+            if (!sgvBefore || !sgv2h) return;
+
+            var peakRise = Math.max(sgv2h, sgv3h||0) - sgvBefore;
+            var outcome  = sgv2h > 200 ? 'high_peak' : sgv2h > 180 ? 'elevated' : sgv2h < 70 ? 'hypo' : 'ok';
+
+            // בנה רשומה
+            var existing = learnedDB[foodName] || { name: t.notes.trim(), sessions: [] };
+            existing.sessions.push({
+                date:       t.created_at,
+                carbs:      carbs,
+                sgvBefore:  sgvBefore,
+                sgvPeak:    Math.max(sgv2h, sgv3h||0),
+                rise:       peakRise,
+                outcome:    outcome
+            });
+            // שמור רק 10 ארוחות אחרונות
+            existing.sessions = existing.sessions.slice(-10);
+
+            // חשב ממוצעים
+            var sessions = existing.sessions;
+            existing.avgCarbs   = Math.round(sessions.reduce(function(s,r){return s+r.carbs;},0)/sessions.length);
+            existing.avgRise    = Math.round(sessions.reduce(function(s,r){return s+r.rise;},0)/sessions.length);
+            existing.highCount  = sessions.filter(function(r){return r.outcome==='high_peak';}).length;
+            existing.okCount    = sessions.filter(function(r){return r.outcome==='ok';}).length;
+            existing.lastUpdate = new Date().toISOString();
+
+            // אם נצפה פיק גבוה — הגדל המלצה
+            if (existing.highCount >= 2) {
+                existing.suggestedAdjust = 'increase'; // הגדל מנה מיידית
+            } else if (existing.okCount === sessions.length) {
+                existing.suggestedAdjust = 'ok';
+            }
+
+            learnedDB[foodName] = existing;
+            updated = true;
+        });
+
+        if (!updated) return;
+
+        // שמור ב-Firestore
+        var saveUrl = 'https://firestore.googleapis.com/v1/projects/' + FIREBASE_CONFIG.projectId +
+                      '/databases/(default)/documents/learned_food_db/daniel?key=' + FIREBASE_CONFIG.apiKey;
+        await _fbFetch(saveUrl, {
+            method:  'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fields: {
+                db:         { stringValue: JSON.stringify(learnedDB) },
+                updatedAt:  { stringValue: new Date().toISOString() }
+            }})
+        }, 8000);
+
+        // שמור גם מקומית
+        try { localStorage.setItem('loopie_learned_foods', JSON.stringify(learnedDB)); } catch(e) {}
+        console.log('[Loopie] ✅ למידת מאכלים עודכנה:', Object.keys(learnedDB).length, 'מאכלים');
+
+    } catch(e) {
+        console.warn('[Loopie] analyzeAndLearnMeals error:', e.message);
+    }
+}
+
+// ── fetchLearnedFood — שלוף ערך נלמד לפי שם ─────────────────
+function fetchLearnedFood(foodName) {
+    try {
+        var db = JSON.parse(localStorage.getItem('loopie_learned_foods')||'{}');
+        var key = foodName.toLowerCase().trim();
+        return db[key] || null;
+    } catch(e) { return null; }
+}
+
 
 function sendSystemPushNotification(title, body) {
     if (!('Notification' in window)) return;
