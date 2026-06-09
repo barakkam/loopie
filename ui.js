@@ -1163,7 +1163,7 @@ async function askGeminiAdvisor(userQuestion) {
 
         showPopup('🧠 Loopie',
             "<div style='font-size:14px;line-height:1.75;text-align:right;direction:rtl;white-space:pre-line'>" +
-            fullText.replace(/</g,'&lt;').replace(/>/g,'&gt;') +
+            fullText.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/(\d+(?:\.\d+)?)\s*g\b/g,"<b style='color:#3b82f6;font-size:17px'>$1g</b>").replace(/(\d+(?:\.\d+)?)\s*U\b/g,"<b style='color:#10b981;font-size:17px'>$1U</b>").replace(/(\d+\s*-\s*\d+\s*\u05d3\u05e7\u05d5\u05ea|\d+\s*\u05d3\u05e7\u05d5\u05ea)/g,"<b style='color:#f59e0b'>$1</b>") +
             "</div><br><small style='color:#555'>Gemini 2.5 | " +
             new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false}) +
             "</small>");
