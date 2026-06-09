@@ -553,7 +553,15 @@ async function fetchData() {
                 var ovData = dig(dev,'loop.override') || dig(dev,'override');
                 if (ovData && ovData.active) {
                     nsData.overrideActive     = true;
-                    nsData.overrideName       = ovData.name || ovData.currentCorrectionRange || 'תוכנית פעילה';
+                    // חלץ שם טקסטואלי בלבד — לעולם לא אובייקט
+                    var ovName = (typeof ovData.name === 'string') ? ovData.name : null;
+                    if (!ovName) {
+                        if (typeof ovData.symbol === 'string' && ovData.symbol) ovName = ovData.symbol;
+                        else if (typeof ovData.reason === 'string' && ovData.reason) ovName = ovData.reason;
+                        else ovName = 'תוכנית פעילה';
+                    }
+                    if (typeof ovName !== 'string') ovName = 'תוכנית פעילה';
+                    nsData.overrideName       = ovName;
                     nsData.overrideMultiplier = ovData.multiplier || null;
                     nsData._overrideRaw       = ovData;
                 } else {
@@ -565,7 +573,8 @@ async function fetchData() {
                 if (ovEl && ovValEl) {
                     if (nsData.overrideActive) {
                         var pct = nsData.overrideMultiplier ? Math.round(nsData.overrideMultiplier*100)+'%' : '';
-                        ovValEl.textContent = nsData.overrideName + (pct?' — '+pct:'');
+                        var _ovTxt = (typeof nsData.overrideName === 'string') ? nsData.overrideName : 'תוכנית פעילה';
+                        ovValEl.textContent = _ovTxt + (pct?' — '+pct:'');
                         ovValEl.style.color = '#f59e0b'; ovValEl.style.fontWeight = '700';
                         ovEl.style.background = 'rgba(245,158,11,0.1)'; ovEl.style.border = '1px solid #f59e0b';
                     } else {
@@ -668,7 +677,7 @@ async function fetchData() {
                 if (ovBannerEl) {
                     if (nsData.overrideActive) {
                         ovBannerEl.style.display = 'block';
-                        ovBannerEl.innerText = '🔄 ' + (nsData.overrideName||'Override פעיל');
+                        ovBannerEl.innerText = '🔄 ' + ((typeof nsData.overrideName==='string' && nsData.overrideName) ? nsData.overrideName : 'Override פעיל');
                     } else { ovBannerEl.style.display = 'none'; }
                 }
 
