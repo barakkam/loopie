@@ -134,20 +134,31 @@ function _calcFoodLocally(userInput) {
         (matched.notes ? "<br><small style='color:#888;font-weight:400'>" + matched.notes + "</small>" : "") +
         "</div>" +
 
-        // ⭐ שורת זהב 1 — פחמימות להזנה
+        // ⭐ שורת זהב 1 — המלצת LOOPIE (הכמות להזין)
         "<div style='background:rgba(59,130,246,0.12);border:1px solid #3b82f6;border-radius:10px;padding:13px;margin-bottom:10px'>" +
-        "<div style='font-size:12px;color:#93c5fd;margin-bottom:4px'>🎯 הזן ללופ עכשיו:</div>" +
-        "<div style='font-size:26px;font-weight:800;color:#3b82f6;line-height:1.2'>" + nowCarbs + "g <span style='font-size:14px;font-weight:600;color:#93c5fd'>פחמימה</span></div>" +
-        "<div style='font-size:11px;color:#888;margin-top:2px'>" + Math.round(splitPct*100) + "% מ-" + baseCarbs + "g</div>" +
+        "<div style='font-size:12px;color:#93c5fd;margin-bottom:4px'>🎯 המלצת LOOPIE — הזן ללופ:</div>" +
+        "<div style='font-size:28px;font-weight:800;color:#3b82f6;line-height:1.2'>" + nowCarbs + "g <span style='font-size:14px;font-weight:600;color:#93c5fd'>פחמימה</span></div>" +
+        "<div style='font-size:11px;color:#888;margin-top:3px'>" +
+        (morningOverride ? "100% מראש — פרוטוקול בוקר (תנגודת גבוהה)" :
+         isFatty ? "50% מ-" + baseCarbs + "g — מאכל שומני, יתרה כחוב" :
+         "70% מ-" + baseCarbs + "g — פיצול רגיל") +
+        "</div></div>" +
+
+        // ⭐ שורת זהב 2 — מה הלופ יציע (אימות)
+        "<div style='background:rgba(16,185,129,0.10);border:1px solid #10b981;border-radius:10px;padding:13px;margin-bottom:10px'>" +
+        "<div style='font-size:12px;color:#6ee7b7;margin-bottom:4px'>💉 המלצת LOOPIE — יחידות אינסולין:</div>" +
+        "<div style='font-size:28px;font-weight:800;color:#10b981;line-height:1.2'>~" + loopBolus + "U</div>" +
+        "<div style='font-size:11px;color:#888;margin-top:2px'>" + nowCarbs + "g ÷ CR " + cr + " = " + dryBolus + "U, פחות IOB " + iob.toFixed(2) + "U" +
+        (isFatty ? " | יתרה ל-SMB" : "") + "</div>" +
         "</div>" +
 
-        // ⭐ שורת זהב 2 — אינסולין מומלץ
-        "<div style='background:rgba(16,185,129,0.10);border:1px solid #10b981;border-radius:10px;padding:13px;margin-bottom:10px'>" +
-        "<div style='font-size:12px;color:#6ee7b7;margin-bottom:4px'>💉 צפי המשאבה:</div>" +
-        "<div style='font-size:24px;font-weight:800;color:#10b981;line-height:1.2'>" + loopBolus + "U</div>" +
-        "<div style='font-size:11px;color:#888;margin-top:2px'>הערכת לופי " + dryBolus + "U − IOB " + iob.toFixed(2) + "U" +
-        (isFatty ? " | יתרה ל-SMB/בזאלי" : "") + "</div>" +
-        "</div>" +
+        // הסבר — למה LOOPIE שינה מהחישוב הפשוט
+        (nowCarbs !== baseCarbs ?
+        "<div style='font-size:11px;color:#c4b5fd;margin-bottom:10px;padding:8px 10px;background:rgba(139,92,246,0.08);border-radius:6px;line-height:1.6'>" +
+        "💡 LOOPIE ממליץ להזין <b>" + nowCarbs + "g</b> במקום " + baseCarbs + "g המלאים — מתחשב ב" +
+        (morningOverride ? "תנגודת בוקר" : isFatty ? "ספיגה איטית של מאכל שומני (מונע היפו)" : "פיצול לחוב") +
+        ", פרמטרים שהלופ לבדו לא לוקח בחשבון." +
+        "</div>" : "") +
 
         // ⭐ שורת זהב 3 — תזמון
         "<div style='background:rgba(245,158,11,0.10);border:1px solid #f59e0b;border-radius:10px;padding:11px;margin-bottom:10px'>" +
@@ -1161,9 +1172,14 @@ async function askGeminiAdvisor(userQuestion) {
             fullText = 'לא התקבלה תשובה מגמיני.';
         }
 
-        showPopup('🧠 Loopie',
+        var _g = fullText.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        // 3 קופסאות זהב מהתגיות
+        _g = _g.replace(/@@CARBS@@\s*([^\n]+)/g, "<div style='background:rgba(59,130,246,0.12);border:1px solid #3b82f6;border-radius:10px;padding:11px;margin:8px 0'><div style='font-size:11px;color:#93c5fd'>\uD83C\uDFAF המלצת LOOPIE — פחמימות להזן:</div><div style='font-size:22px;font-weight:800;color:#3b82f6'>$1</div></div>");
+        _g = _g.replace(/@@INSULIN@@\s*([^\n]+)/g, "<div style='background:rgba(16,185,129,0.12);border:1px solid #10b981;border-radius:10px;padding:11px;margin:8px 0'><div style='font-size:11px;color:#6ee7b7'>\uD83D\uDC89 המלצת LOOPIE — יחידות אינסולין:</div><div style='font-size:22px;font-weight:800;color:#10b981'>$1</div></div>");
+        _g = _g.replace(/@@TIMING@@\s*([^\n]+)/g, "<div style='background:rgba(245,158,11,0.12);border:1px solid #f59e0b;border-radius:10px;padding:11px;margin:8px 0'><div style='font-size:11px;color:#fcd34d'>\u23F3 תזמון הזרקה:</div><div style='font-size:16px;font-weight:700;color:#f59e0b'>$1</div></div>");
+        showPopup('\uD83E\uDDE0 Loopie',
             "<div style='font-size:14px;line-height:1.75;text-align:right;direction:rtl;white-space:pre-line'>" +
-            fullText.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/(\d+(?:\.\d+)?)\s*g\b/g,"<b style='color:#3b82f6;font-size:17px'>$1g</b>").replace(/(\d+(?:\.\d+)?)\s*U\b/g,"<b style='color:#10b981;font-size:17px'>$1U</b>").replace(/(\d+\s*-\s*\d+\s*\u05d3\u05e7\u05d5\u05ea|\d+\s*\u05d3\u05e7\u05d5\u05ea)/g,"<b style='color:#f59e0b'>$1</b>") +
+            _g +
             "</div><br><small style='color:#555'>Gemini 2.5 | " +
             new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',hour12:false}) +
             "</small>");
@@ -1270,34 +1286,26 @@ function buildGeminiSystemPrompt(cr, isf, ctx) {
         "אם השאלה על פוד/משאבה/קנולה/חיישן/החלפה/תקין (לא מאכל) — התעלם מפורמט המאכל למטה!\n" +
         "ענה בפורמט חופשי: אבחון לפי SGV+IOB+CAGE והמלצה ברורה (להחליף פוד / להמתין / תקין).\n" +
         "אל תכתוב 'לא הוזן מאכל' — זו שאלת חומרה!\n\n" +
-        "── פורמט פלט קשיח v41 — 7 חלקים בדיוק ──\n" +
+        "── פורמט פלט קשיח — 3 המלצות LOOPIE תמיד בראש ──\n" +
+        "חובה להתחיל ב-3 ההמלצות, כל אחת בשורה נפרדת עם הסימון המדויק הזה:\n" +
         "\n" +
-        "🍏 [שם המאכל] — [X]g | ספיגה: [N]ש'\n" +
+        "🍏 [שם המאכל] | ספיגה: [N]ש'\n" +
         "\n" +
-        "🎯 פעולה מיידית באייפון כעת:\n" +
-        "כנס ללופ, הזן [Y]g פחמימה ([50%/70%/100%] מ-[X]g), ותן למשאבה לחשב את המינון המקוזז שלה.\n" +
+        "@@CARBS@@ [Y] גרם פחמימה להזין ללופ\n" +
+        "@@INSULIN@@ [Z] יחידות אינסולין (המלצת LOOPIE לאחר כל ההתאמות)\n" +
+        "@@TIMING@@ " + timing + "\n" +
         "\n" +
-        "📊 סימולציית מנות אינסולין חזויה:\n" +
-        "⚙️ הערכת לופי למנה: כ-[Y÷CR]U (חישוב יבש טהור ל-[Y]g).\n" +
-        "🤖 צפי המשאבה: חשב [Y]÷CR − IOB=" + iob + "U.\n" +
-        "אם התוצאה קטנה מ-0.1U: אל תציג מספר! כתוב: 'המשאבה לא תציע בולוס כעת — IOB מכסה את הכל. הלופ מנהל דרך SMB/בזאלי זמני.'\n" +
-        "אם התוצאה גדולה מ-0.1U: הצג את הערך הסופי אחרי כל ההתאמות (לילה/ספורט/override).\n" +
+        "הסבר קצר (2-3 שורות): כמה הלופ היה מציע בחישוב פשוט (~[Y÷CR-IOB]U), ולמה LOOPIE התאים את ההמלצה (לילה/ספורט/ביה\"ס/פיצול/IOB). ההמלצה של LOOPIE היא הקובעת.\n" +
         "\n" +
-        "🧠 למה פחות עכשיו?\n" +
-        "הסבר בשני חלקים:\n" +
-        "א) חלוקה (חוק 70/30 או 60/40): [X]g פוצלו כי ספיגה איטית → היפו אם מזריקים הכל.\n" +
-        "ב) התאמת לילה: אם is_night=true, הפחתת 15% מהמנה המיידית.\n" +
-        "    הסבר בפועל: האם הפחתה זו מוצדקת? בדוק היסטוריית מאכל (food_history_summary):\n" +
-        "    • אם בעבר היה פיק >200 אחרי מאכל זה בלילה → ההפחתה NOT מוצדקת, המלץ להישאר על 70%.\n" +
-        "    • אם בעבר היה היפו לילי אחרי מאכל זה → ההפחתה מוצדקת, המשך עם 60%.\n" +
-        "    • אם אין היסטוריה → ציין שמדובר בהערכה שמרנית ללא נתונים.\n" +
-        "סכם בשורה אחת: מדוע בחרת את האחוז הספציפי שהמלצת עליו.\n\n" +
+        "🛡️ [אם יש חוב] [W]g נותרים כחוב — התראת פוש תישלח מתי להשלים.\n" +
         "\n" +
-        "⏳ תזמון: " + timing + "\n" +
-        "\n" +
-        "🛡️ [Z]g חוב ברקע — התראת פוש תישלח מתי ולכמה גרמים להזין ללופ.\n" +
-        "\n" +
-        "📊 נתוני רקע: [שם המאכל] | סך פחמימות: [X]g | ספיגה: [N]ש' | (ערכי ייחוס ל-100g מוצר — CR=" + cr.toFixed(1) + " | ISF=" + isf + " | IOB=" + iob + "U)";
+        "כללי חישוב יחידות LOOPIE (@@INSULIN@@):\n" +
+        "• בסיס = [Y]g ÷ CR=" + cr.toFixed(1) + "\n" +
+        "• נכה IOB=" + iob + "U\n" +
+        "• החל מכפיל שעה: " + ((ctx && ctx._nightMult) ? ctx._nightMult : "1.0") + " (לילה 0.85 / dawn 1.12 / יום 1.0)\n" +
+        "• " + ((ctx && ctx._iobNote) ? ctx._iobNote : "ניכוי רגיל") + "\n" +
+        "• אם התוצאה < 0.1U → כתוב @@INSULIN@@ 0 (המשאבה מכסה דרך IOB/SMB)\n" +
+        "• עגל ל-2 ספרות אחרי הנקודה.";
 }
 
 function showStatus(msg, type) {
