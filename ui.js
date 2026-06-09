@@ -125,41 +125,51 @@ function _calcFoodLocally(userInput) {
     var timing      = pre <= 2 ? "0-2 דק' לפני האכילה (" + ins + ")" : pre + " דק' לפני האכילה (" + ins + ")";
 
     var html =
-        "<div style='font-size:13px;text-align:right;direction:rtl;line-height:1.9'>" +
+        "<div style='font-size:13px;text-align:right;direction:rtl;line-height:1.7'>" +
 
-        "<div style='font-weight:700;font-size:15px;margin-bottom:10px'>" +
+        // כותרת מאכל
+        "<div style='font-weight:700;font-size:16px;margin-bottom:12px;color:#fff'>" +
         "🍏 " + matchedKey + (qty !== 1 ? " ×" + qty : "") +
-        " — " + baseCarbs + "g | ספיגה: " + hours + "ש'" +
+        " <span style='color:#888;font-size:13px;font-weight:400'>| ספיגה: " + hours + "ש'</span>" +
         (matched.notes ? "<br><small style='color:#888;font-weight:400'>" + matched.notes + "</small>" : "") +
         "</div>" +
 
-        "<div style='background:rgba(59,130,246,0.1);border:1px solid #3b82f6;border-radius:8px;padding:10px;margin-bottom:10px'>" +
-        "🎯 <b>פעולה באייפון עכשיו:</b><br>" +
-        "כנס ללופ, הזן <b style='font-size:16px;color:#3b82f6'>" + nowCarbs + "g</b> פחמימה " +
-        "(" + Math.round(splitPct*100) + "% מ-" + baseCarbs + "g)" +
+        // ⭐ שורת זהב 1 — פחמימות להזנה
+        "<div style='background:rgba(59,130,246,0.12);border:1px solid #3b82f6;border-radius:10px;padding:13px;margin-bottom:10px'>" +
+        "<div style='font-size:12px;color:#93c5fd;margin-bottom:4px'>🎯 הזן ללופ עכשיו:</div>" +
+        "<div style='font-size:26px;font-weight:800;color:#3b82f6;line-height:1.2'>" + nowCarbs + "g <span style='font-size:14px;font-weight:600;color:#93c5fd'>פחמימה</span></div>" +
+        "<div style='font-size:11px;color:#888;margin-top:2px'>" + Math.round(splitPct*100) + "% מ-" + baseCarbs + "g</div>" +
         "</div>" +
 
-        "<div style='background:#0a0a14;border-radius:8px;padding:10px;margin-bottom:10px;font-size:12px'>" +
-        "📊 <b>סימולציה:</b><br>" +
-        "⚙️ הערכת לופי: <b>" + dryBolus + "U</b> (יבש ל-" + nowCarbs + "g)<br>" +
-        "🤖 צפי משאבה: <b>" + loopBolus + "U</b> (אחרי ניכוי IOB=" + iob.toFixed(2) + "U)<br>" +
-        (isFatty ? "<small style='color:#f59e0b'>יתרה עוברת ל-SMB/בזאלי זמני לאורך הספיגה</small>" : "") +
+        // ⭐ שורת זהב 2 — אינסולין מומלץ
+        "<div style='background:rgba(16,185,129,0.10);border:1px solid #10b981;border-radius:10px;padding:13px;margin-bottom:10px'>" +
+        "<div style='font-size:12px;color:#6ee7b7;margin-bottom:4px'>💉 צפי המשאבה:</div>" +
+        "<div style='font-size:24px;font-weight:800;color:#10b981;line-height:1.2'>" + loopBolus + "U</div>" +
+        "<div style='font-size:11px;color:#888;margin-top:2px'>הערכת לופי " + dryBolus + "U − IOB " + iob.toFixed(2) + "U" +
+        (isFatty ? " | יתרה ל-SMB/בזאלי" : "") + "</div>" +
         "</div>" +
 
-        (dryBolus !== loopBolus || isFatty ?
-        "<div style='font-size:12px;color:#aaa;margin-bottom:10px'>" +
-        "🧠 אם היית מזין " + baseCarbs + "g, הלופ היה מציע ~" + Math.max(0, fullDry - iob).toFixed(2) + "U מיידית" +
-        (isFatty ? " — מנה כבדה על מאכל שומני, עלול לגרום להיפו." : ".") +
+        // ⭐ שורת זהב 3 — תזמון
+        "<div style='background:rgba(245,158,11,0.10);border:1px solid #f59e0b;border-radius:10px;padding:11px;margin-bottom:10px'>" +
+        "<span style='font-size:12px;color:#fcd34d'>⏳ תזמון:</span> " +
+        "<span style='font-size:15px;font-weight:700;color:#f59e0b'>" + timing + "</span>" +
+        "</div>" +
+
+        // חוב ברקע
+        (debtCarbs > 0 ?
+        "<div style='font-size:11px;color:#aaa;margin-bottom:8px;padding:6px 10px;background:#0a0a14;border-radius:6px'>" +
+        "🛡️ <b>" + debtCarbs + "g</b> חוב ברקע — התראת פוש תישלח מתי להשלים." +
         "</div>" : "") +
 
-        "<div style='font-size:12px;margin-bottom:8px'>⏳ <b>תזמון:</b> " + timing + "</div>" +
+        // הערת לילה בטיחותית
+        (isNight ?
+        "<div style='font-size:11px;color:#93c5fd;margin-bottom:8px;padding:8px 10px;background:rgba(59,130,246,0.06);border-radius:6px;line-height:1.6'>" +
+        "🎯 <b>הערה בטיחותית:</b> המלצה זו שמרנית ומקוזזת ב-15% עקב שעת לילה ומניעת היפו. אם הסוכר יישאר עקשן מעל 150, המשאבה תשלים לבד דרך מיקרו-בולוסים (SMB) מבוקרים." +
+        "</div>" : "") +
 
-        "<div style='background:rgba(16,185,129,0.08);border:1px solid #10b981;border-radius:8px;padding:8px;font-size:12px'>" +
-        "🛡️ <b>" + debtCarbs + "g חוב ברקע</b> — התראת פוש תישלח מתי ולכמה גרמים להזין ללופ." +
-        "</div>" +
-
-        "<div style='font-size:10px;color:#555;margin-top:8px;text-align:center'>" +
-        "⚡ חישוב מקומי מיידי | CR=" + cr + " | IOB=" + iob.toFixed(2) + "U" +
+        // footer
+        "<div style='font-size:10px;color:#555;margin-top:6px;text-align:center'>" +
+        "⚡ חישוב מקומי | CR=" + cr + " | IOB=" + iob.toFixed(2) + "U" +
         "</div></div>";
 
     return html;
