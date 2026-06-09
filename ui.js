@@ -22,7 +22,7 @@ var FOOD_DB = {
     "פסטה":         { carbs: 30,  durationH: 5, notes: "כוס מבושלת — ספיגה איטית", perUnit: "כוס" },
     "אורז":         { carbs: 5,   durationH: 3, notes: "כף", perUnit: "כף" },
     // מאכלים ישראליים נוספים
-    "ג'חנון":       { carbs: 50,  durationH: 6, notes: "100g — שומן גבוה, ספיגה איטית מאוד" },
+    "ג'חנון":       { carbs: 50,  durationH: 5, notes: "50g פחמימה ל-100g ג'חנון — שומני, ספיגה איטית", isExtremeFat: true },
     "מלאווח":       { carbs: 45,  durationH: 6, notes: "100g — שומן גבוה, ספיגה איטית" },
     "תפוח":         { carbs: 15,  durationH: 2, notes: "תפוח בינוני — GI נמוך" },
     "בננה":         { carbs: 25,  durationH: 2, notes: "בננה בינונית — GI בינוני" },
@@ -56,6 +56,9 @@ var FOOD_DB = {
     "מנגו":         { carbs: 20,  durationH: 1.5, notes: "GI בינוני-גבוה" },
     "פיצוחים":      { carbs: 5,   durationH: 2, notes: "חופן — פחמימות נמוכות" },
     "קרקרים":       { carbs: 15,  durationH: 2, notes: "6 קרקרים", perUnit: "קרקר" },
+    "קרפלך":        { carbs: 7,   durationH: 3, notes: "ליחידה — כיס בצק במילוי", perUnit: "יחידה" },
+    "דים סאם":      { carbs: 7.5, durationH: 3, notes: "ליחידה — מאודה/מטוגן", perUnit: "יחידה" },
+    "דימסאם":       { carbs: 7.5, durationH: 3, notes: "ליחידה", perUnit: "יחידה" },
     "ביסלי":        { carbs: 12,  durationH: 2, notes: "שקית קטנה 25g" },
     "חטיף":         { carbs: 15,  durationH: 2, notes: "שקית קטנה" },
     "פיצה פטה":     { carbs: 20,  durationH: 3, notes: "2 פרוסות קטנות" },
@@ -130,7 +133,7 @@ function _calcFoodLocally(userInput) {
         // כותרת מאכל
         "<div style='font-weight:700;font-size:16px;margin-bottom:12px;color:#fff'>" +
         "🍏 " + matchedKey + (qty !== 1 ? " ×" + qty : "") +
-        " <span style='color:#888;font-size:13px;font-weight:400'>| ספיגה: " + hours + "ש'</span>" +
+        " <span style='color:#888;font-size:13px;font-weight:400'>| סך פחמימות: " + baseCarbs + "g | ספיגה: <b style='color:#f59e0b'>" + hours + "ש'</b></span>" +
         (matched.notes ? "<br><small style='color:#888;font-weight:400'>" + matched.notes + "</small>" : "") +
         "</div>" +
 
@@ -160,10 +163,9 @@ function _calcFoodLocally(userInput) {
         ", פרמטרים שהלופ לבדו לא לוקח בחשבון." +
         "</div>" : "") +
 
-        // ⭐ שורת זהב 3 — תזמון
-        "<div style='background:rgba(245,158,11,0.10);border:1px solid #f59e0b;border-radius:10px;padding:11px;margin-bottom:10px'>" +
-        "<span style='font-size:12px;color:#fcd34d'>⏳ תזמון:</span> " +
-        "<span style='font-size:15px;font-weight:700;color:#f59e0b'>" + timing + "</span>" +
+        // תזמון — פשוט ללא הדגשה
+        "<div style='padding:6px 10px;margin-bottom:8px;color:#aaa;font-size:13px'>" +
+        "⏳ תזמון: " + timing +
         "</div>" +
 
         // חוב ברקע
@@ -1174,9 +1176,10 @@ async function askGeminiAdvisor(userQuestion) {
 
         var _g = fullText.replace(/</g,'&lt;').replace(/>/g,'&gt;');
         // 3 קופסאות זהב מהתגיות
-        _g = _g.replace(/@@CARBS@@\s*([^\n]+)/g, "<div style='background:rgba(59,130,246,0.12);border:1px solid #3b82f6;border-radius:10px;padding:11px;margin:8px 0'><div style='font-size:11px;color:#93c5fd'>\uD83C\uDFAF המלצת LOOPIE — פחמימות להזן:</div><div style='font-size:22px;font-weight:800;color:#3b82f6'>$1</div></div>");
+        _g = _g.replace(/@@HOURS@@\s*([^\n]+)/g, "\u05e1\u05e4\u05d9\u05d2\u05d4: <b style='color:#f59e0b;font-size:16px'>$1</b>");
+        _g = _g.replace(/@@CARBS@@\s*([^\n]+)/g, "<div style='background:rgba(59,130,246,0.12);border:1px solid #3b82f6;border-radius:10px;padding:12px;margin:8px 0'><div style='font-size:11px;color:#93c5fd'>\uD83C\uDFAF המלצת LOOPIE — פחמימות להזין ללופ:</div><div style='font-size:24px;font-weight:800;color:#3b82f6'>$1</div></div>");
         _g = _g.replace(/@@INSULIN@@\s*([^\n]+)/g, "<div style='background:rgba(16,185,129,0.12);border:1px solid #10b981;border-radius:10px;padding:11px;margin:8px 0'><div style='font-size:11px;color:#6ee7b7'>\uD83D\uDC89 המלצת LOOPIE — יחידות אינסולין:</div><div style='font-size:22px;font-weight:800;color:#10b981'>$1</div></div>");
-        _g = _g.replace(/@@TIMING@@\s*([^\n]+)/g, "<div style='background:rgba(245,158,11,0.12);border:1px solid #f59e0b;border-radius:10px;padding:11px;margin:8px 0'><div style='font-size:11px;color:#fcd34d'>\u23F3 תזמון הזרקה:</div><div style='font-size:16px;font-weight:700;color:#f59e0b'>$1</div></div>");
+        _g = _g.replace(/@@TIMING@@\s*([^\n]+)/g, "<div style='padding:6px 10px;margin:6px 0;color:#aaa;font-size:13px'>\u23F3 \u05ea\u05d6\u05de\u05d5\u05df: $1</div>");
         showPopup('\uD83E\uDDE0 Loopie',
             "<div style='font-size:14px;line-height:1.75;text-align:right;direction:rtl;white-space:pre-line'>" +
             _g +
@@ -1242,6 +1245,7 @@ function buildGeminiSystemPrompt(cr, isf, ctx) {
         "פיצה ביתית/משולש ביתי=22g/יח'/4ש' | פיצה פיצרייה/מסעדה/קנויה=35g/יח'/5ש'\n" +
         "המבורגר+לחמנייה=30g/4ש' | שניצל מטוגן=10g/4ש'\n" +
         "ג'חנון 100g=50g/5ש' | מלאווח=40g/4ש' | צ'יפס=30g/4ש' | בורקס=25g/3ש'\n" +
+        "קרפלך=7g/יחידה/3ש' | דים סאם=7.5g/יחידה/3ש'\n" +
         "קרואסון=25g/3ש' | בייגלה=55g/3ש' | שוקו=30g/3ש' | עוגיה=10g/3ש'\n" +
         "חלב סויה רגיל=4g/3ש' | חלב סויה וניל/ממותק=12g/3ש'\n" +
         "מאכל לא ברשימה: הערך הגיוני + 3ש'.\n" +
@@ -1289,9 +1293,9 @@ function buildGeminiSystemPrompt(cr, isf, ctx) {
         "── פורמט פלט קשיח — 3 המלצות LOOPIE תמיד בראש ──\n" +
         "חובה להתחיל ב-3 ההמלצות, כל אחת בשורה נפרדת עם הסימון המדויק הזה:\n" +
         "\n" +
-        "🍏 [שם המאכל] | ספיגה: [N]ש'\n" +
+        "🍏 [שם המאכל] | סך פחמימות: [X]g | @@HOURS@@[N]ש'\n" +
         "\n" +
-        "@@CARBS@@ [Y] גרם פחמימה להזין ללופ\n" +
+        "@@CARBS@@ [Y] גרם פחמימה להזין ללופ (מתוך [X]g סך הכל)\n" +
         "@@INSULIN@@ [Z] יחידות אינסולין (המלצת LOOPIE לאחר כל ההתאמות)\n" +
         "@@TIMING@@ " + timing + "\n" +
         "\n" +
